@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Suppress verbose console.log in production; errors/warnings still appear -->
+    <script>if(window.location.hostname!=='localhost'&&window.location.hostname!=='127.0.0.1'){var _n=function(){};console.log=_n;console.info=_n;console.debug=_n;}</script>
+    <!-- Auto-attach JWT cookie to all same-origin API fetch calls -->
+    <script>(function(){var _f=window.fetch;window.fetch=function(input,init){var url=typeof input==='string'?input:(input&&input.url?input.url:'');var same=!url.startsWith('http')||url.startsWith(window.location.origin);if(same){init=Object.assign({},init);init.credentials=init.credentials||'include';}return _f.apply(this,[input,init]);};})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Processing | KMI Brokers</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+        const CONFIG = {
+            API_BASE: 'http://localhost:5000',
+            PDF_WORKER_URL: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+        };
+        pdfjsLib.GlobalWorkerOptions.workerSrc = CONFIG.PDF_WORKER_URL;
+        
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; overflow: hidden; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .drop-zone {
+            border: 1.5px dashed #cbd5e1;
+            transition: all 0.2s ease;
+        }
+        .drop-zone.drag-over {
+            border-color: #334155;
+            background-color: #f8fafc;
+        }
+
+        .doc-item {
+            transition: all 0.15s ease;
+        }
+        .doc-item:hover {
+            background: #f8fafc;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.025em;
+        }
+
+        .status-badge.pass { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .status-badge.warn { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+        .status-badge.fail { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        .issue-card {
+            border-left: 3px solid;
+            transition: all 0.15s ease;
+        }
+        .issue-card:hover {
+            transform: translateX(2px);
+        }
+        .issue-card.critical { border-color: #dc2626; background: #fef2f2; }
+        .issue-card.warning { border-color: #f59e0b; background: #fffbeb; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slideDown { animation: slideDown 0.3s ease-out; }
+
+        .empty-state {
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans antialiased text-slate-700">
+
+    <!-- Authentication Guard (server-side JWT verification) -->
+    <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
+    <!-- Top Bar -->
+    <div class="bg-white border-b border-slate-200 px-6 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-700 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-shield-check text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-900">Document Processing Center</h1>
+                    <p class="text-xs text-slate-500">Upload → Verify → Sign</p>
+                </div>
+            </div>
+            <!-- Workflow Breadcrumb -->
+            <div class="hidden md:flex items-center gap-1.5 text-[11px]">
+                <a href="/" class="flex items-center gap-1 font-medium text-slate-500 hover:text-slate-800 hover:underline transition-colors">
+                    <i class="fa-solid fa-users text-[9px]"></i> Leads
+                </a>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <a href="/auto" class="flex items-center gap-1 font-medium text-slate-500 hover:text-slate-800 hover:underline transition-colors">
+                    <i class="fa-solid fa-car text-[9px]"></i> Auto
+                </a>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <a href="/coverpage" class="flex items-center gap-1 font-medium text-slate-500 hover:text-slate-800 hover:underline transition-colors">
+                    <i class="fa-solid fa-file-contract text-[9px]"></i> Auto Cover
+                </a>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <span class="flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                    <i class="fa-solid fa-shield-check text-[9px]"></i> Doc Processing
+                </span>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <a href="/signwell-ui" class="flex items-center gap-1 font-medium text-indigo-500 hover:text-indigo-800 hover:underline transition-colors">
+                    <i class="fa-solid fa-pen-nib text-[9px]"></i> eSign
+                </a>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+                <a href="/signed-documents" class="flex items-center gap-1 font-medium text-violet-500 hover:text-violet-800 hover:underline transition-colors">
+                    <i class="fa-solid fa-inbox text-[9px]"></i> Signed Docs
+                </a>
+            </div>
+            
+            <!-- Client Selector -->
+            <div class="flex items-center gap-3">
+                <select id="leadSelect" onchange="onLeadChange()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent bg-white">
+                    <option value="">Select client...</option>
+                </select>
+                <span id="leadInfo" class="text-xs text-slate-500"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Layout -->
+    <div class="flex h-[calc(100vh-57px)]">
+        
+        <!-- LEFT PANEL: Upload Interface -->
+        <div class="w-[480px] border-r border-slate-200 bg-white flex flex-col">
+            
+            <!-- Policy Type Toggle -->
+            <div class="px-6 py-4 border-b border-slate-100">
+                <div class="flex gap-2">
+                    <button id="tab-auto" onclick="switchCategory('auto')" class="flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-800 text-white">
+                        AUTO <span id="auto-count" class="ml-1 opacity-60">(0)</span>
+                    </button>
+                    <button id="tab-home" onclick="switchCategory('home')" class="flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                        HOME <span id="home-count" class="ml-1 opacity-60">(0)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Document Upload Areas -->
+            <div class="flex-1 overflow-y-auto px-6 py-4">
+                
+                <!-- AUTO Zone -->
+                <div id="auto-zone">
+                    <!-- Signing Documents -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Signing Documents</h3>
+                            <span id="auto-signing-count" class="text-xs font-semibold text-slate-500">0</span>
+                        </div>
+                        <div id="auto-signing-dropzone" class="drop-zone rounded-lg p-6 text-center cursor-pointer mb-3" onclick="document.getElementById('auto-signing-input').click()">
+                            <i class="fa-solid fa-file-arrow-up text-2xl text-slate-300 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-600">Drop PDFs here</p>
+                            <p class="text-xs text-slate-400 mt-0.5">or click to browse</p>
+                        </div>
+                        <input type="file" id="auto-signing-input" multiple accept="application/pdf" class="hidden">
+                        <div id="auto-signing-list" class="space-y-1.5"></div>
+                    </div>
+
+                    <!-- Reference Documents -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Reference Documents</h3>
+                            <span id="auto-reference-count" class="text-xs font-semibold text-slate-500">0</span>
+                        </div>
+                        <div id="auto-reference-dropzone" class="drop-zone rounded-lg p-6 text-center cursor-pointer mb-3" onclick="document.getElementById('auto-reference-input').click()">
+                            <i class="fa-solid fa-file-arrow-up text-2xl text-slate-300 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-600">Drop PDFs here</p>
+                            <p class="text-xs text-slate-400 mt-0.5">or click to browse</p>
+                        </div>
+                        <input type="file" id="auto-reference-input" multiple accept="application/pdf" class="hidden">
+                        <div id="auto-reference-list" class="space-y-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- HOME Zone (Hidden) -->
+                <div id="home-zone" class="hidden">
+                    <!-- Signing Documents -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Signing Documents</h3>
+                            <span id="home-signing-count" class="text-xs font-semibold text-slate-500">0</span>
+                        </div>
+                        <div id="home-signing-dropzone" class="drop-zone rounded-lg p-6 text-center cursor-pointer mb-3" onclick="document.getElementById('home-signing-input').click()">
+                            <i class="fa-solid fa-file-arrow-up text-2xl text-slate-300 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-600">Drop PDFs here</p>
+                            <p class="text-xs text-slate-400 mt-0.5">or click to browse</p>
+                        </div>
+                        <input type="file" id="home-signing-input" multiple accept="application/pdf" class="hidden">
+                        <div id="home-signing-list" class="space-y-1.5"></div>
+                    </div>
+
+                    <!-- Reference Documents -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Reference Documents</h3>
+                            <span id="home-reference-count" class="text-xs font-semibold text-slate-500">0</span>
+                        </div>
+                        <div id="home-reference-dropzone" class="drop-zone rounded-lg p-6 text-center cursor-pointer mb-3" onclick="document.getElementById('home-reference-input').click()">
+                            <i class="fa-solid fa-file-arrow-up text-2xl text-slate-300 mb-2"></i>
+                            <p class="text-xs font-medium text-slate-600">Drop PDFs here</p>
+                            <p class="text-xs text-slate-400 mt-0.5">or click to browse</p>
+                        </div>
+                        <input type="file" id="home-reference-input" multiple accept="application/pdf" class="hidden">
+                        <div id="home-reference-list" class="space-y-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- ══ SAVED IN CLOUD ══ -->
+                <div id="saved-docs-section" class="hidden mt-5 pt-4 border-t border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-emerald-600 text-xs"></i>
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Saved in Cloud</span>
+                            <span id="saved-docs-count" class="hidden px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">0</span>
+                        </div>
+                        <button onclick="loadSavedDocuments()" title="Refresh" class="text-slate-400 hover:text-slate-700 transition text-[11px] px-1.5">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+                    <div id="saved-docs-loading" class="hidden py-3 text-center text-[11px] text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading saved documents…
+                    </div>
+                    <div id="saved-docs-empty" class="hidden py-3 text-center text-[11px] text-slate-400">
+                        <i class="fa-regular fa-folder-open mr-1"></i> No documents saved yet for this client
+                    </div>
+                    <div id="saved-docs-list" class="space-y-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <div class="grid grid-cols-2 gap-2" style="grid-template-columns:1fr 1fr;grid-template-rows:auto auto;">
+                    <button id="btn-verify" onclick="verifyAllDocuments()" class="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-lg hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        <span>Verify</span>
+                    </button>
+                    <button id="btn-save" onclick="saveAllDocuments()" class="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-floppy-disk text-xs"></i>
+                        <span>Save</span>
+                    </button>
+                    <button id="btn-esign" onclick="saveAndESign()" disabled class="col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-pen-nib text-xs"></i>
+                        <span>Save &amp; Open eSign UI</span>
+                    </button>
+                </div>
+                <div class="mt-2 text-center text-xs text-slate-500">
+                    <span id="total-docs" class="font-semibold">0</span> documents uploaded &mdash; <span class="text-indigo-500">Save first, then open eSign UI</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Verification Results -->
+        <div class="flex-1 bg-slate-50 flex flex-col overflow-hidden">
+            
+            <div id="results-empty" class="flex-1 flex items-center justify-center empty-state">
+                <div class="text-center">
+                    <i class="fa-solid fa-clipboard-check text-6xl text-slate-300 mb-4"></i>
+                    <p class="text-sm font-medium text-slate-600">No verification results yet</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload documents and click "Verify"</p>
+                </div>
+            </div>
+
+            <div id="results-panel" class="hidden flex-1 flex flex-col">
+                <!-- Results Header -->
+                <div class="px-8 py-6 border-b border-slate-200 bg-white">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900 mb-1">Verification Report</h2>
+                            <p class="text-xs text-slate-500" id="report-timestamp"></p>
+                        </div>
+                        <div id="overall-status"></div>
+                    </div>
+                </div>
+
+                <!-- Results Content -->
+                <div class="flex-1 overflow-y-auto px-8 py-6">
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-3 gap-4 mb-6" id="summary-cards">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Issues List -->
+                    <div id="issues-container">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Success State -->
+                    <div id="success-state" class="hidden p-8 text-center bg-white rounded-lg border border-slate-200">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                            <i class="fa-solid fa-check text-2xl text-green-600"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">All Clear!</h3>
+                        <p class="text-sm text-slate-600">No issues found. Documents are ready to send for signature.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Error Preview Modal -->
+    <div id="error-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8">
+        <div class="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-lg font-bold text-slate-900 truncate" id="preview-title">Document Preview</h3>
+                    <p class="text-xs text-slate-500 mt-1" id="preview-subtitle"></p>
+                </div>
+                <button onclick="closePreviewModal()" class="ml-4 p-2 text-slate-400 hover:text-slate-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="flex-1 overflow-hidden flex">
+                <!-- PDF Canvas Area -->
+                <div class="flex-1 overflow-auto bg-slate-100 p-6 flex items-center justify-center relative">
+                    <div id="pdf-canvas-container" class="relative">
+                        <canvas id="pdf-canvas" class="shadow-lg"></canvas>
+                        <!-- Error Highlight Overlay -->
+                        <div id="error-highlight" class="absolute border-4 border-red-500 rounded-lg pointer-events-none hidden" style="box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- Error Details Sidebar -->
+                <div class="w-80 border-l border-slate-200 bg-white overflow-y-auto">
+                    <div class="p-4">
+                        <div class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Error Details</div>
+                        <div id="preview-error-details">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <button id="prev-page-btn" onclick="changePage(-1)" class="px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left mr-1"></i> Previous
+                    </button>
+                    <span class="text-xs text-slate-600">
+                        Page <span id="current-page-num">1</span> of <span id="total-pages-num">1</span>
+                    </span>
+                    <button id="next-page-btn" onclick="changePage(1)" class="px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+                <button onclick="closePreviewModal()" class="px-4 py-1.5 text-sm font-semibold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Saved Doc Inline Preview Modal -->
+    <div id="saved-doc-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-6" onclick="if(event.target===this)closeSavedDocPreview()">
+        <div class="bg-white rounded-xl shadow-2xl flex flex-col" style="width:860px;max-width:95vw;height:90vh">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50 rounded-t-xl shrink-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i class="fa-solid fa-file-pdf text-red-500"></i>
+                    <span class="text-sm font-bold text-slate-800 truncate" id="saved-preview-title">Document Preview</span>
+                    <span id="saved-preview-badge" class="ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full"></span>
+                </div>
+                <button onclick="closeSavedDocPreview()" class="ml-3 p-1.5 text-slate-400 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <!-- iframe -->
+            <div class="flex-1 overflow-hidden">
+                <iframe id="saved-preview-iframe" src="" class="w-full h-full border-0"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- SignWell Modal -->
+    <div id="signwell-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-lg">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Send for Signature</h3>
+                    <p class="text-xs text-blue-100 mt-0.5">Powered by SignWell — secure e-signatures</p>
+                </div>
+                <button onclick="closeSignWellModal()" class="p-2 text-blue-200 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Body -->
+            <div class="p-6 space-y-4">
+                <!-- Connection Status -->
+                <div id="signwell-status" class="hidden p-3 rounded-lg text-xs"></div>
+                
+                <!-- Signer Info -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Signer Name *</label>
+                    <input type="text" id="signwell-signer-name" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="e.g. John Smith">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Signer Email *</label>
+                    <input type="email" id="signwell-signer-email" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="e.g. john@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Message (optional)</label>
+                    <textarea id="signwell-message" rows="2" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" placeholder="Please review and sign these documents"></textarea>
+                </div>
+                
+                <!-- Document Summary -->
+                <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                    <div class="text-xs font-bold text-slate-700 mb-2">Documents to Send</div>
+                    <div id="signwell-doc-list" class="space-y-1 max-h-32 overflow-y-auto text-xs text-slate-600"></div>
+                </div>
+                
+                <!-- Scope selector -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Send documents from:</label>
+                    <div class="flex gap-2">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="signwell-scope" value="signing" checked class="text-blue-600" onchange="updateSignWellDocList()">
+                            <span>Signing docs only</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="signwell-scope" value="all" class="text-blue-600" onchange="updateSignWellDocList()">
+                            <span>All uploaded docs</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <button onclick="closeSignWellModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition">
+                    Cancel
+                </button>
+                <button id="btn-signwell-send" onclick="sendViaSignWell()" class="px-6 py-2 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Send for Signature
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let currentCategory = 'auto';
+        let currentLead = null;
+        let documents = {
+            auto: { signing: [], reference: [] },
+            home: { signing: [], reference: [] }
+        };
+        let lastVerificationResults = null; // Store last verification results
+
+        // ===== TOAST NOTIFICATIONS =====
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                success: 'bg-slate-800 text-white',
+                error: 'bg-red-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                info: 'bg-slate-700 text-white'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.className = `${styles[type]} px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 animate-slideDown`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type]}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ===== LEADS =====
+        async function loadLeads() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/api/leads`);
+                const leads = await response.json();
+                
+                const select = document.getElementById('leadSelect');
+                select.innerHTML = '<option value="">Select client...</option>';
+                
+                leads.forEach(lead => {
+                    const option = document.createElement('option');
+                    option.value = lead.id;
+                    option.textContent = lead.name;
+                    option.dataset.email = lead.email || '';
+                    option.dataset.phone = lead.phone || '';
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                showToast('Failed to load clients', 'error');
+            }
+        }
+
+        function onLeadChange() {
+            const select = document.getElementById('leadSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption.value) {
+                currentLead = {
+                    id: selectedOption.value,
+                    name: selectedOption.textContent,
+                    email: selectedOption.dataset.email,
+                    phone: selectedOption.dataset.phone
+                };
+                
+                document.getElementById('leadInfo').textContent = currentLead.email ? `${currentLead.email}` : '';
+                showToast(`Selected: ${currentLead.name}`, 'success');
+                loadSavedDocuments();
+            } else {
+                currentLead = null;
+                document.getElementById('leadInfo').textContent = '';
+                document.getElementById('saved-docs-section').classList.add('hidden');
+            }
+        }
+
+        // ===== CATEGORY SWITCHING =====
+        function switchCategory(category) {
+            currentCategory = category;
+            
+            const autoTab = document.getElementById('tab-auto');
+            const homeTab = document.getElementById('tab-home');
+            const autoZone = document.getElementById('auto-zone');
+            const homeZone = document.getElementById('home-zone');
+            
+            if (category === 'auto') {
+                autoTab.className = 'flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-800 text-white';
+                homeTab.className = 'flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+                autoZone.classList.remove('hidden');
+                homeZone.classList.add('hidden');
+            } else {
+                homeTab.className = 'flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-800 text-white';
+                autoTab.className = 'flex-1 py-2 text-xs font-bold tracking-wide rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+                homeZone.classList.remove('hidden');
+                autoZone.classList.add('hidden');
+            }
+        }
+
+        // ===== FILE HANDLING =====
+        function setupFileHandlers() {
+            console.log('=== Setting up file handlers ===');
+            const zones = [
+                { category: 'auto', type: 'signing' },
+                { category: 'auto', type: 'reference' },
+                { category: 'home', type: 'signing' },
+                { category: 'home', type: 'reference' }
+            ];
+            
+            zones.forEach(({category, type}) => {
+                const input = document.getElementById(`${category}-${type}-input`);
+                const dropzone = document.getElementById(`${category}-${type}-dropzone`);
+                
+                if (!input) {
+                    console.error(`Input not found: ${category}-${type}-input`);
+                    return;
+                }
+                if (!dropzone) {
+                    console.error(`Dropzone not found: ${category}-${type}-dropzone`);
+                    return;
+                }
+                
+                console.log(`Setting up handlers for: ${category}-${type}`);
+                
+                input.addEventListener('change', (e) => {
+                    // Convert FileList to Array BEFORE clearing the input
+                    // Clearing input while async function iterates FileList kills remaining files
+                    const filesArray = Array.from(e.target.files);
+                    console.log(`File input changed for ${category}-${type}:`, filesArray.length, 'files');
+                    e.target.value = ''; // safe to clear now — we have a real Array copy
+                    handleFileSelect(filesArray, category, type);
+                });
+                
+                dropzone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('drag-over');
+                });
+                
+                dropzone.addEventListener('dragleave', () => {
+                    dropzone.classList.remove('drag-over');
+                });
+                
+                dropzone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('drag-over');
+                    console.log(`Files dropped on ${category}-${type}:`, e.dataTransfer.files.length, 'files');
+                    handleFileSelect(e.dataTransfer.files, category, type);
+                });
+            });
+            
+            console.log('=== File handlers setup complete ===');
+        }
+
+        async function handleFileSelect(files, category, type) {
+            console.log('=== handleFileSelect CALLED ===');
+            console.log('Files:', files.length, 'Category:', category, 'Type:', type);
+            console.log('Current lead:', currentLead);
+            
+            if (!currentLead) {
+                showToast('⚠️ Select a client first', 'warning');
+                console.error('No client selected!');
+                return;
+            }
+            
+            if (files.length === 0) {
+                console.log('No files selected');
+                return;
+            }
+            
+            let fileIndex = 0;
+            for (const file of files) {
+                console.log(`=== Processing file ${fileIndex + 1}/${files.length}:`, file.name, '===');
+                console.log('File type:', file.type);
+                console.log('File size:', file.size);
+                
+                if (file.type !== 'application/pdf') {
+                    showToast(`${file.name} is not a PDF`, 'error');
+                    console.error('Not a PDF:', file.type);
+                    fileIndex++;
+                    continue;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast(`${file.name} exceeds 10MB`, 'error');
+                    console.error('File too large:', file.size);
+                    fileIndex++;
+                    continue;
+                }
+                
+                try {
+                    // Use timestamp + index + random to ensure unique IDs
+                    const docId = `${Date.now()}_${fileIndex}_${Math.random().toString(36).substr(2, 9)}`;
+                    console.log('Generated unique ID:', docId);
+                    console.log('Getting page count...');
+                    const pageCount = await getPdfPageCount(file);
+                    console.log('Page count:', pageCount);
+                    
+                    // Small delay to ensure unique timestamps
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    
+                    const doc = {
+                        id: docId,
+                        file: file,
+                        name: file.name,
+                        size: file.size,
+                        category: category,
+                        type: type,
+                        pages: pageCount
+                    };
+                    
+                    console.log('Created doc object:', doc);
+                    
+                    documents[category][type].push(doc);
+                    console.log('Added to documents array. Current count:', documents[category][type].length);
+                    console.log('Full documents array:', documents[category][type].map(d => d.name));
+                    
+                    renderDocument(doc, category, type);
+                    updateCounts();
+                    showToast(`✓ Added ${fileIndex + 1}/${files.length}: ${file.name}`, 'success');
+                    console.log('=== File processed successfully ===');
+                } catch (error) {
+                    console.error('Error processing file:', file.name, error);
+                    showToast(`Error adding ${file.name}: ${error.message}`, 'error');
+                }
+                
+                fileIndex++;
+            }
+        }
+
+        async function getPdfPageCount(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                return pdf.numPages;
+            } catch {
+                return 1;
+            }
+        }
+
+        function renderDocument(doc, category, type) {
+            const listId = `${category}-${type}-list`;
+            const list = document.getElementById(listId);
+            
+            const item = document.createElement('div');
+            item.className = 'doc-item flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs';
+            item.dataset.docId = doc.id;
+            
+            const sizeKb = (doc.size / 1024).toFixed(0);
+            
+            item.innerHTML = `
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <i class="fa-solid fa-file-pdf text-red-500"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-slate-800 truncate">${doc.name}</p>
+                        <p class="text-slate-400 text-xs">${doc.pages}p • ${sizeKb}KB</p>
+                    </div>
+                </div>
+                <button onclick="removeDocument('${category}', '${type}', '${doc.id}')" class="p-1 text-slate-400 hover:text-red-600 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            
+            list.appendChild(item);
+            console.log('Rendered document:', doc.name, 'with ID:', doc.id);
+        }
+
+        function removeDocument(category, type, docId) {
+            console.log('Removing document ID:', docId, 'from', category, type);
+            console.log('Before removal:', documents[category][type].length, 'documents');
+            
+            documents[category][type] = documents[category][type].filter(d => d.id !== docId);
+            
+            console.log('After removal:', documents[category][type].length, 'documents');
+            
+            const listId = `${category}-${type}-list`;
+            const item = document.querySelector(`#${listId} [data-doc-id="${docId}"]`);
+            if (item) {
+                item.remove();
+                console.log('Removed DOM element');
+            } else {
+                console.error('Could not find DOM element with ID:', docId);
+            }
+            
+            updateCounts();
+        }
+
+        function updateCounts() {
+            const autoSigningCount = documents.auto.signing.length;
+            const autoReferenceCount = documents.auto.reference.length;
+            const homeSigningCount = documents.home.signing.length;
+            const homeReferenceCount = documents.home.reference.length;
+            
+            document.getElementById('auto-signing-count').textContent = autoSigningCount;
+            document.getElementById('auto-reference-count').textContent = autoReferenceCount;
+            document.getElementById('home-signing-count').textContent = homeSigningCount;
+            document.getElementById('home-reference-count').textContent = homeReferenceCount;
+            
+            const autoTotal = autoSigningCount + autoReferenceCount;
+            const homeTotal = homeSigningCount + homeReferenceCount;
+            const grandTotal = autoTotal + homeTotal;
+            
+            document.getElementById('auto-count').textContent = `(${autoTotal})`;
+            document.getElementById('home-count').textContent = `(${homeTotal})`;
+            document.getElementById('total-docs').textContent = grandTotal;
+            
+            // Disable action buttons when no documents are uploaded
+            const hasDocuments = grandTotal > 0;
+            document.getElementById('btn-verify').disabled = !hasDocuments;
+            document.getElementById('btn-save').disabled = !hasDocuments;
+            document.getElementById('btn-esign').disabled = !hasDocuments;
+            // btn-signwell may not be present (legacy)
+            const _sw = document.getElementById('btn-signwell');
+            if (_sw) _sw.disabled = !hasDocuments;
+            
+            console.log('Updated counts:', {
+                autoSigning: autoSigningCount,
+                autoReference: autoReferenceCount,
+                homeSigning: homeSigningCount,
+                homeReference: homeReferenceCount,
+                total: grandTotal
+            });
+        }
+
+        // ===== AI VERIFICATION =====
+        function formatIssueLocation(issue) {
+            // Format location information for an issue into readable HTML
+            let locationParts = [];
+            
+            // Single document location
+            if (issue.document) {
+                locationParts.push(`<i class="fa-solid fa-file-pdf text-xs mr-1"></i><strong>${issue.document}</strong>`);
+            }
+            if (issue.page) {
+                locationParts.push(`<i class="fa-solid fa-file-lines text-xs mr-1"></i>Page ${issue.page}`);
+            }
+            if (issue.page_section) {
+                locationParts.push(`<i class="fa-solid fa-location-dot text-xs mr-1"></i>${issue.page_section}`);
+            }
+            if (issue.field_name) {
+                locationParts.push(`<i class="fa-solid fa-tag text-xs mr-1"></i>${issue.field_name}`);
+            }
+            
+            // Comparison between two documents (for warnings)
+            if (issue.document_1 && issue.document_2) {
+                locationParts = [];
+                locationParts.push(`
+                    <div class="text-xs text-slate-700 mt-1">
+                        <div class="mb-1">
+                            <i class="fa-solid fa-file-pdf text-xs mr-1"></i><strong>${issue.document_1}</strong>
+                            <span class="mx-2">·</span>
+                            <i class="fa-solid fa-file-lines text-xs mr-1"></i>Page ${issue.document_1_page}
+                            ${issue.document_1_section ? `<span class="mx-2">·</span><i class="fa-solid fa-location-dot text-xs mr-1"></i>${issue.document_1_section}` : ''}
+                            <div class="ml-4 mt-0.5 font-mono text-xs">"${issue.document_1_value}"</div>
+                        </div>
+                        <div>
+                            <i class="fa-solid fa-file-pdf text-xs mr-1"></i><strong>${issue.document_2}</strong>
+                            <span class="mx-2">·</span>
+                            <i class="fa-solid fa-file-lines text-xs mr-1"></i>Page ${issue.document_2_page}
+                            ${issue.document_2_section ? `<span class="mx-2">·</span><i class="fa-solid fa-location-dot text-xs mr-1"></i>${issue.document_2_section}` : ''}
+                            <div class="ml-4 mt-0.5 font-mono text-xs">"${issue.document_2_value}"</div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            if (locationParts.length > 0) {
+                if (typeof locationParts[0] === 'string' && locationParts[0].includes('<div')) {
+                    // Already formatted HTML
+                    return locationParts[0];
+                } else {
+                    // Join with separators
+                    return `<div class="text-xs text-slate-600 mt-1">${locationParts.join(' <span class="mx-1">·</span> ')}</div>`;
+                }
+            }
+            
+            return '';
+        }
+
+        async function verifyAllDocuments() {
+            if (!currentLead) {
+                showToast('Select a client', 'warning');
+                return;
+            }
+            
+            const allDocs = [
+                ...documents.auto.signing,
+                ...documents.auto.reference,
+                ...documents.home.signing,
+                ...documents.home.reference
+            ];
+            
+            if (allDocs.length === 0) {
+                showToast('No documents to verify', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('btn-verify');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Analyzing...</span>';
+            
+            // Hide empty state, show loading
+            document.getElementById('results-empty').classList.add('hidden');
+            document.getElementById('results-panel').classList.remove('hidden');
+            
+            try {
+                const formData = new FormData();
+                allDocs.forEach(doc => formData.append('files', doc.file));
+                formData.append('client_name', currentLead.name);
+                
+                const response = await fetch(`${CONFIG.API_BASE}/api/verify-documents`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    showToast(`Error: ${result.error}`, 'error');
+                    document.getElementById('results-panel').classList.add('hidden');
+                    document.getElementById('results-empty').classList.remove('hidden');
+                } else {
+                    displayVerificationResults(result);
+                }
+            } catch (error) {
+                showToast('Verification failed', 'error');
+                document.getElementById('results-panel').classList.add('hidden');
+                document.getElementById('results-empty').classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Verify</span>';
+            }
+        }
+
+        function displayVerificationResults(data) {
+            // Store results globally
+            lastVerificationResults = data;
+            
+            const status = data.overall_status || 'UNKNOWN';
+            const readyToSend = data.ready_to_send !== undefined ? data.ready_to_send : status === 'PASS';
+            const criticalIssues = data.critical_issues_list || [];
+            const warnings = data.warnings_list || [];
+            
+            // Update timestamp
+            document.getElementById('report-timestamp').textContent = new Date().toLocaleString();
+            
+            // Overall Status Badge
+            const statusHTML = `
+                <span class="status-badge ${status.toLowerCase()}">
+                    ${status === 'PASS' ? '<i class="fa-solid fa-check"></i>' : status === 'WARN' ? '<i class="fa-solid fa-exclamation-triangle"></i>' : '<i class="fa-solid fa-xmark"></i>'}
+                    <span>${readyToSend ? 'READY TO SEND' : 'NOT READY'}</span>
+                </span>
+            `;
+            document.getElementById('overall-status').innerHTML = statusHTML;
+            
+            // Summary Cards
+            const summaryHTML = `
+                <div class="bg-white rounded-lg border border-slate-200 p-4 text-center">
+                    <div class="text-2xl font-bold text-slate-900">${(data.documents_analyzed || []).length}</div>
+                    <div class="text-xs text-slate-500 font-medium mt-1">Documents</div>
+                </div>
+                <div class="bg-white rounded-lg border border-slate-200 p-4 text-center">
+                    <div class="text-2xl font-bold text-red-600">${criticalIssues.length}</div>
+                    <div class="text-xs text-slate-500 font-medium mt-1">Critical</div>
+                </div>
+                <div class="bg-white rounded-lg border border-slate-200 p-4 text-center">
+                    <div class="text-2xl font-bold text-amber-600">${warnings.length}</div>
+                    <div class="text-xs text-slate-500 font-medium mt-1">Warnings</div>
+                </div>
+            `;
+            document.getElementById('summary-cards').innerHTML = summaryHTML;
+            
+            // Issues
+            const issuesContainer = document.getElementById('issues-container');
+            const successState = document.getElementById('success-state');
+            
+            if (criticalIssues.length === 0 && warnings.length === 0) {
+                issuesContainer.innerHTML = '';
+                successState.classList.remove('hidden');
+            } else {
+                successState.classList.add('hidden');
+                
+                let issuesHTML = '';
+                
+                if (criticalIssues.length > 0) {
+                    issuesHTML += `
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Critical Issues</h3>
+                            <div class="space-y-2">
+                    `;
+                    criticalIssues.forEach((issue, index) => {
+                        const locationHTML = formatIssueLocation(issue);
+                        const hasDocument = issue.document || issue.document_1;
+                        issuesHTML += `
+                            <div class="issue-card critical p-3 rounded-lg ${hasDocument ? 'cursor-pointer hover:shadow-md' : ''} transition" ${hasDocument ? `onclick="showErrorPreviewByIndex('critical', ${index})"` : ''}>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex-1">
+                                        <div class="font-semibold text-sm text-red-900 mb-1">${issue.issue || issue.description}</div>
+                                        ${locationHTML}
+                                        ${issue.action || issue.action_required ? `<div class="text-xs text-red-700 mt-2"><i class="fa-solid fa-arrow-right mr-1"></i>${issue.action || issue.action_required}</div>` : ''}
+                                    </div>
+                                    ${hasDocument ? `<div class="flex-shrink-0"><i class="fa-solid fa-eye text-red-500 text-lg"></i></div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    issuesHTML += `</div></div>`;
+                }
+                
+                if (warnings.length > 0) {
+                    issuesHTML += `
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Warnings</h3>
+                            <div class="space-y-2">
+                    `;
+                    warnings.forEach((issue, index) => {
+                        const locationHTML = formatIssueLocation(issue);
+                        const hasDocument = issue.document || issue.document_1;
+                        issuesHTML += `
+                            <div class="issue-card warning p-3 rounded-lg ${hasDocument ? 'cursor-pointer hover:shadow-md' : ''} transition" ${hasDocument ? `onclick="showErrorPreviewByIndex('warning', ${index})"` : ''}>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex-1">
+                                        <div class="font-semibold text-sm text-amber-900 mb-1">${issue.issue || issue.description}</div>
+                                        ${locationHTML}
+                                        ${issue.action || issue.action_required ? `<div class="text-xs text-amber-700 mt-2"><i class="fa-solid fa-arrow-right mr-1"></i>${issue.action || issue.action_required}</div>` : ''}
+                                    </div>
+                                    ${hasDocument ? `<div class="flex-shrink-0"><i class="fa-solid fa-eye text-amber-500 text-lg"></i></div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    issuesHTML += `</div></div>`;
+                }
+                
+                issuesContainer.innerHTML = issuesHTML;
+            }
+        }
+
+        // ===== SAVE TO DATABASE =====
+        async function saveAllDocuments() {
+            if (!currentLead) {
+                showToast('Select a client', 'warning');
+                return;
+            }
+            
+            const allDocs = [
+                ...documents.auto.signing,
+                ...documents.auto.reference,
+                ...documents.home.signing,
+                ...documents.home.reference
+            ];
+            
+            console.log('=== SAVE ALL DOCUMENTS ===');
+            console.log('Total documents to save:', allDocs.length);
+            allDocs.forEach((d, i) => console.log(`  ${i+1}. ${d.name} [${d.category}/${d.type}]`));
+            
+            if (allDocs.length === 0) {
+                showToast('No documents to save', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            
+            let savedCount = 0;
+            let failedCount = 0;
+            const errors = [];
+            
+            for (let i = 0; i < allDocs.length; i++) {
+                const doc = allDocs[i];
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Saving ${i+1}/${allDocs.length}...</span>`;
+                
+                console.log(`--- Saving ${i+1}/${allDocs.length}: ${doc.name} ---`);
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('files[]', doc.file);
+                    formData.append('lead_id', currentLead.id);
+                    formData.append('client_name', currentLead.name);
+                    formData.append('category', doc.category);
+                    formData.append('document_type', doc.type === 'signing' ? 'signing' : 'nonsigning');
+                    
+                    const response = await fetch(`${CONFIG.API_BASE}/api/client-documents/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        console.error('HTTP error:', response.status, errText);
+                        failedCount++;
+                        errors.push(`${doc.name}: HTTP ${response.status}`);
+                        continue;
+                    }
+                    
+                    const result = await response.json();
+                    console.log('Save result:', result);
+                    
+                    if (result.success) {
+                        savedCount++;
+                        console.log(`✓ Saved: ${doc.name}`);
+                    } else {
+                        failedCount++;
+                        const errMsg = result.error || result.message || 'Unknown error';
+                        errors.push(`${doc.name}: ${errMsg}`);
+                        console.error(`✗ Failed: ${doc.name} →`, errMsg);
+                    }
+                } catch (err) {
+                    failedCount++;
+                    errors.push(`${doc.name}: ${err.message}`);
+                    console.error(`✗ Exception saving ${doc.name}:`, err);
+                }
+            }
+            
+            console.log(`=== SAVE COMPLETE: ${savedCount} saved, ${failedCount} failed ===`);
+            if (errors.length) console.error('Errors:', errors);
+            
+            if (savedCount > 0 && failedCount === 0) {
+                showToast(`✓ All ${savedCount} documents saved`, 'success');
+                loadSavedDocuments();
+            } else if (savedCount > 0 && failedCount > 0) {
+                showToast(`Saved ${savedCount}, failed ${failedCount}`, 'warning');
+                loadSavedDocuments();
+            } else {
+                showToast(`✗ Save failed: ${errors[0] || 'Unknown error'}`, 'error');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk text-xs"></i><span>Save</span>';
+        }
+
+        async function saveAndESign() {
+            if (!currentLead) { showToast('Select a client first', 'warning'); return; }
+            const allDocs = [
+                ...documents.auto.signing, ...documents.auto.reference,
+                ...documents.home.signing, ...documents.home.reference
+            ];
+            if (allDocs.length === 0) { showToast('No documents to save', 'warning'); return; }
+
+            const btn = document.getElementById('btn-esign');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Saving…</span>';
+
+            let saved = 0, failed = 0;
+            for (let i = 0; i < allDocs.length; i++) {
+                const doc = allDocs[i];
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Saving ${i+1}/${allDocs.length}…</span>`;
+                try {
+                    const fd = new FormData();
+                    fd.append('files[]', doc.file);
+                    fd.append('lead_id', currentLead.id);
+                    fd.append('client_name', currentLead.name);
+                    fd.append('category', doc.category);
+                    fd.append('document_type', doc.type === 'signing' ? 'signing' : 'nonsigning');
+                    const r = await fetch(`${CONFIG.API_BASE}/api/client-documents/upload`, { method: 'POST', body: fd });
+                    const result = await r.json();
+                    if (result.success) saved++;
+                    else { failed++; console.error('Save failed:', doc.name, result.error); }
+                } catch (e) { failed++; console.error('Save error:', e); }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-pen-nib text-xs"></i><span>Save &amp; Open eSign UI</span>';
+
+            if (saved === 0) {
+                showToast('Save failed — check console', 'error'); return;
+            }
+            if (failed > 0) showToast(`Saved ${saved}, ${failed} failed — opening eSign`, 'warning');
+            else showToast(`✓ All ${saved} docs saved — opening eSign UI`, 'success');
+
+            loadSavedDocuments();
+
+            const params = new URLSearchParams({
+                lead_id: currentLead.id,
+                client_name: currentLead.name
+            });
+            window.open('/signwell-ui?' + params.toString(), '_blank');
+        }
+
+        // ===== PDF ERROR PREVIEW =====
+        let currentPreviewPdf = null;
+        let currentPreviewPage = 1;
+        let currentPreviewError = null;
+
+        function showErrorPreviewByIndex(type, index) {
+            if (!lastVerificationResults) return;
+            
+            const issues = type === 'critical' 
+                ? (lastVerificationResults.critical_issues_list || [])
+                : (lastVerificationResults.warnings_list || []);
+            
+            if (index >= 0 && index < issues.length) {
+                showErrorPreview(issues[index]);
+            }
+        }
+
+        async function showErrorPreview(issue) {
+            console.log('=== SHOW ERROR PREVIEW ===');
+            console.log('Issue object:', issue);
+            
+            const docName = issue.document || issue.document_1;
+            console.log('Looking for document name:', docName);
+            
+            if (!docName) {
+                showToast('No document specified in error', 'warning');
+                return;
+            }
+
+            // Find the document file
+            const allDocs = [
+                ...documents.auto.signing,
+                ...documents.auto.reference,
+                ...documents.home.signing,
+                ...documents.home.reference
+            ];
+            
+            console.log('Available uploaded documents:', allDocs.map(d => d.name));
+            
+            // Clean AI's document reference (strip any paths)
+            let cleanDocName = docName;
+            if (cleanDocName.includes('/')) {
+                cleanDocName = cleanDocName.split('/').pop();
+            }
+            if (cleanDocName.includes('\\')) {
+                cleanDocName = cleanDocName.split('\\').pop();
+            }
+            console.log('Cleaned document name:', cleanDocName);
+            
+            // Try multiple matching strategies
+            let doc = null;
+            
+            // 1. Exact match
+            doc = allDocs.find(d => d.name === cleanDocName);
+            console.log('Strategy 1 (exact):', doc ? doc.name : 'no match');
+            
+            // 2. Case-insensitive match
+            if (!doc) {
+                doc = allDocs.find(d => d.name.toLowerCase() === cleanDocName.toLowerCase());
+                console.log('Strategy 2 (case-insensitive):', doc ? doc.name : 'no match');
+            }
+            
+            // 3. Match without .pdf extension
+            if (!doc) {
+                const nameWithoutExt = cleanDocName.replace(/\.pdf$/i, '');
+                doc = allDocs.find(d => d.name.replace(/\.pdf$/i, '').toLowerCase() === nameWithoutExt.toLowerCase());
+                console.log('Strategy 3 (without extension):', doc ? doc.name : 'no match');
+            }
+            
+            // 4. Partial match (contains)
+            if (!doc) {
+                doc = allDocs.find(d => 
+                    d.name.toLowerCase().includes(cleanDocName.toLowerCase()) || 
+                    cleanDocName.toLowerCase().includes(d.name.toLowerCase())
+                );
+                console.log('Strategy 4 (partial):', doc ? doc.name : 'no match');
+            }
+            
+            // 5. Match first N characters (useful for truncated names)
+            if (!doc && cleanDocName.length > 10) {
+                const shortName = cleanDocName.substring(0, 15).toLowerCase();
+                doc = allDocs.find(d => d.name.toLowerCase().startsWith(shortName));
+                console.log('Strategy 5 (prefix):', doc ? doc.name : 'no match');
+            }
+            
+            // 6. Fuzzy match - remove spaces, underscores, dashes and compare
+            if (!doc) {
+                const normalize = s => s.toLowerCase().replace(/[\s_\-\.]/g, '');
+                const normalizedSearch = normalize(cleanDocName);
+                doc = allDocs.find(d => normalize(d.name).includes(normalizedSearch) || normalizedSearch.includes(normalize(d.name)));
+                console.log('Strategy 6 (fuzzy):', doc ? doc.name : 'no match');
+            }
+            
+            // 7. If we only have one document, use it
+            if (!doc && allDocs.length === 1) {
+                doc = allDocs[0];
+                console.log('Strategy 7 (single doc fallback):', doc.name);
+            }
+            
+            if (!doc) {
+                console.error('Document not found. Searched for:', docName);
+                console.error('Available docs:', allDocs.map(d => d.name));
+                showToast(`Document not found. Try re-uploading files.`, 'error');
+                return;
+            }
+            
+            console.log('Found document:', doc.name);
+
+            try {
+                currentPreviewError = issue;
+                
+                // Load PDF
+                const arrayBuffer = await doc.file.arrayBuffer();
+                currentPreviewPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                // Set page to error page or page 1
+                currentPreviewPage = issue.page || 1;
+                
+                // Update modal
+                document.getElementById('preview-title').textContent = doc.name;
+                document.getElementById('preview-subtitle').textContent = `${issue.issue || 'Issue detected'}`;
+                document.getElementById('total-pages-num').textContent = currentPreviewPdf.numPages;
+                
+                // Render page
+                await renderPreviewPage();
+                
+                // Update error details sidebar
+                updateErrorDetails(issue);
+                
+                // Show modal
+                document.getElementById('error-preview-modal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading PDF preview:', error);
+                showToast('Failed to load PDF preview', 'error');
+            }
+        }
+
+        async function renderPreviewPage() {
+            const page = await currentPreviewPdf.getPage(currentPreviewPage);
+            const canvas = document.getElementById('pdf-canvas');
+            const context = canvas.getContext('2d');
+            
+            // Calculate scale to fit container
+            const container = document.getElementById('pdf-canvas-container');
+            const containerWidth = container.clientWidth || 800;
+            const viewport = page.getViewport({ scale: 1 });
+            const scale = Math.min((containerWidth - 40) / viewport.width, 2.0);
+            const scaledViewport = page.getViewport({ scale: scale });
+            
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
+            
+            await page.render({
+                canvasContext: context,
+                viewport: scaledViewport
+            }).promise;
+            
+            // Update page number
+            document.getElementById('current-page-num').textContent = currentPreviewPage;
+            
+            // Update navigation buttons
+            document.getElementById('prev-page-btn').disabled = currentPreviewPage === 1;
+            document.getElementById('next-page-btn').disabled = currentPreviewPage === currentPreviewPdf.numPages;
+            
+            // Show error highlight if on error page
+            highlightErrorSection();
+        }
+
+        function highlightErrorSection() {
+            const highlight = document.getElementById('error-highlight');
+            const canvas = document.getElementById('pdf-canvas');
+            
+            if (!currentPreviewError || currentPreviewPage !== (currentPreviewError.page || 1)) {
+                highlight.classList.add('hidden');
+                return;
+            }
+            
+            const section = (currentPreviewError.page_section || currentPreviewError.section || '').toLowerCase();
+            const canvasHeight = canvas.height;
+            const canvasWidth = canvas.width;
+            
+            let top, left, width, height;
+            
+            // Calculate position based on section description
+            if (section.includes('top')) {
+                top = 40;
+                height = canvasHeight * 0.25;
+            } else if (section.includes('bottom')) {
+                top = canvasHeight * 0.7;
+                height = canvasHeight * 0.25;
+            } else if (section.includes('middle')) {
+                top = canvasHeight * 0.35;
+                height = canvasHeight * 0.3;
+            } else {
+                // Default: highlight entire page with subtle overlay
+                top = 20;
+                height = canvasHeight - 40;
+            }
+            
+            if (section.includes('left')) {
+                left = 40;
+                width = canvasWidth * 0.4;
+            } else if (section.includes('right')) {
+                left = canvasWidth * 0.55;
+                width = canvasWidth * 0.4;
+            } else {
+                left = 40;
+                width = canvasWidth - 80;
+            }
+            
+            // Apply highlight
+            highlight.style.top = `${top}px`;
+            highlight.style.left = `${left}px`;
+            highlight.style.width = `${width}px`;
+            highlight.style.height = `${height}px`;
+            highlight.classList.remove('hidden');
+        }
+
+        function updateErrorDetails(issue) {
+            const detailsContainer = document.getElementById('preview-error-details');
+            
+            let html = `
+                <div class="space-y-3">
+                    <div class="p-3 rounded-lg ${issue.severity === 'FAIL' ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}">
+                        <div class="text-xs font-bold ${issue.severity === 'FAIL' ? 'text-red-900' : 'text-amber-900'} uppercase tracking-wider mb-2">
+                            ${issue.severity || 'ERROR'}
+                        </div>
+                        <div class="text-sm font-semibold ${issue.severity === 'FAIL' ? 'text-red-800' : 'text-amber-800'} mb-2">
+                            ${issue.issue || 'Issue detected'}
+                        </div>
+            `;
+            
+            if (issue.document) {
+                html += `
+                    <div class="text-xs text-slate-600 space-y-1">
+                        ${issue.page ? `<div><i class="fa-solid fa-file-lines text-xs mr-1"></i>Page ${issue.page}</div>` : ''}
+                        ${issue.page_section ? `<div><i class="fa-solid fa-location-dot text-xs mr-1"></i>${issue.page_section}</div>` : ''}
+                        ${issue.field_name ? `<div><i class="fa-solid fa-tag text-xs mr-1"></i>${issue.field_name}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            if (issue.document_1 && issue.document_2) {
+                html += `
+                    <div class="text-xs text-slate-700 mt-2 pt-2 border-t border-slate-200">
+                        <div class="font-semibold mb-2 text-amber-900">📋 Cross-Document Comparison:</div>
+                        
+                        <div class="bg-white border border-slate-300 rounded p-2 mb-2">
+                            <div class="font-semibold mb-1 flex items-center justify-between">
+                                <span>🔴 Document 1:</span>
+                                <button onclick="viewDocument('${issue.document_1}', ${issue.document_1_page})" class="text-blue-600 hover:text-blue-800 text-xs underline">
+                                    View
+                                </button>
+                            </div>
+                            <div class="ml-2 text-xs text-slate-600">📄 ${issue.document_1}</div>
+                            <div class="ml-2 text-xs text-slate-500">Page ${issue.document_1_page}${issue.document_1_section ? ' · ' + issue.document_1_section : ''}</div>
+                            ${issue.document_1_field ? `<div class="ml-2 text-xs text-slate-500">Field: ${issue.document_1_field}</div>` : ''}
+                            <div class="ml-2 mt-1 font-mono text-xs bg-slate-50 p-1.5 rounded border">"${issue.document_1_value}"</div>
+                        </div>
+                        
+                        <div class="bg-white border border-slate-300 rounded p-2">
+                            <div class="font-semibold mb-1 flex items-center justify-between">
+                                <span>🔵 Document 2:</span>
+                                <button onclick="viewDocument('${issue.document_2}', ${issue.document_2_page})" class="text-blue-600 hover:text-blue-800 text-xs underline">
+                                    View
+                                </button>
+                            </div>
+                            <div class="ml-2 text-xs text-slate-600">📄 ${issue.document_2}</div>
+                            <div class="ml-2 text-xs text-slate-500">Page ${issue.document_2_page}${issue.document_2_section ? ' · ' + issue.document_2_section : ''}</div>
+                            ${issue.document_2_field ? `<div class="ml-2 text-xs text-slate-500">Field: ${issue.document_2_field}</div>` : ''}
+                            <div class="ml-2 mt-1 font-mono text-xs bg-slate-50 p-1.5 rounded border">"${issue.document_2_value}"</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+            `;
+            
+            if (issue.action || issue.action_required) {
+                html += `
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">Action Required</div>
+                        <div class="text-xs text-blue-800">${issue.action || issue.action_required}</div>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            
+            detailsContainer.innerHTML = html;
+        }
+
+        async function viewDocument(docName, pageNum = 1) {
+            console.log('=== VIEW DOCUMENT ===');
+            console.log('Document:', docName, 'Page:', pageNum);
+            
+            // Find the document
+            const allDocs = [
+                ...documents.auto.signing,
+                ...documents.auto.reference,
+                ...documents.home.signing,
+                ...documents.home.reference
+            ];
+            
+            // Clean doc name like in showErrorPreview
+            let cleanDocName = docName;
+            if (cleanDocName.includes('/')) cleanDocName = cleanDocName.split('/').pop();
+            if (cleanDocName.includes('\\')) cleanDocName = cleanDocName.split('\\').pop();
+            
+            // Try matching strategies
+            let doc = allDocs.find(d => d.name === cleanDocName) ||
+                      allDocs.find(d => d.name.toLowerCase() === cleanDocName.toLowerCase()) ||
+                      allDocs.find(d => d.name.replace(/\.pdf$/i, '').toLowerCase() === cleanDocName.replace(/\.pdf$/i, '').toLowerCase()) ||
+                      allDocs.find(d => d.name.toLowerCase().includes(cleanDocName.toLowerCase()));
+            
+            if (!doc) {
+                showToast(`Document not found: ${docName}`, 'error');
+                return;
+            }
+            
+            console.log('Loading document:', doc.name);
+            
+            try {
+                // Load PDF
+                const arrayBuffer = await doc.file.arrayBuffer();
+                currentPreviewPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                currentPreviewPage = Math.min(pageNum, currentPreviewPdf.numPages);
+                
+                // Update modal title
+                document.getElementById('preview-title').textContent = doc.name;
+                document.getElementById('preview-subtitle').textContent = `Viewing page ${currentPreviewPage}`;
+                document.getElementById('total-pages-num').textContent = currentPreviewPdf.numPages;
+                
+                // Render the requested page
+                await renderPreviewPage();
+                
+                showToast(`Switched to ${doc.name}`, 'success');
+            } catch (error) {
+                console.error('Error loading document:', error);
+                showToast('Failed to load document', 'error');
+            }
+        }
+
+        async function changePage(delta) {
+            if (!currentPreviewPdf) return;
+            
+            const newPage = currentPreviewPage + delta;
+            if (newPage < 1 || newPage > currentPreviewPdf.numPages) return;
+            
+            currentPreviewPage = newPage;
+            await renderPreviewPage();
+        }
+
+        function closePreviewModal() {
+            document.getElementById('error-preview-modal').classList.add('hidden');
+            currentPreviewPdf = null;
+            currentPreviewPage = 1;
+            currentPreviewError = null;
+        }
+
+        // ===== SIGNWELL INTEGRATION =====
+
+        function openSignWellSignerUI() {
+            // Pass current lead & category context to the Signing UI via URL params
+            const params = new URLSearchParams();
+            if (currentLead) {
+                params.set('lead_id', currentLead.id);
+                params.set('client_name', currentLead.name);
+            }
+            params.set('category', currentCategory || 'auto');
+            window.open('/signwell-ui?' + params.toString(), '_blank');
+        }
+        
+        function openSignWellModal() {
+            if (!currentLead) {
+                showToast('Select a client first', 'warning');
+                return;
+            }
+            const allDocs = [
+                ...documents.auto.signing, ...documents.auto.reference,
+                ...documents.home.signing, ...documents.home.reference
+            ];
+            if (allDocs.length === 0) {
+                showToast('No documents to send', 'warning');
+                return;
+            }
+            document.getElementById('signwell-signer-name').value = currentLead.name || '';
+            document.getElementById('signwell-signer-email').value = currentLead.email || '';
+            document.getElementById('signwell-message').value = `Hi ${currentLead.name || ''},\n\nPlease review and sign the attached insurance documents.`;
+            updateSignWellDocList();
+            document.getElementById('signwell-modal').classList.remove('hidden');
+            testSignWellConnection();
+        }
+        
+        function closeSignWellModal() {
+            document.getElementById('signwell-modal').classList.add('hidden');
+        }
+        
+        function updateSignWellDocList() {
+            const scope = document.querySelector('input[name="signwell-scope"]:checked').value;
+            const docsToSend = scope === 'signing'
+                ? [...documents.auto.signing, ...documents.home.signing]
+                : [...documents.auto.signing, ...documents.auto.reference, ...documents.home.signing, ...documents.home.reference];
+            const listEl = document.getElementById('signwell-doc-list');
+            if (docsToSend.length === 0) {
+                listEl.innerHTML = '<div class="text-slate-400 italic">No documents in selected scope</div>';
+            } else {
+                listEl.innerHTML = docsToSend.map(d => `
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf text-blue-500 text-xs"></i>
+                        <span class="truncate">${d.name}</span>
+                        <span class="text-slate-400 ml-auto flex-shrink-0">${d.pages}p</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        async function testSignWellConnection() {
+            const statusEl = document.getElementById('signwell-status');
+            statusEl.className = 'p-3 rounded-lg text-xs bg-blue-50 border border-blue-200 text-blue-700';
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Connecting to SignWell...';
+            statusEl.classList.remove('hidden');
+            try {
+                const r = await fetch(`${CONFIG.API_BASE}/api/signwell/test`);
+                const result = await r.json();
+                if (result.success) {
+                    statusEl.className = 'p-3 rounded-lg text-xs bg-green-50 border border-green-200 text-green-700';
+                    statusEl.innerHTML = `<i class="fa-solid fa-check-circle mr-1"></i> Connected as ${result.email || result.name || 'SignWell'}`;
+                } else {
+                    statusEl.className = 'p-3 rounded-lg text-xs bg-red-50 border border-red-200 text-red-700';
+                    statusEl.innerHTML = `<i class="fa-solid fa-exclamation-circle mr-1"></i> ${result.error || 'Connection failed'}`;
+                }
+            } catch (err) {
+                statusEl.className = 'p-3 rounded-lg text-xs bg-red-50 border border-red-200 text-red-700';
+                statusEl.innerHTML = `<i class="fa-solid fa-exclamation-circle mr-1"></i> Cannot reach backend`;
+            }
+        }
+        
+        async function sendViaSignWell() {
+            const signerName = document.getElementById('signwell-signer-name').value.trim();
+            const signerEmail = document.getElementById('signwell-signer-email').value.trim();
+            const message = document.getElementById('signwell-message').value.trim();
+            
+            if (!signerName) { showToast('Signer name is required', 'error'); return; }
+            if (!signerEmail || !signerEmail.includes('@')) { showToast('Valid signer email is required', 'error'); return; }
+            
+            const scope = document.querySelector('input[name="signwell-scope"]:checked').value;
+            const docsToSend = scope === 'signing'
+                ? [...documents.auto.signing, ...documents.home.signing]
+                : [...documents.auto.signing, ...documents.auto.reference, ...documents.home.signing, ...documents.home.reference];
+            
+            if (docsToSend.length === 0) { showToast('No documents to send', 'warning'); return; }
+            
+            const btn = document.getElementById('btn-signwell-send');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...';
+            
+            try {
+                const formData = new FormData();
+                docsToSend.forEach(doc => formData.append('files', doc.file));
+                formData.append('signer_name', signerName);
+                formData.append('signer_email', signerEmail);
+                formData.append('client_name', currentLead.name);
+                formData.append('lead_id', currentLead.id);
+                formData.append('category', currentCategory);
+                formData.append('message', message);
+                formData.append('request_name', `${currentLead.name} - Insurance Documents`);
+                
+                const response = await fetch(`${CONFIG.API_BASE}/api/signwell/send-direct`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error || 'Send failed');
+                
+                showToast(`✅ Documents sent to ${signerEmail} via SignWell!`, 'success');
+                closeSignWellModal();
+                console.log('SignWell document created:', result.document_id);
+                
+            } catch (err) {
+                console.error('SignWell error:', err);
+                showToast(`SignWell error: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Send for Signature';
+            }
+        }
+
+        // ===== SAVED DOCUMENTS =====
+        async function loadSavedDocuments() {
+            if (!currentLead) return;
+
+            const section   = document.getElementById('saved-docs-section');
+            const loading   = document.getElementById('saved-docs-loading');
+            const emptyEl   = document.getElementById('saved-docs-empty');
+            const list      = document.getElementById('saved-docs-list');
+            const countEl   = document.getElementById('saved-docs-count');
+
+            section.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const res  = await fetch(`${CONFIG.API_BASE}/api/client-documents/${currentLead.id}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const docs = data.documents || [];
+
+                loading.classList.add('hidden');
+
+                if (docs.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                    countEl.classList.add('hidden');
+                    return;
+                }
+
+                countEl.textContent = docs.length;
+                countEl.classList.remove('hidden');
+                renderSavedDocs(docs);
+            } catch (err) {
+                loading.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                emptyEl.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-1 text-amber-500"></i> Failed to load: ${err.message}`;
+                console.error('loadSavedDocuments error:', err);
+            }
+        }
+
+        function renderSavedDocs(docs) {
+            const list = document.getElementById('saved-docs-list');
+            list.innerHTML = '';
+
+            const typeColors = {
+                signing:    'bg-indigo-50 text-indigo-700',
+                nonsigning: 'bg-slate-100 text-slate-600'
+            };
+            const typeLabels = { signing: 'Signing', nonsigning: 'Reference' };
+            const catColors  = { auto: 'bg-blue-50 text-blue-700', home: 'bg-orange-50 text-orange-700' };
+
+            docs.forEach(doc => {
+                const sizeKb   = doc.file_size ? `${Math.round(doc.file_size / 1024)} KB` : '';
+                const typeCls  = typeColors[doc.document_type] || typeColors.nonsigning;
+                const typeLabel= typeLabels[doc.document_type] || doc.document_type;
+                const catCls   = catColors[doc.category]  || 'bg-slate-100 text-slate-600';
+                const catLabel = (doc.category || '').toUpperCase();
+
+                const item = document.createElement('div');
+                item.id = `saved-doc-${doc.id}`;
+                item.className = 'flex items-center gap-2 p-2.5 bg-slate-50 hover:bg-white rounded-lg border border-slate-200 transition group';
+                item.innerHTML = `
+                    <i class="fa-solid fa-file-pdf text-red-400 text-sm shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-slate-700 truncate" title="${doc.original_filename}">${doc.original_filename}</p>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded ${catCls}">${catLabel}</span>
+                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded ${typeCls}">${typeLabel}</span>
+                            ${sizeKb ? `<span class="text-[9px] text-slate-400">${sizeKb}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="previewSavedDoc('${doc.id}', '${doc.original_filename.replace(/'/g, "&apos;")}', '${doc.document_type}', '${doc.category}')" 
+                        title="Preview" class="shrink-0 p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition">
+                        <i class="fa-solid fa-eye text-[11px]"></i>
+                    </button>
+                    <button onclick="deleteSavedDoc('${doc.id}', '${doc.original_filename.replace(/'/g, "&apos;")}')" 
+                        title="Delete" class="shrink-0 p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition">
+                        <i class="fa-solid fa-trash text-[11px]"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function previewSavedDoc(docId, docName, docType, category) {
+            const modal   = document.getElementById('saved-doc-preview-modal');
+            const iframe  = document.getElementById('saved-preview-iframe');
+            const title   = document.getElementById('saved-preview-title');
+            const badge   = document.getElementById('saved-preview-badge');
+
+            title.textContent = docName;
+
+            const isSign = docType === 'signing';
+            badge.textContent  = isSign ? 'Signing' : 'Reference';
+            badge.className    = isSign
+                ? 'ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-700'
+                : 'ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600';
+
+            // Point iframe at the inline-view endpoint
+            iframe.src = `${CONFIG.API_BASE}/api/client-documents/view/${docId}`;
+            modal.classList.remove('hidden');
+        }
+
+        function closeSavedDocPreview() {
+            const modal  = document.getElementById('saved-doc-preview-modal');
+            const iframe = document.getElementById('saved-preview-iframe');
+            modal.classList.add('hidden');
+            iframe.src = '';  // stop loading
+        }
+
+        async function deleteSavedDoc(docId, docName) {
+            if (!confirm(`Delete "${docName}" from cloud storage?\n\nThis cannot be undone.`)) return;
+
+            const item = document.getElementById(`saved-doc-${docId}`);
+            if (item) {
+                item.style.opacity = '0.4';
+                item.style.pointerEvents = 'none';
+            }
+
+            try {
+                const res = await fetch(`${CONFIG.API_BASE}/api/client-documents/${docId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                showToast(`Deleted: ${docName}`, 'success');
+                // Remove from DOM immediately, then refresh count
+                if (item) item.remove();
+                const remaining = document.querySelectorAll('[id^="saved-doc-"]').length;
+                const countEl   = document.getElementById('saved-docs-count');
+                const emptyEl   = document.getElementById('saved-docs-empty');
+                if (remaining === 0) {
+                    emptyEl.classList.remove('hidden');
+                    countEl.classList.add('hidden');
+                } else {
+                    countEl.textContent = remaining;
+                }
+            } catch (err) {
+                showToast(`Delete failed: ${err.message}`, 'error');
+                if (item) { item.style.opacity = '1'; item.style.pointerEvents = ''; }
+            }
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('=== PAGE LOADED ===');
+            loadLeads();
+            setupFileHandlers();
+
+            // Close preview modals on Escape
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    closeSavedDocPreview();
+                    closePreviewModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

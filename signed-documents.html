@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Auto-attach JWT cookie to all same-origin API fetch calls -->
+  <script>(function(){var _f=window.fetch;window.fetch=function(input,init){var url=typeof input==='string'?input:(input&&input.url?input.url:'');var same=!url.startsWith('http')||url.startsWith(window.location.origin);if(same){init=Object.assign({},init);init.credentials=init.credentials||'include';}return _f.apply(this,[input,init]);};})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signed Documents Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242736;
+      --border: #2e3248;
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #8b9cb5;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+    .header-nav {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+    .nav-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .nav-btn.primary:hover { background: #5b52e0; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 20px 24px 0;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .stat-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .stat-icon.total   { background: rgba(108,99,255,.15); color: var(--accent2); }
+    .stat-icon.done    { background: rgba(34,197,94,.15);  color: var(--green); }
+    .stat-icon.pending { background: rgba(245,158,11,.15); color: var(--yellow); }
+    .stat-icon.declined{ background: rgba(239,68,68,.15);  color: var(--red); }
+    .stat-value { font-size: 26px; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      padding: 16px 24px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-bar .search-wrap {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+    .filter-bar .search-wrap i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .filter-bar input,
+    .filter-bar select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .filter-bar input { width: 100%; padding-left: 34px; }
+    .filter-bar input:focus,
+    .filter-bar select:focus { border-color: var(--accent); }
+    .filter-bar select option { background: var(--surface2); }
+    .refresh-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+    .refresh-btn.spinning i { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DOCUMENT TABLE ── */
+    .docs-container { padding: 0 24px 40px; }
+    .docs-header {
+      display: flex; align-items: center;
+      padding: 8px 0 14px;
+      font-size: 13px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .docs-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .docs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .docs-table thead th {
+      background: var(--surface2);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .docs-table tbody tr {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .docs-table tbody tr:last-child { border-bottom: none; }
+    .docs-table tbody tr:hover { background: var(--surface2); }
+    .docs-table tbody tr.row-completed td:first-child { box-shadow: inset 3px 0 0 var(--green); }
+    .docs-table tbody tr.row-pending   td:first-child { box-shadow: inset 3px 0 0 var(--yellow); }
+    .docs-table tbody tr.row-declined  td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+    .docs-table td { padding: 11px 14px; vertical-align: middle; }
+    .td-doc {
+      font-weight: 500;
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .td-client {
+      font-weight: 500;
+      max-width: 160px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .td-signer { max-width: 180px; }
+    .td-signer .signer-sub { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .td-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .td-actions { white-space: nowrap; min-width: 220px; }
+    .action-row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+
+    /* status badges */
+    .card-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge-completed { background: rgba(34,197,94,.15);  color: var(--green); }
+    .badge-pending   { background: rgba(245,158,11,.15); color: var(--yellow); }
+    .badge-declined  { background: rgba(239,68,68,.15);  color: var(--red); }
+    .badge-sent      { background: rgba(59,130,246,.15); color: var(--blue); }
+
+    /* category pills */
+    .cat-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .cat-auto   { background: rgba(6,182,212,.15);   color: #22d3ee; }
+    .cat-home   { background: rgba(168,85,247,.15);  color: #c084fc; }
+    .cat-renters{ background: rgba(34,197,94,.15);   color: var(--green); }
+    .cat-other  { background: rgba(148,163,184,.15); color: #94a3b8; }
+
+    /* compact row buttons */
+    .btn-sm {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { color: var(--text); background: var(--surface2); border-color: var(--accent); }
+    .btn-sm.primary { background: var(--accent); color: #fff; border-color: transparent; }
+    .btn-sm.primary:hover { background: #5b52e0; }
+    .btn-sm.success { background: rgba(34,197,94,.1); color: var(--green); border-color: rgba(34,197,94,.25); }
+    .btn-sm.success:hover { background: rgba(34,197,94,.2); }
+    .btn-sm.review { background: rgba(108,99,255,.1); color: var(--accent2); border-color: rgba(108,99,255,.25); }
+    .btn-sm.review:hover { background: rgba(108,99,255,.2); }
+    .btn-sm:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+
+    /* ── EMPTY / LOADING ── */
+    .empty-state, .loading-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+    .empty-state i, .loading-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+      opacity: .3;
+    }
+    .loading-state i { animation: spin .9s linear infinite; opacity: .6; color: var(--accent); }
+    .empty-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty-sub   { font-size: 14px; }
+
+    /* ── MODAL PREVIEW ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90vw;
+      max-width: 900px;
+      height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex; align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .modal-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: none;
+      background: var(--surface2);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: var(--border); color: var(--text); }
+    .modal-body {
+      flex: 1;
+      overflow: hidden;
+    }
+    .modal-body iframe {
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    /* ── EMAIL MODAL ── */
+    .email-modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+    }
+    .email-modal-overlay.open { display: flex; }
+    .email-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 94vw;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .email-modal-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .email-modal-header .em-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: rgba(59,130,246,.15);
+      color: var(--blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .email-modal-title { font-size: 15px; font-weight: 700; flex: 1; }
+    .email-modal-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .email-modal-close {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .email-modal-close:hover { background: var(--border); color: var(--text); }
+    .email-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; max-height: 70vh; overflow-y: auto; }
+    .em-field { display: flex; flex-direction: column; gap: 5px; }
+    .em-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .em-ab-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 11px; padding: 0 2px;
+      line-height: 1; transition: color .15s; flex-shrink: 0;
+    }
+    .em-ab-btn:hover { color: var(--blue); }
+    .em-ab-wrap { position: relative; }
+    .em-ab-dropdown {
+      display: none;
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; z-index: 800;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      max-height: 180px; overflow-y: auto;
+    }
+    .em-ab-dropdown.open { display: block; }
+    .em-ab-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 8px 12px;
+      font-size: 12px; color: var(--text); cursor: pointer;
+      transition: background .12s;
+    }
+    .em-ab-item:hover { background: var(--surface2); }
+    .em-ab-item-email { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .em-ab-del { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+    .em-ab-del:hover { color: var(--red); }
+    .em-ab-empty { padding: 10px 12px; font-size: 12px; color: var(--muted); text-align: center; }
+    .em-input, .em-select, .em-textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+      width: 100%;
+    }
+    .em-select { cursor: pointer; appearance: auto; }
+    .em-select option { background: var(--surface2); color: var(--text); }
+    .em-input:focus, .em-select:focus, .em-textarea:focus { border-color: var(--accent); }
+    .em-textarea { resize: vertical; min-height: 120px; line-height: 1.55; }
+    .em-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .em-attachments {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .em-att-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .em-att-list { display: flex; flex-direction: column; gap: 5px; }
+    .em-att-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text);
+    }
+    .em-att-item i { color: var(--red); width: 14px; text-align: center; }
+    .em-att-item .em-att-tag {
+      margin-left: auto;
+      font-size: 10px; font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+    }
+    .em-att-tag.signed    { background: rgba(34,197,94,.12); color: var(--green); }
+    .em-att-tag.bundle    { background: rgba(108,99,255,.12); color: var(--accent2); }
+    .em-att-tag.reference { background: rgba(59,130,246,.12); color: var(--blue); }
+    .em-remove-btn {
+      background: none; border: none; cursor: pointer; padding: 0 3px; line-height: 1;
+      color: var(--muted); font-size: 12px;
+      opacity: 0; pointer-events: none;
+      transition: color .15s, opacity .15s;
+      flex-shrink: 0;
+    }
+    .em-att-item:hover .em-remove-btn { opacity: 1; pointer-events: auto; }
+    .em-remove-btn:hover { color: var(--red); }
+    .em-restore-btn {
+      background: none; border: none; cursor: pointer; padding: 0 3px; line-height: 1;
+      color: var(--muted); font-size: 11px; flex-shrink: 0;
+      transition: color .15s;
+    }
+    .em-restore-btn:hover { color: var(--green); }
+    .em-att-excluded { opacity: .4; }
+    .em-att-excluded span.em-att-name { text-decoration: line-through; }
+    .em-footer {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .em-footer .em-from {
+      font-size: 12px; color: var(--muted);
+      flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .em-footer .em-from strong { color: var(--text); }
+    .em-send-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .em-send-btn:hover { background: #2563eb; }
+    .em-send-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .em-send-btn.sending i { animation: spin .8s linear infinite; }
+    .em-cancel-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .em-cancel-btn:hover { color: var(--text); background: var(--surface); }
+
+    /* CATEGORY PREVIEW MODAL */
+    .preview-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 10002;
+      padding: 20px;
+    }
+    .preview-modal-overlay.open { display: flex; }
+    .preview-modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 94vw; max-width: 1200px; height: 85vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .preview-modal-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .preview-modal-header .pm-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(59,130,246,.15); color: var(--blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .preview-modal-header.home .pm-icon { background: rgba(34,197,94,.15); color: var(--green); }
+    .preview-modal-title { font-size: 15px; font-weight: 700; }
+    .preview-modal-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .preview-modal-close {
+      width: 30px; height: 30px; border-radius: 7px;
+      border: none; background: transparent;
+      color: var(--muted); cursor: pointer; font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .preview-modal-close:hover { background: var(--border); color: var(--text); }
+    .preview-modal-body {
+      display: flex; flex: 1; overflow: hidden;
+    }
+    .preview-sidebar {
+      width: 320px; border-right: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+    }
+    .preview-doc-item {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .preview-doc-item:hover { background: var(--surface); }
+    .preview-doc-item.active {
+      background: var(--surface);
+      border-left: 3px solid var(--blue);
+    }
+    .preview-doc-item.active.home { border-left-color: var(--green); }
+    .preview-doc-icon {
+      width: 32px; height: 32px; border-radius: 7px;
+      background: rgba(239,68,68,.12); color: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .preview-doc-item.signed .preview-doc-icon {
+      background: rgba(34,197,94,.12); color: var(--green);
+    }
+    .preview-doc-info { flex: 1; min-width: 0; }
+    .preview-doc-name {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .preview-doc-type {
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .preview-viewer {
+      flex: 1; display: flex; flex-direction: column;
+      background: var(--bg);
+    }
+    .preview-viewer-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px; color: var(--muted);
+    }
+    .preview-viewer-empty i { font-size: 48px; opacity: .5; }
+    .preview-viewer-frame {
+      flex: 1; border: none; width: 100%; height: 100%;
+    }
+
+    /* ── PREVIEW DOC ACTIONS ── */
+    .pm-doc-actions {
+      display: flex; gap: 4px;
+      opacity: 0; transition: opacity .15s;
+      pointer-events: none;
+    }
+    .preview-doc-item:hover .pm-doc-actions { opacity: 1; pointer-events: auto; }
+    .pm-action-btn {
+      flex: 1; padding: 3px 0; border: none; border-radius: 4px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 3px;
+      transition: filter .15s;
+    }
+    .pm-action-btn:hover { filter: brightness(1.15); }
+    .pm-replace-btn { background: #2563eb; color: #fff; }
+    .pm-delete-btn  { background: #dc2626; color: #fff; }
+
+    /* ── AUTO-REFRESH INDICATOR ── */
+    .auto-refresh-bar {
+      position: fixed;
+      bottom: 18px; right: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 200;
+    }
+    .pulse {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-anim 2s infinite;
+    }
+    @keyframes pulse-anim {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.8); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 60px; right: 22px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text);
+      z-index: 999;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .sync-btn.syncing i { animation: spin .8s linear infinite; }
+    .sync-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      background: rgba(108,99,255,.15); color: var(--accent2);
+      margin-left: 6px;
+    }
+    .toast.syncing { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── POST-SIGN PROCESSING PANEL ── */
+    .postsign-section {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 16px 24px 0;
+    }
+    .postsign-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .postsign-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+      flex: 1;
+    }
+    .postsign-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background .15s;
+    }
+    .postsign-toggle-btn:hover { background: var(--surface); color: var(--text); }
+    .postsign-body { display: none; }
+    .postsign-body.open { display: block; }
+
+    .ps-client-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .ps-client-bar input {
+      flex: 1;
+      min-width: 220px;
+      max-width: 320px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    .ps-client-bar input:focus { border-color: var(--blue); }
+    .ps-load-btn {
+      padding: 7px 16px;
+      border-radius: 8px;
+      background: var(--blue);
+      border: none;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .ps-load-btn:hover { background: #2563eb; }
+
+    .ps-log-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .ps-log-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .ps-log-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .ps-log-card-header:hover { background: rgba(255,255,255,.04); }
+    .ps-log-card-header .ps-send-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+    .ps-log-card-header .ps-send-date { font-size: 11px; color: var(--muted); }
+    .ps-status-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    .ps-status-pending  { background: rgba(245,158,11,.15);  color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+    .ps-status-completed{ background: rgba(16,185,129,.12);  color: #10b981; border: 1px solid rgba(16,185,129,.25); }
+
+    .ps-file-list { padding: 4px 14px 12px; border-top: 1px solid var(--border); display: none; }
+    .ps-file-list.open { display: block; }
+    .ps-file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .ps-file-row:last-child { border-bottom: none; }
+    .ps-file-name { flex: 1; font-size: 12px; color: var(--text); }
+    .ps-cat-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+    .ps-cat-auto  { background: rgba(6,182,212,.1);  color: #06b6d4; border-color: rgba(6,182,212,.3); }
+    .ps-cat-home  { background: rgba(139,92,246,.1); color: #8b5cf6; border-color: rgba(139,92,246,.3); }
+    .ps-move-btn {
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .ps-move-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--blue); }
+    .ps-move-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .ps-bundle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,.03);
+      border-radius: 8px;
+    }
+    .ps-bundle-label { font-size: 11px; color: var(--muted); flex: 1; }
+    .ps-bundle-link {
+      font-size: 11px;
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .ps-bundle-link:hover { text-decoration: underline; }
+    .ps-empty { font-size: 12px; color: var(--muted); padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Authentication Guard (server-side JWT verification) -->
+  <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-brand">
+      <i class="fa-solid fa-file-signature"></i>
+      Signed Documents Viewer
+    </div>
+    <nav class="header-nav">
+      <a href="/document-upload-dashboard" class="nav-btn">
+        <i class="fa-solid fa-arrow-left fa-xs"></i> DPC
+      </a>
+      <a href="/signwell-ui" class="nav-btn">
+        <i class="fa-solid fa-pen-to-square fa-xs"></i> Signing UI
+      </a>
+      <button class="nav-btn sync-btn" id="syncBtn" onclick="syncStatus()" title="Poll SignWell API for latest signing status on all pending documents">
+        <i class="fa-solid fa-cloud-arrow-down fa-xs"></i> Sync Status
+      </button>
+      <button class="nav-btn primary" onclick="loadDocuments()">
+        <i class="fa-solid fa-rotate-right fa-xs"></i> Refresh
+      </button>
+    </nav>
+  </header>
+
+  <!-- BREADCRUMB -->
+  <div style="background:#1a1d27;border-bottom:1px solid #2e3248;padding:6px 24px;display:flex;align-items:center;gap:6px;font-size:11px;flex-wrap:wrap;">
+    <a href="/" style="color:#94a3b8;text-decoration:none;display:flex;align-items:center;gap:4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+      <i class="fa-solid fa-house" style="font-size:9px;"></i> Leads
+    </a>
+    <i class="fa-solid fa-chevron-right" style="font-size:8px;color:#475569;"></i>
+    <a href="/auto" style="color:#94a3b8;text-decoration:none;display:flex;align-items:center;gap:4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+      <i class="fa-solid fa-car" style="font-size:9px;"></i> Auto
+    </a>
+    <i class="fa-solid fa-chevron-right" style="font-size:8px;color:#475569;"></i>
+    <a href="/coverpage" style="color:#94a3b8;text-decoration:none;display:flex;align-items:center;gap:4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+      <i class="fa-solid fa-file-contract" style="font-size:9px;"></i> Auto Cover
+    </a>
+    <i class="fa-solid fa-chevron-right" style="font-size:8px;color:#475569;"></i>
+    <a href="/document-upload-dashboard" style="color:#94a3b8;text-decoration:none;display:flex;align-items:center;gap:4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+      <i class="fa-solid fa-shield-check" style="font-size:9px;"></i> Doc Processing
+    </a>
+    <i class="fa-solid fa-chevron-right" style="font-size:8px;color:#475569;"></i>
+    <a href="/signwell-ui" style="color:#94a3b8;text-decoration:none;display:flex;align-items:center;gap:4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+      <i class="fa-solid fa-pen-nib" style="font-size:9px;"></i> eSign
+    </a>
+    <i class="fa-solid fa-chevron-right" style="font-size:8px;color:#475569;"></i>
+    <span style="display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-weight:600;color:#a78bfa;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);">
+      <i class="fa-solid fa-inbox" style="font-size:9px;"></i> Signed Docs
+    </span>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-icon total"><i class="fa-solid fa-inbox"></i></div>
+      <div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-label">Total Sent</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon done"><i class="fa-solid fa-circle-check"></i></div>
+      <div>
+        <div class="stat-value" id="statCompleted">—</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon pending"><i class="fa-solid fa-clock"></i></div>
+      <div>
+        <div class="stat-value" id="statPending">—</div>
+        <div class="stat-label">Pending</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon declined"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div>
+        <div class="stat-value" id="statDeclined">—</div>
+        <div class="stat-label">Declined</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST-SIGN PROCESSING PANEL -->
+  <div class="postsign-section">
+    <div class="postsign-header" onclick="togglePostSign()">
+      <i class="fa-solid fa-code-branch" style="color:var(--accent2);font-size:13px;"></i>
+      <h2>Post-Sign Processing <span style="font-size:11px;font-weight:400;color:var(--muted);">— Token tracking &amp; manual category override</span></h2>
+      <button class="postsign-toggle-btn" id="psToggleBtn"><i class="fa-solid fa-chevron-down fa-xs"></i> Show</button>
+    </div>
+    <div class="postsign-body" id="postsignBody">
+      <div class="ps-client-bar">
+        <input type="text" id="psClientInput" placeholder="Client name…" onkeydown="if(event.key==='Enter') loadSendLog()" />
+        <button class="ps-load-btn" onclick="loadSendLog()"><i class="fa-solid fa-magnifying-glass fa-xs"></i> Load</button>
+        <span id="psStatusMsg" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+      <div class="ps-log-list" id="psLogList">
+        <div class="ps-empty">Enter a client name above and click Load to see send history.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="searchInput" placeholder="Search by client name, signer…" oninput="applyFilters()" />
+    </div>
+    <select id="filterCategory" onchange="applyFilters()">
+      <option value="">All Categories</option>
+      <option value="auto">Auto</option>
+      <option value="home">Home</option>
+      <option value="renters">Renters</option>
+      <option value="commercial">Commercial</option>
+    </select>
+    <select id="filterStatus" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="completed">Completed</option>
+      <option value="declined">Declined</option>
+    </select>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadDocuments()">
+      <i class="fa-solid fa-rotate-right"></i> Refresh
+    </button>
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div class="docs-container">
+    <div class="docs-header">
+      <span id="docsCount">Loading…</span>
+    </div>
+    <div class="docs-table-wrap" id="docGrid">
+      <div class="loading-state">
+        <i class="fa-solid fa-circle-notch"></i>
+        <div class="empty-title">Loading signed documents…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORY PREVIEW MODAL (for reviewing all documents in category) -->
+  <div class="preview-modal-overlay" id="categoryPreviewModal">
+    <div class="preview-modal">
+      <div class="preview-modal-header" id="pmHeader">
+        <div class="pm-icon"><i class="fa-solid fa-folder-open"></i></div>
+        <div style="flex:1">
+          <div class="preview-modal-title" id="pmTitle">Category Documents</div>
+          <div class="preview-modal-sub" id="pmSub">Loading documents…</div>
+        </div>
+        <button class="preview-modal-close" onclick="closeCategoryPreview()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="preview-modal-body">
+        <div class="preview-sidebar" id="pmDocList">
+          <div class="preview-viewer-empty">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <div>Loading documents…</div>
+          </div>
+        </div>
+        <div class="preview-viewer" id="pmViewer">
+          <div class="preview-viewer-empty">
+            <i class="fa-solid fa-file-pdf"></i>
+            <div>Select a document to preview</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMAIL COMPOSE MODAL -->
+  <div class="email-modal-overlay" id="emailModal">
+    <div class="email-modal">
+      <div class="email-modal-header">
+        <div class="em-icon"><i class="fa-solid fa-envelope"></i></div>
+        <div style="flex:1">
+          <div class="email-modal-title">Send Document Package</div>
+          <div class="email-modal-sub" id="emModalSub">Signed PDF + Reference Documents</div>
+        </div>
+        <button class="email-modal-close" onclick="closeEmailModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="email-modal-body">
+        <datalist id="emAddressBookList"></datalist>
+        <div class="em-row">
+          <div class="em-field">
+            <label class="em-label">
+              <span><i class="fa-solid fa-at fa-xs"></i> To</span>
+              <button class="em-ab-btn" type="button" title="Address book" onclick="toggleAddressBook('emToDropdown','emTo',event)"><i class="fa-solid fa-address-book"></i></button>
+            </label>
+            <div class="em-ab-wrap">
+              <input class="em-input" type="email" id="emTo" placeholder="recipient@example.com" list="emAddressBookList" autocomplete="off" />
+              <div class="em-ab-dropdown" id="emToDropdown"></div>
+            </div>
+          </div>
+          <div class="em-field">
+            <label class="em-label">
+              <span><i class="fa-solid fa-at fa-xs"></i> CC</span>
+              <button class="em-ab-btn" type="button" title="Address book" onclick="toggleAddressBook('emCcDropdown','emCc',event)"><i class="fa-solid fa-address-book"></i></button>
+            </label>
+            <div class="em-ab-wrap">
+              <input class="em-input" type="email" id="emCc" placeholder="cc@example.com (optional)" list="emAddressBookList" autocomplete="off" />
+              <div class="em-ab-dropdown" id="emCcDropdown"></div>
+            </div>
+          </div>
+        </div>
+        <div class="em-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <div class="em-field">
+            <label class="em-label"><i class="fa-solid fa-list fa-xs"></i> Policy Type</label>
+            <select class="em-select" id="emPolicyType" onchange="updateEmailSubject()">
+              <option value="Home">Home</option>
+              <option value="Home and Rented">Home and Rented</option>
+              <option value="Tenant">Tenant</option>
+              <option value="Auto">Auto</option>
+            </select>
+          </div>
+          <div class="em-field">
+            <label class="em-label"><i class="fa-solid fa-hashtag fa-xs"></i> Customer Code</label>
+            <input class="em-input" type="text" id="emCustomerCode" placeholder="e.g. SM1510" oninput="updateEmailSubject()" />
+          </div>
+          <div class="em-field">
+            <label class="em-label"><i class="fa-solid fa-tag fa-xs"></i> Reference #</label>
+            <input class="em-input" type="text" id="emReferenceNo" placeholder="e.g. B4886" oninput="updateEmailSubject()" />
+          </div>
+          <div class="em-field">
+            <label class="em-label"><i class="fa-solid fa-calendar fa-xs"></i> Effective Date</label>
+            <input class="em-input" type="date" id="emEffectiveDate" onchange="updateEmailSubject()" />
+          </div>
+        </div>
+        <div class="em-field">
+          <label class="em-label"><i class="fa-solid fa-heading fa-xs"></i> Subject</label>
+          <input class="em-input" type="text" id="emSubject" placeholder="Subject line" />
+        </div>
+        <div class="em-field">
+          <label class="em-label"><i class="fa-solid fa-align-left fa-xs"></i> Message Body</label>
+          <textarea class="em-textarea" id="emBody" rows="6" placeholder="Email body text…"></textarea>
+        </div>
+        <div class="em-attachments" id="emAttachmentsBox">
+          <div class="em-att-title"><i class="fa-solid fa-paperclip fa-xs"></i> Attachments (auto-included)</div>
+          <div class="em-att-list" id="emAttList">
+            <div class="em-att-item"><i class="fa-solid fa-arrow-rotate-right fa-xs"></i> <span style="color:var(--muted)">Will be fetched when sending…</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="em-footer">
+        <span class="em-from" id="emFromLabel"><strong>From:</strong> loading…</span>
+        <button class="em-cancel-btn" onclick="closeEmailModal()">Cancel</button>
+        <button class="em-send-btn" id="emSendBtn" onclick="sendEmail()">
+          <i class="fa-solid fa-paper-plane"></i> Send Email
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF PREVIEW MODAL -->
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal">
+      <div class="modal-header">
+        <i class="fa-solid fa-file-pdf" style="color:var(--red)"></i>
+        <div class="modal-title" id="previewTitle">Document Preview</div>
+        <a id="previewDownload" href="#" download class="action-btn success" style="margin-right:4px">
+          <i class="fa-solid fa-download fa-xs"></i> Download
+        </a>
+        <button class="modal-close" onclick="closePreview()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <iframe id="previewFrame" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTO-REFRESH INDICATOR -->
+  <div class="auto-refresh-bar">
+    <div class="pulse"></div>
+    <span id="refreshCountdown">Auto-refresh in 30s</span>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Hidden file input for replacing documents in the preview modal -->
+  <input type="file" id="pmReplaceFileInput" accept=".pdf,application/pdf" style="display:none" onchange="handleReplaceFileSelected()">
+
+  <script>
+    const API = 'http://localhost:5000';
+    let allRecords = [];
+    let refreshTimer = null;
+    let countdown = 30;
+
+    // ── LOAD ──────────────────────────────────────────
+    async function loadDocuments() {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('spinning');
+
+      try {
+        const [statsRes, docsRes] = await Promise.all([
+          fetch(`${API}/api/signed-documents/stats`),
+          fetch(`${API}/api/signed-documents`)
+        ]);
+
+        if (statsRes.ok) {
+          const sd = await statsRes.json();
+          if (sd.stats) {
+            document.getElementById('statTotal').textContent     = sd.stats.total     ?? 0;
+            document.getElementById('statCompleted').textContent = sd.stats.completed ?? 0;
+            document.getElementById('statPending').textContent   = sd.stats.pending   ?? 0;
+            document.getElementById('statDeclined').textContent  = sd.stats.declined  ?? 0;
+          }
+        }
+
+        if (!docsRes.ok) throw new Error(`HTTP ${docsRes.status}`);
+        const data = await docsRes.json();
+        allRecords = data.records || [];
+        applyFilters();
+        resetCountdown();
+      } catch (err) {
+        showToast('Failed to load: ' + err.message, 'error');
+        document.getElementById('docGrid').innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div class="empty-title">Failed to load</div>
+            <div class="empty-sub">${err.message}</div>
+          </div>`;
+      } finally {
+        btn.classList.remove('spinning');
+      }
+    }
+
+    // ── FILTER ────────────────────────────────────────
+    function applyFilters() {
+      const search   = document.getElementById('searchInput').value.trim().toLowerCase();
+      const category = document.getElementById('filterCategory').value.toLowerCase();
+      const status   = document.getElementById('filterStatus').value.toLowerCase();
+
+      const filtered = allRecords.filter(r => {
+        const matchSearch = !search ||
+          (r.client_name || '').toLowerCase().includes(search) ||
+          (r.recipient_name || '').toLowerCase().includes(search) ||
+          (r.recipient_email || '').toLowerCase().includes(search) ||
+          (r.request_id  || '').toLowerCase().includes(search);
+        const matchCat = !category || (r.category || '').toLowerCase() === category;
+        const matchSt  = !status   || (r.status   || '').toLowerCase() === status;
+        return matchSearch && matchCat && matchSt;
+      });
+
+      renderCards(filtered);
+    }
+
+    // ── RENDER ────────────────────────────────────────
+    function renderCards(records) {
+      const grid  = document.getElementById('docGrid');
+      const count = document.getElementById('docsCount');
+
+      if (records.length === 0) {
+        count.textContent = '0 records';
+        grid.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-folder-open"></i>
+            <div class="empty-title">No documents found</div>
+            <div class="empty-sub">Try adjusting your filters, or send some documents for signing first.</div>
+          </div>`;
+        return;
+      }
+
+      count.textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
+      grid.innerHTML = `
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Client</th>
+              <th>Signer</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Sent</th>
+              <th>Completed</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(rec => buildCard(rec)).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function buildCard(rec) {
+      const status     = (rec.status || 'pending').toLowerCase();
+      const category   = rec.category || 'other';
+      const catLabel   = category.charAt(0).toUpperCase() + category.slice(1);
+      const clientName = rec.client_name || 'Unknown Client';
+      const reqId      = rec.request_id  || '';
+      const docName    = rec.document_name || rec.request_name || 'Untitled Document';
+      const leadId     = rec.lead_id || '';
+
+      const badgeClass = { completed:'badge-completed', declined:'badge-declined', pending:'badge-pending', sent:'badge-sent' }[status] || 'badge-pending';
+      const catClass   = { auto:'cat-auto', home:'cat-home', homeowners:'cat-home', renters:'cat-renters', rental:'cat-renters' }[category.toLowerCase()] || 'cat-other';
+      const catIcon    = { auto:'fa-car', home:'fa-house', homeowners:'fa-house', renters:'fa-building' }[category.toLowerCase()] || 'fa-file';
+
+      const sentDate = rec.created_at   ? fmtDateShort(rec.created_at)   : '—';
+      const compDate = rec.completed_at ? fmtDateShort(rec.completed_at) : '—';
+
+      const hasSigned = !!rec.signed_pdf_url;
+      const hasBundle = !!rec.bundle_pdf_url;
+
+      // Review links back to DPC pre-loaded with this client — side-by-side with reference docs
+      const reviewUrl = `/document-upload-dashboard?client_name=${encodeURIComponent(clientName)}${leadId ? '&lead_id=' + encodeURIComponent(leadId) : ''}`;
+
+      const viewSignedBtn = hasSigned
+        ? `<button class="btn-sm success" onclick="openPreview('${escAttr(rec.signed_pdf_url)}','Signed – ${escAttr(clientName)}','${escAttr(rec.signed_pdf_url)}')"><i class="fa-solid fa-eye fa-xs"></i> Signed</button>`
+        : `<button class="btn-sm" disabled title="Not yet ready"><i class="fa-solid fa-eye fa-xs"></i> Signed</button>`;
+
+      const viewBundleBtn = hasBundle
+        ? `<button class="btn-sm primary" onclick="openPreview('${escAttr(rec.bundle_pdf_url)}','Bundle – ${escAttr(clientName)}','${escAttr(rec.bundle_pdf_url)}')"><i class="fa-solid fa-layer-group fa-xs"></i> Bundle</button>`
+        : '';
+
+      const dlBtn = (hasSigned || hasBundle)
+        ? `<button class="btn-sm" onclick="downloadDoc('${escAttr(reqId)}','${hasBundle ? 'bundle' : 'signed'}')"><i class="fa-solid fa-download fa-xs"></i></button>`
+        : '';
+
+      const reviewBtn = status === 'completed'
+        ? `<a class="btn-sm review" href="${reviewUrl}" title="Open DPC with this client to review signed doc against reference docs"><i class="fa-solid fa-magnifying-glass fa-xs"></i> Review</a>`
+        : '';
+
+      // Email and Preview buttons - one set for AUTO, one for HOME
+      const emailAutoBtn = status === 'completed'
+        ? `<button class="btn-sm" style="color:var(--blue);border-color:rgba(59,130,246,.25);background:rgba(59,130,246,.08)" onclick="openCategoryEmailModal('${escAttr(clientName)}','${escAttr(leadId)}','AUTO')" title="Send all AUTO documents via email"><i class="fa-solid fa-car fa-xs"></i> Auto</button>`
+        : '';
+
+      const previewAutoBtn = status === 'completed'
+        ? `<button class="btn-sm" style="color:var(--blue);border-color:rgba(59,130,246,.25);background:rgba(59,130,246,.05)" onclick="openCategoryPreviewModal('${escAttr(clientName)}','${escAttr(leadId)}','AUTO')" title="Preview AUTO documents"><i class="fa-solid fa-eye fa-xs"></i></button>`
+        : '';
+
+      const emailHomeBtn = status === 'completed'
+        ? `<button class="btn-sm" style="color:var(--green);border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.08)" onclick="openCategoryEmailModal('${escAttr(clientName)}','${escAttr(leadId)}','HOME')" title="Send all HOME documents via email"><i class="fa-solid fa-house fa-xs"></i> Home</button>`
+        : '';
+
+      const previewHomeBtn = status === 'completed'
+        ? `<button class="btn-sm" style="color:var(--green);border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.05)" onclick="openCategoryPreviewModal('${escAttr(clientName)}','${escAttr(leadId)}','HOME')" title="Preview HOME documents"><i class="fa-solid fa-eye fa-xs"></i></button>`
+        : '';
+
+      const checkBtn = status === 'pending'
+        ? `<button class="btn-sm" onclick="syncSingle('${escAttr(reqId)}')" title="Check SignWell for latest status"><i class="fa-solid fa-cloud-arrow-down fa-xs"></i> Check</button>`
+        : '';
+
+      return `
+        <tr class="row-${escAttr(status)}">
+          <td class="td-doc" title="${escTitle(docName)}">${escHtml(docName)}</td>
+          <td class="td-client" title="${escTitle(clientName)}">${escHtml(clientName)}</td>
+          <td class="td-signer">
+            <div>${escHtml(rec.recipient_name || '—')}</div>
+            <div class="signer-sub">${escHtml(rec.recipient_email || '')}</div>
+          </td>
+          <td><span class="cat-pill ${catClass}"><i class="fa-solid ${catIcon} fa-xs"></i> ${catLabel}</span></td>
+          <td><span class="card-badge ${badgeClass}">${escHtml(status)}</span></td>
+          <td class="td-date">${sentDate}</td>
+          <td class="td-date">${compDate}</td>
+          <td class="td-actions">
+            <div class="action-row">
+              ${viewSignedBtn}
+              ${viewBundleBtn}
+              ${reviewBtn}
+              ${emailAutoBtn}
+              ${previewAutoBtn}
+              ${emailHomeBtn}
+              ${previewHomeBtn}
+              ${checkBtn}
+              ${dlBtn}
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    // ── CATEGORY EMAIL MODAL ───────────────────────────
+    let _emailClientName = '';
+    let _emailLeadId = '';
+    let _emailCategory = '';
+    let _emailAttachments = [];      // full list fetched from server
+    let _emailExcludedPaths = new Set(); // paths removed from this send only
+
+    async function openCategoryEmailModal(clientName, leadId, category) {
+      _emailClientName = clientName;
+      _emailLeadId = leadId;
+      _emailCategory = category;
+
+      const catLabel = category === 'AUTO' ? 'Auto Insurance' : 'Home Insurance';
+      const catIcon = category === 'AUTO' ? '🚗' : '🏠';
+
+      document.getElementById('emTo').value = abGetDefault();
+      document.getElementById('emCc').value = '';
+
+      // Set policy type dropdown based on category
+      document.getElementById('emPolicyType').value = category === 'AUTO' ? 'Auto' : 'Home';
+      document.getElementById('emCustomerCode').value = '';
+      document.getElementById('emReferenceNo').value = '';
+      // Set effective date to today
+      const _today = new Date();
+      const _yyyy = _today.getFullYear();
+      const _mm = String(_today.getMonth() + 1).padStart(2, '0');
+      const _dd = String(_today.getDate()).padStart(2, '0');
+      document.getElementById('emEffectiveDate').value = `${_yyyy}-${_mm}-${_dd}`;
+      updateEmailSubject();
+      const _effDateFmt = formatEffectiveDate(document.getElementById('emEffectiveDate').value);
+      document.getElementById('emBody').value =
+        `Hi Team,\n\nPlease find all ${catLabel.toLowerCase()} documents for ${clientName} attached` +
+        ` the effective date is ${_effDateFmt}\n\nRegards,\nEldho George`;
+
+      document.getElementById('emModalSub').textContent = `${clientName} · ${catLabel}`;
+
+      // Show loading state for attachments
+      document.getElementById('emAttList').innerHTML = `
+        <div class="em-att-item" style="color:var(--muted)">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${category} documents...
+        </div>`;
+
+      // Fetch actual list of attachments for this category
+      try {
+        const attResp = await fetch(`${API}/api/email-preview-attachments-category`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_name: clientName, lead_id: leadId, category: category })
+        });
+        
+        if (attResp.ok) {
+          const attData = await attResp.json();
+          const attachments = attData.attachments || [];
+          
+          if (attachments.length > 0) {
+            _emailAttachments = attachments;
+            _emailExcludedPaths = new Set();
+            renderEmailAttachments();
+          } else {
+            document.getElementById('emAttList').innerHTML = `
+              <div class="em-att-item" style="color:var(--muted)">
+                <i class="fa-solid fa-info-circle"></i> No ${category} documents found for ${clientName}
+              </div>`;
+          }
+        } else {
+          throw new Error('Failed to load attachments');
+        }
+      } catch (err) {
+        console.error('Attachment preview error:', err);
+        document.getElementById('emAttList').innerHTML = `
+          <div class="em-att-item" style="color:var(--yellow)">
+            <i class="fa-solid fa-exclamation-triangle"></i> Could not preview attachments (will be included when sending)
+          </div>`;
+      }
+
+      fetch(`${API}/api/email-config`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          document.getElementById('emFromLabel').innerHTML =
+            `<strong>From:</strong> ${d?.sender || 'Set MS_OFFICE_EMAIL in .env'}`;
+        })
+        .catch(() => {
+          document.getElementById('emFromLabel').innerHTML =
+            '<strong>From:</strong> Set MS_OFFICE_EMAIL in .env';
+        });
+
+      const btn = document.getElementById('emSendBtn');
+      btn.disabled = false;
+      btn.classList.remove('sending');
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Email';
+      btn.style.background = '';
+
+      document.getElementById('emailModal').classList.add('open');
+      setTimeout(() => document.getElementById('emTo').focus(), 80);
+    }
+
+    function closeEmailModal() {
+      document.getElementById('emailModal').classList.remove('open');
+      _emailClientName = '';
+      _emailLeadId = '';
+      _emailCategory = '';
+      _emailAttachments = [];
+      _emailExcludedPaths = new Set();
+      document.getElementById('emPolicyType').value = 'Home';
+      document.getElementById('emCustomerCode').value = '';
+      document.getElementById('emReferenceNo').value = '';
+      document.getElementById('emEffectiveDate').value = '';
+    }
+
+    // ── ADDRESS BOOK ─────────────────────────────────
+    const _AB_KEY = 'em_address_book';
+    const _AB_DEFAULT = 'plprocessing@kmibrokers.com';
+
+    function abLoad() {
+      try {
+        const raw = localStorage.getItem(_AB_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        if (!list.includes(_AB_DEFAULT)) list.unshift(_AB_DEFAULT);
+        return list;
+      } catch(e) { return [_AB_DEFAULT]; }
+    }
+
+    function abSave(list) {
+      try { localStorage.setItem(_AB_KEY, JSON.stringify(list)); } catch(e) {}
+    }
+
+    function abGetDefault() {
+      const list = abLoad();
+      return list[0] || _AB_DEFAULT;
+    }
+
+    function abAdd(email) {
+      if (!email || !email.includes('@')) return;
+      email = email.trim().toLowerCase();
+      const list = abLoad();
+      const idx = list.indexOf(email);
+      if (idx > -1) list.splice(idx, 1);
+      list.unshift(email);   // most-recently-used first
+      abSave(list);
+      abRefreshDatalist();
+    }
+
+    function abRemove(email) {
+      if (email === _AB_DEFAULT) return;  // protect the default
+      const list = abLoad().filter(e => e !== email);
+      abSave(list);
+      abRefreshDatalist();
+    }
+
+    function abRefreshDatalist() {
+      const dl = document.getElementById('emAddressBookList');
+      if (!dl) return;
+      dl.innerHTML = abLoad().map(e => `<option value="${e}">`).join('');
+    }
+
+    function toggleAddressBook(dropdownId, inputId, event) {
+      event.stopPropagation();
+      // close any other open dropdown first
+      document.querySelectorAll('.em-ab-dropdown.open').forEach(d => {
+        if (d.id !== dropdownId) d.classList.remove('open');
+      });
+      const dd = document.getElementById(dropdownId);
+      if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+      const list = abLoad();
+      if (list.length === 0) {
+        dd.innerHTML = '<div class="em-ab-empty">No saved addresses</div>';
+      } else {
+        dd.innerHTML = list.map(e =>
+          `<div class="em-ab-item" onclick="abSelect('${inputId}','${e}','${dropdownId}')">`+
+          `<span class="em-ab-item-email">${e}</span>`+
+          (e !== _AB_DEFAULT ? `<span class="em-ab-del" title="Remove" onclick="event.stopPropagation();abRemoveAndRefresh('${e}','${dropdownId}')"><i class="fa-solid fa-xmark"></i></span>` : '')+
+          `</div>`
+        ).join('');
+      }
+      dd.classList.add('open');
+    }
+
+    function abSelect(inputId, email, dropdownId) {
+      document.getElementById(inputId).value = email;
+      document.getElementById(dropdownId).classList.remove('open');
+    }
+
+    function abRemoveAndRefresh(email, dropdownId) {
+      abRemove(email);
+      // re-render the currently open dropdown
+      toggleAddressBook(dropdownId, dropdownId === 'emToDropdown' ? 'emTo' : 'emCc',
+        { stopPropagation: () => {} });
+      // force it open again since toggle would close it
+      document.getElementById(dropdownId).classList.add('open');
+    }
+
+    // Close address book dropdowns when clicking outside
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.em-ab-dropdown.open').forEach(d => d.classList.remove('open'));
+    });
+
+    // Seed datalist on page load
+    abRefreshDatalist();
+
+    function formatEffectiveDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function updateEmailSubject() {
+      const policyType = document.getElementById('emPolicyType').value;
+      const customerCode = document.getElementById('emCustomerCode').value.trim();
+      const referenceNo = document.getElementById('emReferenceNo').value.trim();
+      const effectiveDate = document.getElementById('emEffectiveDate').value;
+      const dateFmt = formatEffectiveDate(effectiveDate);
+      document.getElementById('emSubject').value =
+        'New Business Submission ' + policyType + '  -Customer Code: ' + customerCode + ' -' + referenceNo + '-Effective ' + dateFmt;
+    }
+    document.getElementById('emailModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEmailModal();
+    });
+
+    function renderEmailAttachments() {
+      const list = document.getElementById('emAttList');
+      if (!_emailAttachments.length) {
+        list.innerHTML = `<div class="em-att-item" style="color:var(--muted)"><i class="fa-solid fa-info-circle"></i> No documents found</div>`;
+        return;
+      }
+      const active   = _emailAttachments.filter(a => !_emailExcludedPaths.has(a.storage_path));
+      const excluded = _emailAttachments.filter(a =>  _emailExcludedPaths.has(a.storage_path));
+      list.innerHTML = [
+        ...active.map(att => {
+          const icon     = att.tag === 'signed' ? 'fa-file-signature' : 'fa-file-pdf';
+          const tagClass = att.tag === 'signed' ? 'signed' : 'reference';
+          const tagLabel = att.tag === 'signed' ? 'Signed' : 'Reference';
+          const sizeText = att.size_kb && att.size_kb !== '-' ? `<span style="color:var(--muted);font-size:11px"> · ${escHtml(String(att.size_kb))} KB</span>` : '';
+          return `
+            <div class="em-att-item">
+              <i class="fa-solid ${icon}"></i>
+              <span class="em-att-name">${escHtml(att.name)}</span>
+              ${sizeText}
+              <span class="em-att-tag ${tagClass}">${tagLabel}</span>
+              <button class="em-remove-btn" onclick="removeEmailAttachment('${escAttr(att.storage_path)}')" title="Remove from this email"><i class="fa-solid fa-xmark"></i></button>
+            </div>`;
+        }),
+        ...excluded.map(att => `
+          <div class="em-att-item em-att-excluded">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span class="em-att-name">${escHtml(att.name)}</span>
+            <span class="em-att-tag" style="margin-left:auto;background:rgba(239,68,68,.1);color:var(--red)">Excluded</span>
+            <button class="em-restore-btn" onclick="restoreEmailAttachment('${escAttr(att.storage_path)}')" title="Restore attachment"><i class="fa-solid fa-rotate-left"></i></button>
+          </div>`)
+      ].join('');
+    }
+
+    function removeEmailAttachment(storagePath) {
+      _emailExcludedPaths.add(storagePath);
+      renderEmailAttachments();
+    }
+
+    function restoreEmailAttachment(storagePath) {
+      _emailExcludedPaths.delete(storagePath);
+      renderEmailAttachments();
+    }
+
+    async function sendEmail() {
+      if (!_emailClientName || !_emailCategory) return;
+      const to      = document.getElementById('emTo').value.trim();
+      const cc      = document.getElementById('emCc').value.trim();
+      const subject = document.getElementById('emSubject').value.trim();
+      const body    = document.getElementById('emBody').value.trim();
+
+      if (!to) {
+        document.getElementById('emTo').focus();
+        showToast('Please enter a recipient email address', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('emSendBtn');
+      btn.disabled = true;
+      btn.classList.add('sending');
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch"></i> Sending…';
+
+      try {
+        const r = await fetch(`${API}/api/send-category-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            client_name: _emailClientName, 
+            lead_id: _emailLeadId, 
+            category: _emailCategory, 
+            to, cc, subject, body,
+            excluded_paths: [..._emailExcludedPaths]
+          })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Send failed');
+
+        const n = data.count || 0;
+        const cat = data.category || _emailCategory;
+        showToast(`✅ ${cat} email sent to ${to} — ${n} attachment${n !== 1 ? 's' : ''}`, 'success');
+
+        const attList = document.getElementById('emAttList');
+        if (data.attachments?.length) {
+          attList.innerHTML = data.attachments.map(f =>
+            `<div class="em-att-item"><i class="fa-solid fa-check" style="color:var(--green)"></i> ${escHtml(f)} <span class="em-att-tag signed">✓ Sent</span></div>`
+          ).join('');
+        }
+        // Save To/CC to address book
+        abAdd(to);
+        if (cc) cc.split(',').forEach(e => abAdd(e.trim()));
+
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Sent!';
+        btn.style.background = 'var(--green)';
+        setTimeout(() => closeEmailModal(), 1800);
+      } catch (err) {
+        showToast('Send failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.classList.remove('sending');
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Email';
+      }
+    }
+
+    // ── CATEGORY PREVIEW MODAL ────────────────────────
+    let _previewDocs = [];
+    let _previewCategory = '';
+    let _previewClientName = '';
+    let _previewLeadId = '';
+    let _replaceDocIdx = -1;
+
+    async function openCategoryPreviewModal(clientName, leadId, category) {
+      _previewCategory = category;
+      _previewClientName = clientName;
+      _previewLeadId = leadId;
+      const modal = document.getElementById('categoryPreviewModal');
+      const header = document.getElementById('pmHeader');
+      const title = document.getElementById('pmTitle');
+      const sub = document.getElementById('pmSub');
+      const docList = document.getElementById('pmDocList');
+      const viewer = document.getElementById('pmViewer');
+
+      // Update header styling based on category
+      if (category === 'HOME') {
+        header.classList.add('home');
+        title.innerHTML = `<i class="fa-solid fa-house fa-xs"></i> Home Documents`;
+      } else {
+        header.classList.remove('home');
+        title.innerHTML = `<i class="fa-solid fa-car fa-xs"></i> Auto Documents`;
+      }
+      sub.textContent = `${clientName} — Loading…`;
+      modal.classList.add('open');
+
+      // Reset viewer
+      viewer.innerHTML = `
+        <div class="preview-viewer-empty">
+          <i class="fa-solid fa-file-pdf"></i>
+          <div>Select a document to preview</div>
+        </div>
+      `;
+
+      // Fetch documents
+      try {
+        const r = await fetch(`${API}/api/category-documents-preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_name: clientName, lead_id: leadId, category: category })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load documents');
+
+        _previewDocs = data.documents || [];
+        const signed = _previewDocs.filter(d => d.document_type === 'signed');
+        const refs = _previewDocs.filter(d => d.document_type !== 'signed');
+        sub.textContent = `${clientName} — ${signed.length} signed, ${refs.length} reference`;
+
+        if (_previewDocs.length === 0) {
+          docList.innerHTML = `
+            <div class="preview-viewer-empty" style="padding:40px 20px">
+              <i class="fa-solid fa-inbox"></i>
+              <div>No documents found</div>
+            </div>
+          `;
+          return;
+        }
+
+        // Render document list
+        docList.innerHTML = _previewDocs.map((doc, idx) => {
+          const isSigned = doc.document_type === 'signed';
+          const icon = isSigned ? 'fa-file-circle-check' : 'fa-file-pdf';
+          const typeLabel = isSigned ? 'Signed' : (doc.document_type || 'reference').replace('_', ' ');
+          return `
+            <div class="preview-doc-item ${isSigned ? 'signed' : ''}" onclick="viewCategoryDoc(${idx})">
+              <div class="preview-doc-icon"><i class="fa-solid ${icon}"></i></div>
+              <div class="preview-doc-info">
+                <div class="preview-doc-name" title="${escTitle(doc.document_name)}">${escHtml(doc.document_name)}</div>
+                <div class="preview-doc-type">${escHtml(typeLabel)}</div>
+              </div>
+              <div class="pm-doc-actions">
+                <button class="pm-action-btn pm-replace-btn" onclick="event.stopPropagation();triggerReplaceDoc(${idx})" title="Replace file"><i class="fa-solid fa-upload"></i> Replace</button>
+                <button class="pm-action-btn pm-delete-btn" onclick="event.stopPropagation();deletePreviewDoc(${idx})" title="Delete file"><i class="fa-solid fa-trash"></i> Delete</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        showToast('Failed to load documents: ' + err.message, 'error');
+        sub.textContent = `${clientName} — Error`;
+        docList.innerHTML = `
+          <div class="preview-viewer-empty" style="padding:40px 20px">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>Failed to load</div>
+            <div style="font-size:11px;margin-top:8px">${escHtml(err.message)}</div>
+          </div>
+        `;
+      }
+    }
+
+    function viewCategoryDoc(index) {
+      const doc = _previewDocs[index];
+      if (!doc || !doc.preview_url) return;
+
+      // Update active state
+      document.querySelectorAll('.preview-doc-item').forEach((el, i) => {
+        if (i === index) {
+          el.classList.add('active');
+          if (_previewCategory === 'HOME') el.classList.add('home');
+        } else {
+          el.classList.remove('active', 'home');
+        }
+      });
+
+      // Display PDF in viewer
+      const viewer = document.getElementById('pmViewer');
+      viewer.innerHTML = `<iframe class="preview-viewer-frame" src="${escAttr(doc.preview_url)}"></iframe>`;
+    }
+
+    function closeCategoryPreview() {
+      document.getElementById('categoryPreviewModal').classList.remove('open');
+      _previewDocs = [];
+      _previewCategory = '';
+      _previewClientName = '';
+      _previewLeadId = '';
+      _replaceDocIdx = -1;
+    }
+    document.getElementById('categoryPreviewModal').addEventListener('click', function(e) {
+      if (e.target === this) closeCategoryPreview();
+    });
+
+    function triggerReplaceDoc(idx) {
+      _replaceDocIdx = idx;
+      document.getElementById('pmReplaceFileInput').value = '';
+      document.getElementById('pmReplaceFileInput').click();
+    }
+
+    async function handleReplaceFileSelected() {
+      const input = document.getElementById('pmReplaceFileInput');
+      if (!input.files || !input.files[0] || _replaceDocIdx < 0) return;
+      const file = input.files[0];
+      const doc = _previewDocs[_replaceDocIdx];
+      if (!doc) return;
+      if (!confirm(`Replace "${doc.document_name}" with "${file.name}"?\nThis will overwrite the existing file.`)) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        showToast('Replacing file…', '');
+        const r = await fetch(`${API}/api/client-documents/${doc.id}/replace`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Replace failed');
+        showToast('File replaced successfully', 'success');
+        await openCategoryPreviewModal(_previewClientName, _previewLeadId, _previewCategory);
+      } catch (err) {
+        showToast('Replace failed: ' + err.message, 'error');
+      } finally {
+        _replaceDocIdx = -1;
+      }
+    }
+
+    async function deletePreviewDoc(idx) {
+      const doc = _previewDocs[idx];
+      if (!doc) return;
+      if (!confirm(`Delete "${doc.document_name}"?\nThis cannot be undone.`)) return;
+      try {
+        showToast('Deleting file…', '');
+        const r = await fetch(`${API}/api/client-documents/${doc.id}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Delete failed');
+        showToast('File deleted', 'success');
+        await openCategoryPreviewModal(_previewClientName, _previewLeadId, _previewCategory);
+      } catch (err) {
+        showToast('Delete failed: ' + err.message, 'error');
+      }
+    }
+
+    // ── PREVIEW MODAL ─────────────────────────────────
+    function openPreview(url, title, downloadUrl) {
+      document.getElementById('previewTitle').textContent = title;
+      document.getElementById('previewFrame').src = url;
+      document.getElementById('previewDownload').href = downloadUrl;
+      document.getElementById('previewModal').classList.add('open');
+    }
+    function closePreview() {
+      document.getElementById('previewModal').classList.remove('open');
+      document.getElementById('previewFrame').src = '';
+    }
+    document.getElementById('previewModal').addEventListener('click', function(e) {
+      if (e.target === this) closePreview();
+    });
+
+    // ── SYNC STATUS (poll SignWell API) ───────────────
+    async function syncStatus() {
+      const btn = document.getElementById('syncBtn');
+      btn.classList.add('syncing');
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-xs"></i> Syncing…';
+      showToast('Checking SignWell for updates…', 'syncing');
+      try {
+        const r = await fetch(`${API}/api/signwell/sync-status`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Sync failed');
+        const checked = data.checked ?? 0;
+        const updated = data.updated ?? 0;
+        const updates = data.updates || [];
+        const errors  = data.errors  || [];
+        if (updated > 0) {
+          const names = updates.map(u => u.status === 'completed' ? `✔ ${u.name || u.id.substring(0,12)}` : `✗ ${u.id.substring(0,12)} (${u.status})`).join('\n');
+          showToast(`Updated ${updated} of ${checked} docs`, 'success');
+          console.log('Sync updates:', names);
+          await loadDocuments();
+        } else {
+          showToast(checked > 0 ? `Checked ${checked} docs — no changes` : 'No pending documents', 'info');
+        }
+        if (errors.length) console.warn('Sync errors:', errors);
+      } catch (err) {
+        showToast('Sync failed: ' + err.message, 'error');
+      } finally {
+        btn.classList.remove('syncing');
+        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-xs"></i> Sync Status';
+      }
+    }
+
+    async function syncSingle(requestId) {
+      if (!requestId) return;
+      showToast('Checking document…', 'syncing');
+      try {
+        const r = await fetch(`${API}/api/signwell/sync-status`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Sync failed');
+        const match = (data.updates || []).find(u => u.id === requestId);
+        if (match) {
+          showToast(`Status updated → ${match.status}`, 'success');
+        } else {
+          showToast('No new updates from SignWell', 'info');
+        }
+        await loadDocuments(); // always reload so the table reflects current DB state
+      } catch (err) {
+        showToast('Check failed: ' + err.message, 'error');
+      }
+    }
+
+    // ── DOWNLOAD ──────────────────────────────────────
+    async function downloadDoc(requestId, type) {
+      if (!requestId) { showToast('No request ID', 'error'); return; }
+      showToast('Preparing download…');
+      try {
+        const url = `${API}/api/signed-documents/${encodeURIComponent(requestId)}/download?type=${type}`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${requestId}_${type}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        showToast('Download failed: ' + err.message, 'error');
+      }
+    }
+
+    // ── HELPERS ───────────────────────────────────────
+    function fmtDate(iso) {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true
+        }).format(new Date(iso));
+      } catch { return iso; }
+    }
+    function fmtDateShort(iso) {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        }).format(new Date(iso));
+      } catch { return iso; }
+    }
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(s) {
+      return String(s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+    // For title="" and other non-JS HTML attribute contexts (uses &#39; not \' )
+    function escTitle(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ── TOAST ─────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast show ${type}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── AUTO-REFRESH ──────────────────────────────────
+    function resetCountdown() {
+      countdown = 30;
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => {
+        countdown--;
+        document.getElementById('refreshCountdown').textContent = `Auto-refresh in ${countdown}s`;
+        if (countdown <= 0) {
+          loadDocuments();
+        }
+      }, 1000);
+    }
+
+    // ── POST-SIGN PROCESSING ──────────────────────────
+
+    function togglePostSign() {
+      const body = document.getElementById('postsignBody');
+      const btn  = document.getElementById('psToggleBtn');
+      const open = body.classList.toggle('open');
+      btn.innerHTML = open
+        ? '<i class="fa-solid fa-chevron-up fa-xs"></i> Hide'
+        : '<i class="fa-solid fa-chevron-down fa-xs"></i> Show';
+    }
+
+    async function loadSendLog() {
+      const clientName = document.getElementById('psClientInput').value.trim();
+      if (!clientName) { showToast('Enter a client name first', 'error'); return; }
+
+      const status = document.getElementById('psStatusMsg');
+      const list   = document.getElementById('psLogList');
+      status.textContent = 'Loading…';
+      list.innerHTML = '<div class="ps-empty"><i class="fa-solid fa-circle-notch fa-spin fa-xs"></i> Loading send history…</div>';
+
+      try {
+        const r    = await fetch(`${API}/api/signwell/send-log?client_name=${encodeURIComponent(clientName)}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Load failed');
+
+        const logs = data.logs || [];
+        status.textContent = `${logs.length} send${logs.length !== 1 ? 's' : ''} found`;
+
+        if (!logs.length) {
+          list.innerHTML = '<div class="ps-empty">No send history for this client yet.</div>';
+          return;
+        }
+
+        list.innerHTML = logs.map((log, li) => buildLogCard(log, li)).join('');
+      } catch (err) {
+        status.textContent = '';
+        list.innerHTML = `<div class="ps-empty" style="color:#f87171">Error: ${escHtml(err.message)}</div>`;
+      }
+    }
+
+    function buildLogCard(log, idx) {
+      const manifest   = log.files_manifest || [];
+      const statusCls  = log.status === 'completed' ? 'ps-status-completed' : 'ps-status-pending';
+      const sentDate   = log.created_at ? fmtDateShort(log.created_at) : '—';
+      const docId      = log.signwell_document_id || log.id || '';
+      const title      = `Send ${idx + 1} — ${manifest.length} file${manifest.length !== 1 ? 's' : ''}`;
+
+      const fileRows = manifest.map((entry, ei) => {
+        const cat        = (entry.category || 'auto').toLowerCase();
+        const catCls     = cat === 'home' ? 'ps-cat-home' : 'ps-cat-auto';
+        const catLabel   = cat.toUpperCase();
+        const targetCat  = cat === 'auto' ? 'home' : 'auto';
+        const docDocId   = entry.client_doc_id || '';
+        const fname      = entry.original_filename || entry.tokenized_filename || 'unknown';
+        const signedBadge= entry.signed_storage_path
+          ? `<span style="font-size:10px;color:var(--green);"><i class="fa-solid fa-circle-check fa-xs"></i> Signed</span>`
+          : `<span style="font-size:10px;color:var(--muted);"><i class="fa-regular fa-clock fa-xs"></i> Pending</span>`;
+
+        return `
+          <div class="ps-file-row" id="ps-row-${escAttr(docDocId || `${idx}-${ei}`)}">
+            <i class="fa-regular fa-file-pdf" style="color:var(--muted);font-size:11px;"></i>
+            <span class="ps-file-name" title="${escTitle(fname)}">${escHtml(fname)}</span>
+            ${signedBadge}
+            <span class="ps-cat-badge ${catCls}">${catLabel}</span>
+            ${docDocId
+              ? `<button class="ps-move-btn" onclick="recategorize('${escAttr(docDocId)}','${escAttr(targetCat)}',this)" title="Move to ${targetCat.toUpperCase()}">
+                   <i class="fa-solid fa-right-left fa-xs"></i> Move to ${targetCat.toUpperCase()}
+                 </button>`
+              : `<span style="font-size:10px;color:var(--muted)">no doc ID</span>`
+            }
+          </div>`;
+      }).join('');
+
+      const bundleAuto = log.bundle_auto_path
+        ? `<a class="ps-bundle-link" href="${API}/api/client-documents/view/auto?path=${encodeURIComponent(log.bundle_auto_path)}" target="_blank"><i class="fa-solid fa-download fa-xs"></i> Download</a>`
+        : `<span style="font-size:11px;color:var(--muted);">Building…</span>`;
+      const bundleHome = log.bundle_home_path
+        ? `<a class="ps-bundle-link" href="${API}/api/client-documents/view/home?path=${encodeURIComponent(log.bundle_home_path)}" target="_blank"><i class="fa-solid fa-download fa-xs"></i> Download</a>`
+        : `<span style="font-size:11px;color:var(--muted);">Building…</span>`;
+
+      return `
+        <div class="ps-log-card">
+          <div class="ps-log-card-header" onclick="toggleLogBody('ps-body-${idx}')">
+            <i class="fa-solid fa-paper-plane" style="color:var(--blue);font-size:11px;"></i>
+            <span class="ps-send-name">${escHtml(title)}</span>
+            <span class="ps-send-date">${sentDate}</span>
+            <span class="ps-status-badge ${statusCls}">${log.status || 'pending'}</span>
+            <i class="fa-solid fa-chevron-down fa-xs" style="color:var(--muted);margin-left:4px;"></i>
+          </div>
+          <div class="ps-file-list" id="ps-body-${idx}">
+            ${fileRows || '<div class="ps-empty">No files in manifest.</div>'}
+            <div class="ps-bundle-row">
+              <span class="ps-bundle-label"><i class="fa-solid fa-car fa-xs"></i> AUTO Bundle</span>${bundleAuto}
+              <span class="ps-bundle-label" style="margin-left:16px;"><i class="fa-solid fa-house fa-xs"></i> HOME Bundle</span>${bundleHome}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function toggleLogBody(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('open');
+    }
+
+    async function recategorize(clientDocId, newCategory, btn) {
+      if (!clientDocId) { showToast('No doc ID', 'error'); return; }
+      const confirmed = confirm(`Move this file to ${newCategory.toUpperCase()}?\n\nThis copies the file to the new category path in Supabase storage and updates the record. The old file will be removed.`);
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin fa-xs"></i> Moving…';
+
+      try {
+        const r    = await fetch(`${API}/api/signwell/recategorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_doc_id: clientDocId, new_category: newCategory, reason: 'manual override by agent' })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Recategorize failed');
+
+        showToast(`✅ Moved to ${data.new_category.toUpperCase()}`, 'success');
+
+        // Update badge inline without full reload
+        const row     = btn.closest('.ps-file-row');
+        const badge   = row.querySelector('.ps-cat-badge');
+        const oldCat  = data.old_category;
+        const newCat  = data.new_category;
+        if (badge) {
+          badge.className = `ps-cat-badge ${newCat === 'home' ? 'ps-cat-home' : 'ps-cat-auto'}`;
+          badge.textContent = newCat.toUpperCase();
+        }
+        const targetCat = newCat === 'auto' ? 'home' : 'auto';
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-right-left fa-xs"></i> Move to ${targetCat.toUpperCase()}`;
+        btn.onclick = () => recategorize(clientDocId, targetCat, btn);
+      } catch (err) {
+        showToast('Move failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-right-left fa-xs"></i> Move to ${newCategory.toUpperCase()}`;
+      }
+    }
+
+    // ── INIT ──────────────────────────────────────────
+    loadDocuments();
+  </script>
+</body>
+</html>

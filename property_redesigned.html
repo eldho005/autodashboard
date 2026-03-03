@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Suppress verbose console.log in production; errors/warnings still appear -->
+    <script>if(window.location.hostname!=='localhost'&&window.location.hostname!=='127.0.0.1'){var _n=function(){};console.log=_n;console.info=_n;console.debug=_n;}</script>
+    <!-- Auto-attach JWT cookie to all same-origin API fetch calls -->
+    <script>(function(){var _f=window.fetch;window.fetch=function(input,init){var url=typeof input==='string'?input:(input&&input.url?input.url:'');var same=!url.startsWith('http')||url.startsWith(window.location.origin);if(same){init=Object.assign({},init);init.credentials=init.credentials||'include';}return _f.apply(this,[input,init]);};})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broker HUD - Property Insurance</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { slate: { 850: '#151e2e' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+        /* Light border style for card inputs */
+        .hud__input--light {
+            border: 1px solid #e5e7eb !important;
+        }
+        .hud__input--light:hover {
+            border-color: #d1d5db !important;
+        }
+        .hud__input--light:focus {
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2) !important;
+            outline: none !important;
+        }
+
+        /* Clean card styling */
+        .hud__card { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+
+        /* Selection Modal */
+        .selection-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .selection-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .selection-card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 90%;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Property Type Selection Cards */
+        .type-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .type-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+        .type-card.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Rental Property Card */
+        .rental-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: white;
+            transition: all 0.2s;
+        }
+        .rental-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .rental-card.collapsed .rental-card-body {
+            display: none;
+        }
+
+        /* Success Animation */
+        @keyframes successPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        }
+        .save-success {
+            animation: successPulse 0.6s ease-out;
+        }
+    </style>
+    <script>
+        function togglePagesMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('pagesMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('pagesMenu');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-600 antialiased">
+
+    <!-- Authentication Guard (server-side JWT verification) -->
+    <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
+    <!-- SELECTION MODAL -->
+    <div id="selection-modal" class="selection-modal">
+        <div class="selection-card">
+            <div class="text-center mb-8">
+                <i class="fa-solid fa-home text-5xl text-blue-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Property Insurance</h2>
+                <p class="text-sm text-slate-500">Let's start by understanding your property situation</p>
+            </div>
+            
+            <h3 class="text-lg font-semibold text-slate-700 mb-4">Are you a Homeowner or Tenant?</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="type-card" onclick="PropertyApp.selectUserType('homeowner')" data-type="homeowner">
+                    <i class="fa-solid fa-house text-4xl text-blue-600 mb-3"></i>
+                    <h4 class="text-lg font-bold text-slate-800 mb-1">Homeowner</h4>
+                    <p class="text-xs text-slate-500">I own a property</p>
+                </div>
+                <div class="type-card" onclick="PropertyApp.selectUserType('tenant')" data-type="tenant">
+                    <i class="fa-solid fa-key text-4xl text-green-600 mb-3"></i>
+                    <h4 class="text-lg font-bold text-slate-800 mb-1">Tenant</h4>
+                    <p class="text-xs text-slate-500">I rent a property</p>
+                </div>
+            </div>
+            
+            <button id="btn-continue" class="w-full bg-slate-400 text-white font-bold py-3 px-6 rounded-lg transition-all cursor-not-allowed" disabled>
+                Continue <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main-content" class="hidden">
+        <!-- Header -->
+        <div class="sticky top-0 bg-white/95 backdrop-blur-md z-20 px-8 py-4 border-b border-slate-200 shadow-sm">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Property Insurance</h2>
+                        <p class="text-xs text-slate-500 font-medium uppercase tracking-wide" id="header-subtitle">Homeowner Insurance</p>
+                    </div>
+                    <!-- Change Policy Type Button -->
+                    <button onclick="PropertyApp.requestPolicyTypeChange()" class="flex items-center gap-1.5 text-xs font-medium text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition-all" title="Change between Homeowner and Tenant">
+                        <i class="fa-solid fa-exchange-alt"></i>
+                        <span>Change Type</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Previous Page Button -->
+                    <a href="Auto dashboard.html" onclick="sessionStorage.setItem('navigatedFromPage', 'property'); return true;" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                        <span>Auto</span>
+                    </a>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Pages Menu Dropdown -->
+                    <div class="relative">
+                        <button onclick="togglePagesMenu(event)" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                            <i class="fa-solid fa-bars text-slate-500"></i>
+                            <span>Pages</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+                        <div id="pagesMenu" class="hidden absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                            <a href="meta dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Leads</a>
+                            <a href="Auto dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Dashboard</a>
+                            <a href="property_redesigned.html" class="block px-4 py-2 text-xs text-slate-900 bg-slate-100 font-semibold">Property</a>
+                            <a href="final review page.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Review</a>
+                            <a href="Powerbroker.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">PowerBroker</a>
+                            <div class="border-t border-slate-200 my-1"></div>
+                            <a href="property-coverpage-temp.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Cover</a>
+                            <a href="home-tenant-coverpage.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Home Cover</a>
+                            <a href="PAC form.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">PAC</a>
+                            <a href="/document-upload-dashboard" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Doc Processing</a>
+                            <a href="/signwell-ui" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">eSign</a>
+                            <a href="/signed-documents" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Signed Docs</a>
+                        </div>
+                    </div>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Current Page -->
+                    <span class="text-xs font-semibold text-slate-800">Property</span>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Next Page Button -->
+                    <a href="final review page.html" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                        <span>Review</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                    <div class="h-4 w-px bg-slate-300 mx-1"></div>
+                    <!-- Auto-Save Indicator -->
+                    <div id="save-indicator" class="flex items-center text-xs hidden">
+                        <i class="fa-solid fa-check-circle text-green-500 mr-1"></i>
+                        <span class="text-green-600">Auto-saved</span>
+                    </div>
+                    <!-- Sync to Database Button -->
+                    <button onclick="PropertyApp.saveToDatabase()" id="btn-save" class="group flex items-center gap-2 text-xs font-bold text-white bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-[0.98]" title="Sync to database (data is auto-saved locally as you type)">
+                        <i class="fa-solid fa-database group-hover:scale-110 transition-transform"></i>
+                        <span>Sync to Database</span>
+                    </button>
+                    <!-- Clear Data Button -->
+                    <button onclick="PropertyApp.clearAllData()" class="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-2 rounded transition-all" title="Clear all property data">
+                        <i class="fa-solid fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="px-8 py-6 max-w-6xl mx-auto space-y-6 pb-20">
+
+            <!-- CARD 1: CUSTOMER INFORMATION -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-blue-700">1.</span>
+                        <h3 class="text-sm font-bold text-blue-800">Customer Information</h3>
+                    </div>
+                </div>
+                <div class="p-5 space-y-4">
+                    
+                    <!-- Insured Person -->
+                    <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                        <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Insured Person</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Date of Birth</label>
+                                <input type="text" data-key="insDob" data-mask="date" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="MM-DD-YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Gender</label>
+                                <select data-key="insGender" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Co-Insured Person (Optional) -->
+                    <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                        <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Co-Insured Person (Optional)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Date of Birth</label>
+                                <input type="text" data-key="coDob" data-mask="date" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="MM-DD-YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Gender</label>
+                                <select data-key="coGender" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- CARD 2: PRIMARY PROPERTY -->
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-green-50 border-b border-slate-200 px-5 py-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-green-700">2.</span>
+                        <h3 class="text-sm font-bold text-green-800" id="primary-property-title">Primary Property (Your Home)</h3>
+                    </div>
+                </div>
+                <div class="p-5 space-y-4">
+
+                    <!-- Property Type Selection (Only for Homeowners) -->
+                    <div id="primary-type-selection" class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Property Type</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="type-card cursor-pointer" onclick="PropertyApp.selectPrimaryType('house')">
+                                <input type="radio" name="primaryType" value="house" class="hidden">
+                                <i class="fa-solid fa-house text-2xl text-green-600 mb-2 block"></i>
+                                <div class="text-sm font-bold text-slate-800">House</div>
+                            </label>
+                            <label class="type-card cursor-pointer" onclick="PropertyApp.selectPrimaryType('condo')">
+                                <input type="radio" name="primaryType" value="condo" class="hidden">
+                                <i class="fa-solid fa-building text-2xl text-green-600 mb-2 block"></i>
+                                <div class="text-sm font-bold text-slate-800">Condo</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Insured Since -->
+                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Insurance History</h4>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-slate-500">Insured Since</label>
+                            <input type="text" data-key="insuredSince" data-scope="primary" data-mask="date" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="MM-DD-YYYY">
+                        </div>
+                    </div>
+
+                    <!-- Property Details -->
+                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Property Details</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Living Area (sq ft)</label>
+                                <input type="number" data-key="livingArea" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2000">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Full Baths</label>
+                                <input type="number" data-key="fullBaths" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Half Baths</label>
+                                <input type="number" data-key="halfBaths" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500"># of Cars</label>
+                                <input type="number" data-key="numberOfCars" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Basement Area (sq ft)</label>
+                                <input type="number" data-key="basementArea" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="800">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Basement % Finished</label>
+                                <input type="number" data-key="basementFinished" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="50" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Construction Details -->
+                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Construction Details</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Construction Type</label>
+                                <select data-key="construction" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Frame">Frame</option>
+                                    <option value="Masonry">Masonry</option>
+                                    <option value="Log">Log</option>
+                                    <option value="Solid Brick">Solid Brick</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Exterior Finish</label>
+                                <select data-key="exteriorFinish" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Aluminum">Aluminum</option>
+                                    <option value="Brick">Brick</option>
+                                    <option value="Stone">Stone</option>
+                                    <option value="Vinyl">Vinyl</option>
+                                    <option value="Wood">Wood</option>
+                                    <option value="Stucco">Stucco</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Structure Type</label>
+                                <select data-key="structureType" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Detached">Detached</option>
+                                    <option value="Semi-Detached">Semi-Detached</option>
+                                    <option value="Row/Townhouse">Row/Townhouse</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Stories</label>
+                                <input type="number" data-key="storeys" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Systems & Updates -->
+                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Systems & Updates</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Heating Year</label>
+                                <input type="text" data-key="heatYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Electric Year</label>
+                                <input type="text" data-key="elecYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Plumbing Year</label>
+                                <input type="text" data-key="plumbYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Roofing Year</label>
+                                <input type="text" data-key="roofYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Water Heater Year</label>
+                                <input type="text" data-key="tankYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Property Address (Auto-populated from Auto Dashboard) -->
+                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide">Property Address</h4>
+                            <span class="text-xs text-green-600 font-medium"><i class="fa-solid fa-link mr-1"></i>From Auto Dashboard</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Street Address *</label>
+                                <input type="text" data-key="address" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-slate-50 transition-colors" placeholder="Auto-populated from Auto Dashboard" readonly>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">City</label>
+                                    <input type="text" data-key="city" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-slate-50 transition-colors" placeholder="City" readonly>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Postal Code</label>
+                                    <input type="text" data-key="postal" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-slate-50 transition-colors" placeholder="Postal" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- CARD 3: RENTAL PROPERTIES (Only for Homeowners) -->
+            <section id="rental-properties-section" class="hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-purple-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-purple-700">3.</span>
+                            <h3 class="text-sm font-bold text-purple-800">Rental Properties</h3>
+                            <span class="text-xs text-purple-600 font-medium">(Optional - Properties you rent out)</span>
+                        </div>
+                        <button onclick="PropertyApp.showRentalTypeModal()" class="text-xs font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 px-3 py-1.5 rounded transition-all">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Rental Property
+                        </button>
+                    </div>
+                    <div id="rental-properties-container" class="p-5 space-y-4">
+                        <!-- Rental property cards will be added here dynamically -->
+                        <div class="text-center py-8 text-slate-400">
+                            <i class="fa-solid fa-building text-4xl mb-3"></i>
+                            <p class="text-sm">No rental properties added yet</p>
+                            <p class="text-xs">Click "Add Rental Property" to add properties you rent out to tenants</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- RENTAL TYPE SELECTION MODAL -->
+    <div id="rental-type-modal" class="selection-modal">
+        <div class="selection-card" style="max-width: 500px;">
+            <div class="text-center mb-6">
+                <i class="fa-solid fa-building text-4xl text-purple-600 mb-3"></i>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">Add Rental Property</h3>
+                <p class="text-sm text-slate-500">What type of property are you renting out?</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="type-card" onclick="PropertyApp.selectRentalType('rental-house')" data-rental-type="rental-house">
+                    <i class="fa-solid fa-house text-3xl text-purple-600 mb-2"></i>
+                    <h4 class="text-base font-bold text-slate-800">Rental House</h4>
+                </div>
+                <div class="type-card" onclick="PropertyApp.selectRentalType('rental-condo')" data-rental-type="rental-condo">
+                    <i class="fa-solid fa-building text-3xl text-purple-600 mb-2"></i>
+                    <h4 class="text-base font-bold text-slate-800">Rental Condo</h4>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="PropertyApp.closeRentalTypeModal()" class="flex-1 bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-all">
+                    Cancel
+                </button>
+                <button id="btn-add-rental" class="flex-1 bg-slate-400 text-white font-bold py-2 px-4 rounded-lg transition-all cursor-not-allowed" disabled>
+                    Add Property
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Property Application State
+        const PropertyApp = {
+            userType: null, // 'homeowner' or 'tenant'
+            primaryType: null, // 'house' or 'condo' (for homeowners)
+            selectedRentalType: null, // 'rental-house' or 'rental-condo'
+            rentalProperties: [], // Array of rental property objects
+            rentalIdCounter: 1,
+            autoSaveTimeout: null, // For debouncing auto-save
+            hasUnsavedChanges: false, // Track unsaved changes
+            lastSavedData: null, // Store last saved state for comparison
+
+            // Initialize
+            init: function() {
+                console.log('🏠 Property Insurance App Initialized');
+                this.attachEventListeners();
+                this.attachAutoSaveListeners();
+                this.attachPageLeaveWarning();
+                this.loadFromLocalStorage();
+            },
+
+            // Attach Event Listeners
+            attachEventListeners: function() {
+                // Date masking
+                document.querySelectorAll('[data-mask="date"]').forEach(input => {
+                    input.addEventListener('input', this.maskDate);
+                });
+                // Phone masking
+                document.querySelectorAll('[data-mask="phone"]').forEach(input => {
+                    input.addEventListener('input', this.maskPhone);
+                });
+            },
+
+            // Attach Auto-Save Listeners to all inputs
+            attachAutoSaveListeners: function() {
+                // Listen to all inputs with data-key attribute
+                document.querySelectorAll('[data-key]').forEach(input => {
+                    input.addEventListener('input', () => this.triggerAutoSave());
+                    input.addEventListener('change', () => this.triggerAutoSave());
+                });
+                
+                // Listen to select elements
+                document.querySelectorAll('select[data-key]').forEach(select => {
+                    select.addEventListener('change', () => this.triggerAutoSave());
+                });
+                
+                console.log('✅ Auto-save listeners attached');
+            },
+
+            // Attach Page Leave Warning
+            attachPageLeaveWarning: function() {
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.hasUnsavedChanges) {
+                        e.preventDefault();
+                        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                        return e.returnValue;
+                    }
+                });
+            },
+
+            // Trigger Auto-Save (debounced)
+            triggerAutoSave: function() {
+                this.hasUnsavedChanges = true;
+                this.updateSaveIndicator('saving');
+                
+                // Clear existing timeout
+                if (this.autoSaveTimeout) {
+                    clearTimeout(this.autoSaveTimeout);
+                }
+                
+                // Debounce: save after 1 second of no typing
+                this.autoSaveTimeout = setTimeout(() => {
+                    this.autoSaveToLocalStorage();
+                }, 1000);
+            },
+
+            // Update Save Indicator
+            updateSaveIndicator: function(status) {
+                const indicator = document.getElementById('save-indicator');
+                if (!indicator) return;
+                
+                switch(status) {
+                    case 'saving':
+                        indicator.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-500 mr-1"></i><span class="text-amber-600">Saving...</span>';
+                        indicator.classList.remove('hidden');
+                        break;
+                    case 'saved':
+                        indicator.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 mr-1"></i><span class="text-green-600">Auto-saved</span>';
+                        indicator.classList.remove('hidden');
+                        // Hide after 3 seconds
+                        setTimeout(() => {
+                            if (indicator.innerHTML.includes('Auto-saved')) {
+                                indicator.classList.add('hidden');
+                            }
+                        }, 3000);
+                        break;
+                    case 'error':
+                        indicator.innerHTML = '<i class="fa-solid fa-exclamation-circle text-red-500 mr-1"></i><span class="text-red-600">Save failed</span>';
+                        indicator.classList.remove('hidden');
+                        break;
+                }
+            },
+
+            // Auto-Save to LocalStorage
+            autoSaveToLocalStorage: function() {
+                try {
+                    const data = this.collectAllData();
+                    
+                    // Get lead-specific storage key
+                    const leadId = data.customer.leadId || data.customer.email || 'default';
+                    const storageKey = `propertyData_${leadId}`;
+                    
+                    // Save to localStorage
+                    localStorage.setItem(storageKey, JSON.stringify(data));
+                    
+                    this.hasUnsavedChanges = false;
+                    this.lastSavedData = JSON.stringify(data);
+                    this.updateSaveIndicator('saved');
+                    
+                    console.log(`💾 Auto-saved to localStorage (key: ${storageKey})`);
+                } catch (e) {
+                    console.error('❌ Auto-save failed:', e);
+                    this.updateSaveIndicator('error');
+                }
+            },
+
+            // Collect All Data (reusable function)
+            collectAllData: function() {
+                // Collect customer data
+                const customer = {};
+                document.querySelectorAll('[data-key]:not([data-scope]):not([data-rental-id])').forEach(input => {
+                    const key = input.getAttribute('data-key');
+                    customer[key] = input.value || '';
+                });
+                
+                // Add email from Auto Dashboard for backend lookup
+                try {
+                    const autoDashboardLead = localStorage.getItem('autoDashboardOriginalLead');
+                    if (autoDashboardLead) {
+                        const lead = JSON.parse(autoDashboardLead);
+                        if (lead.email) customer.email = lead.email;
+                        if (lead.leadId) customer.leadId = lead.leadId;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Could not get email from Auto Dashboard:', e);
+                }
+                
+                // Collect primary property data
+                const primaryProperty = {
+                    propertyType: this.userType === 'tenant' ? 'Tenant' : `Homeowner ${this.primaryType === 'house' ? 'House' : 'Condo'}`
+                };
+                document.querySelectorAll('[data-scope="primary"][data-key]').forEach(input => {
+                    const key = input.getAttribute('data-key');
+                    primaryProperty[key] = input.value || '';
+                });
+                
+                // Build final data structure
+                return {
+                    userType: this.userType,
+                    primaryType: this.primaryType,
+                    customer: customer,
+                    primaryProperty: primaryProperty,
+                    rentalProperties: this.rentalProperties,
+                    lastSaved: new Date().toISOString()
+                };
+            },
+
+            // STEP 1: Select User Type (Homeowner or Tenant)
+            selectUserType: function(type) {
+                this.userType = type;
+                
+                // Update UI
+                document.querySelectorAll('.type-card[data-type]').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                document.querySelector(`.type-card[data-type="${type}"]`).classList.add('selected');
+                
+                // Enable continue button
+                const btnContinue = document.getElementById('btn-continue');
+                btnContinue.disabled = false;
+                btnContinue.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                btnContinue.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+                btnContinue.onclick = () => this.continueFromSelection();
+                
+                console.log(`✅ User type selected: ${type}`);
+            },
+
+            // Show selection modal (when no saved data)
+            showSelectionModal: function() {
+                document.getElementById('selection-modal').classList.add('active');
+                console.log('📋 Showing selection modal');
+            },
+
+            // Request policy type change (with confirmation)
+            requestPolicyTypeChange: function() {
+                const currentType = this.userType === 'homeowner' ? 'Homeowner' : 'Tenant';
+                const message = `⚠️ WARNING: Changing Policy Type\n\nYou are currently in ${currentType} mode.\n\nSwitching policy type will DELETE all existing property data:\n• Customer information\n• Primary property details\n${this.userType === 'homeowner' ? '• All rental properties\n' : ''}
+This action cannot be undone.\n\nAre you sure you want to continue?`;
+                
+                if (confirm(message)) {
+                    this.changePolicyType();
+                }
+            },
+
+            // Execute policy type change (clear data and show modal)
+            changePolicyType: function() {
+                console.log('🔄 Changing policy type, clearing all data...');
+                
+                // Reset state
+                this.userType = null;
+                this.primaryType = null;
+                this.rentalProperties = [];
+                this.rentalIdCounter = 1;
+                this.hasUnsavedChanges = false;
+                
+                // Clear localStorage
+                let leadId = null;
+                try {
+                    const autoLead = localStorage.getItem('autoDashboardOriginalLead');
+                    if (autoLead) {
+                        const lead = JSON.parse(autoLead);
+                        leadId = lead.leadId || lead.email || 'default';
+                    }
+                } catch (e) {}
+                const storageKey = `propertyData_${leadId || 'default'}`;
+                localStorage.removeItem(storageKey);
+                console.log(`🗑️ Cleared localStorage: ${storageKey}`);
+                
+                // Clear all form inputs
+                document.querySelectorAll('[data-key]').forEach(input => {
+                    input.value = '';
+                });
+                
+                // Clear rental properties container
+                document.getElementById('rental-properties-container').innerHTML = '';
+                
+                // Reset primary type selection
+                document.querySelectorAll('#primary-type-selection .type-card').forEach(card => {
+                    card.classList.remove('selected');
+                    const radio = card.querySelector('input[type="radio"]');
+                    if (radio) radio.checked = false;
+                });
+                
+                // Hide main content
+                document.getElementById('main-content').classList.add('hidden');
+                
+                // Show selection modal
+                this.showSelectionModal();
+                
+                console.log('✅ Policy type change complete, ready for new selection');
+            },
+
+            // Continue from selection
+            continueFromSelection: function() {
+                if (!this.userType) return;
+                
+                // Hide modal
+                document.getElementById('selection-modal').classList.remove('active');
+                
+                // Show main content
+                document.getElementById('main-content').classList.remove('hidden');
+                
+                // Configure UI based on user type
+                if (this.userType === 'homeowner') {
+                    document.getElementById('header-subtitle').textContent = 'Homeowner Insurance';
+                    document.getElementById('primary-type-selection').classList.remove('hidden');
+                    document.getElementById('rental-properties-section').classList.remove('hidden');
+                } else {
+                    document.getElementById('header-subtitle').textContent = 'Tenant Insurance';
+                    document.getElementById('primary-property-title').textContent = 'Rental Property (Your Home)';
+                    document.getElementById('primary-type-selection').classList.add('hidden');
+                    document.getElementById('rental-properties-section').classList.add('hidden');
+                }
+                
+                // Trigger auto-save with user type selection
+                this.triggerAutoSave();
+                
+                console.log(`📄 Main content displayed for ${this.userType}`);
+            },
+
+            // STEP 2: Select Primary Property Type (House or Condo) - Homeowners only
+            selectPrimaryType: function(type) {
+                this.primaryType = type;
+                
+                // Update UI
+                const cards = document.querySelectorAll('#primary-type-selection .type-card');
+                cards.forEach(card => card.classList.remove('selected'));
+                event.currentTarget.classList.add('selected');
+                
+                // Trigger auto-save
+                this.triggerAutoSave();
+                
+                console.log(`✅ Primary property type selected: ${type}`);
+            },
+
+            // Show Rental Type Modal
+            showRentalTypeModal: function() {
+                document.getElementById('rental-type-modal').classList.add('active');
+                this.selectedRentalType = null;
+                
+                // Reset selection
+                document.querySelectorAll('[data-rental-type]').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                document.getElementById('btn-add-rental').disabled = true;
+                document.getElementById('btn-add-rental').classList.add('bg-slate-400', 'cursor-not-allowed');
+                document.getElementById('btn-add-rental').classList.remove('bg-purple-600', 'hover:bg-purple-700');
+            },
+
+            // Close Rental Type Modal
+            closeRentalTypeModal: function() {
+                document.getElementById('rental-type-modal').classList.remove('active');
+            },
+
+            // Select Rental Type
+            selectRentalType: function(type) {
+                this.selectedRentalType = type;
+                
+                // Update UI
+                document.querySelectorAll('[data-rental-type]').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                document.querySelector(`[data-rental-type="${type}"]`).classList.add('selected');
+                
+                // Enable add button
+                const btnAddRental = document.getElementById('btn-add-rental');
+                btnAddRental.disabled = false;
+                btnAddRental.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                btnAddRental.classList.add('bg-purple-600', 'hover:bg-purple-700', 'cursor-pointer');
+                btnAddRental.onclick = () => this.addRentalProperty();
+                
+                console.log(`✅ Rental type selected: ${type}`);
+            },
+
+            // Add Rental Property
+            addRentalProperty: function() {
+                if (!this.selectedRentalType) return;
+                
+                const rentalId = this.rentalIdCounter++;
+                const rental = {
+                    id: rentalId,
+                    type: this.selectedRentalType,
+                    address: '',
+                    city: '',
+                    postal: '',
+                    construction: '',
+                    exteriorFinish: '',
+                    structureType: '',
+                    storeys: '',
+                    livingArea: '',
+                    fullBaths: '',
+                    halfBaths: '',
+                    numberOfCars: '',
+                    heatYear: '',
+                    elecYear: '',
+                    plumbYear: '',
+                    roofYear: '',
+                    tankYear: '',
+                    collapsed: false
+                };
+                
+                this.rentalProperties.push(rental);
+                this.renderRentalProperty(rental);
+                this.closeRentalTypeModal();
+                
+                // Trigger auto-save
+                this.triggerAutoSave();
+                
+                console.log(`➕ Rental property added:`, rental);
+            },
+
+            // Render Rental Property Card
+            renderRentalProperty: function(rental) {
+                const container = document.getElementById('rental-properties-container');
+                
+                // Remove "no properties" message if it exists
+                if (container.querySelector('.text-center')) {
+                    container.innerHTML = '';
+                }
+                
+                const typeIcon = rental.type === 'rental-house' ? 'fa-house' : 'fa-building';
+                const typeLabel = rental.type === 'rental-house' ? 'Rental House' : 'Rental Condo';
+                const number = this.rentalProperties.filter(r => r.type === rental.type).length;
+                
+                const card = document.createElement('div');
+                card.className = 'rental-card';
+                card.id = `rental-${rental.id}`;
+                card.innerHTML = `
+                    <div class="rental-card-header p-4 bg-purple-50/50 border-b border-slate-200 flex items-center justify-between cursor-pointer" onclick="PropertyApp.toggleRentalCard(${rental.id})">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid ${typeIcon} text-purple-600 text-lg"></i>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800">${typeLabel} #${number}</h4>
+                                <p class="text-xs text-slate-500" id="rental-${rental.id}-address">Address not set</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="event.stopPropagation(); PropertyApp.toggleRentalCard(${rental.id})" class="text-slate-400 hover:text-slate-600 transition-colors">
+                                <i class="fa-solid fa-chevron-down text-sm" id="rental-${rental.id}-chevron"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); PropertyApp.removeRentalProperty(${rental.id})" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-all">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="rental-card-body p-5 space-y-4">
+                        <!-- Property Address -->
+                        <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
+                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Property Address</h4>
+                            <div class="space-y-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Street Address</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="address" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="456 Oak Street" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div class="flex flex-col gap-1">
+                                        <label class="text-xs font-medium text-slate-500">City</label>
+                                        <input type="text" data-rental-id="${rental.id}" data-key="city" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="Toronto" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <label class="text-xs font-medium text-slate-500">Postal Code</label>
+                                        <input type="text" data-rental-id="${rental.id}" data-key="postal" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="A1A 1A1" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Construction Details -->
+                        <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
+                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Construction Details</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Construction Type</label>
+                                    <select data-rental-id="${rental.id}" data-key="construction" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="Frame">Frame</option>
+                                        <option value="Masonry">Masonry</option>
+                                        <option value="Log">Log</option>
+                                        <option value="Solid Brick">Solid Brick</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Exterior Finish</label>
+                                    <select data-rental-id="${rental.id}" data-key="exteriorFinish" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="Aluminum">Aluminum</option>
+                                        <option value="Brick">Brick</option>
+                                        <option value="Stone">Stone</option>
+                                        <option value="Vinyl">Vinyl</option>
+                                        <option value="Wood">Wood</option>
+                                        <option value="Stucco">Stucco</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Structure Type</label>
+                                    <select data-rental-id="${rental.id}" data-key="structureType" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="Detached">Detached</option>
+                                        <option value="Semi-Detached">Semi-Detached</option>
+                                        <option value="Row/Townhouse">Row/Townhouse</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Stories</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="storeys" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Property Details -->
+                        <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
+                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Property Details</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Living Area (sq ft)</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="livingArea" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1500" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Full Baths</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="fullBaths" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Half Baths</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="halfBaths" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500"># of Cars</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="numberOfCars" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Systems & Updates -->
+                        <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
+                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Systems & Updates</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Heating Year</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="heatYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Electric Year</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="elecYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Plumbing Year</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="plumbYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Roofing Year</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="roofYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Water Heater Year</label>
+                                    <input type="text" data-rental-id="${rental.id}" data-key="tankYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            },
+
+            // Toggle Rental Card (Collapse/Expand)
+            toggleRentalCard: function(rentalId) {
+                const card = document.getElementById(`rental-${rentalId}`);
+                const chevron = document.getElementById(`rental-${rentalId}-chevron`);
+                
+                if (card.classList.contains('collapsed')) {
+                    card.classList.remove('collapsed');
+                    chevron.classList.remove('fa-chevron-up');
+                    chevron.classList.add('fa-chevron-down');
+                } else {
+                    card.classList.add('collapsed');
+                    chevron.classList.remove('fa-chevron-down');
+                    chevron.classList.add('fa-chevron-up');
+                }
+            },
+
+            // Update Rental Property Data
+            updateRentalProperty: function(rentalId) {
+                const rental = this.rentalProperties.find(r => r.id === rentalId);
+                if (!rental) return;
+                
+                // Collect all field values
+                document.querySelectorAll(`[data-rental-id="${rentalId}"][data-key]`).forEach(input => {
+                    const key = input.getAttribute('data-key');
+                    rental[key] = input.value;
+                });
+                
+                // Update address preview
+                const addressPreview = document.getElementById(`rental-${rentalId}-address`);
+                if (rental.address) {
+                    addressPreview.textContent = rental.address;
+                } else {
+                    addressPreview.textContent = 'Address not set';
+                }
+                
+                // Trigger auto-save
+                this.triggerAutoSave();
+                
+                console.log(`📝 Rental property updated:`, rental);
+            },
+
+            // Remove Rental Property
+            removeRentalProperty: function(rentalId) {
+                if (!confirm('Are you sure you want to remove this rental property?')) return;
+                
+                // Remove from array
+                this.rentalProperties = this.rentalProperties.filter(r => r.id !== rentalId);
+                
+                // Remove from DOM
+                document.getElementById(`rental-${rentalId}`).remove();
+                
+                // Show "no properties" message if empty
+                const container = document.getElementById('rental-properties-container');
+                if (this.rentalProperties.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-slate-400">
+                            <i class="fa-solid fa-building text-4xl mb-3"></i>
+                            <p class="text-sm">No rental properties added yet</p>
+                            <p class="text-xs">Click "Add Rental Property" to add properties you rent out to tenants</p>
+                        </div>
+                    `;
+                }
+                
+                // Trigger auto-save after removal
+                this.triggerAutoSave();
+                
+                console.log(`🗑️ Rental property removed: ${rentalId}`);
+            },
+
+            // Save to Database (also syncs to backend)
+            saveToDatabase: function() {
+                console.log('💾 Saving property data to database...');
+                
+                // Use the collectAllData function
+                const data = this.collectAllData();
+                
+                console.log('📦 Property data collected:', data);
+                
+                // Validate required fields
+                if (!data.primaryProperty.address) {
+                    alert('Please fill in the property address');
+                    return;
+                }
+                
+                // Save to localStorage with lead-specific key
+                const leadId = data.customer.leadId || data.customer.email || 'default';
+                const storageKey = `propertyData_${leadId}`;
+                localStorage.setItem(storageKey, JSON.stringify(data));
+                console.log(`💾 Saved to localStorage key: ${storageKey}`);
+                
+                // Mark as saved
+                this.hasUnsavedChanges = false;
+                
+                // Disable save button during request
+                const btnSave = document.getElementById('btn-save');
+                const originalText = btnSave.innerHTML;
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Syncing...</span>';
+                
+                // Send to backend API (v2 endpoint for redesigned page)
+                fetch('/api/save-property-v2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        console.log('✅ Property data synced to database:', result);
+                        
+                        // Show success animation
+                        btnSave.classList.add('save-success');
+                        btnSave.innerHTML = '<i class="fa-solid fa-check mr-2"></i><span>Synced!</span>';
+                        
+                        setTimeout(() => {
+                            btnSave.classList.remove('save-success');
+                            btnSave.innerHTML = originalText;
+                            btnSave.disabled = false;
+                        }, 2000);
+                        
+                        alert(`Data synced to database successfully!\n\nLead ID: ${result.lead_id || 'N/A'}\nEmail: ${result.email}\n\nNote: Your data is also auto-saved locally as you type.`);
+                    } else {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error syncing to database:', error);
+                    btnSave.innerHTML = originalText;
+                    btnSave.disabled = false;
+                    alert(`Error syncing to database: ${error.message}\n\nDon't worry - your data is still saved locally!`);
+                });
+            },
+
+            // Clear All Data (explicit user action)
+            clearAllData: function() {
+                if (!confirm('Are you sure you want to clear all property data?\n\nThis action cannot be undone!')) {
+                    return;
+                }
+                
+                // Get lead-specific storage key
+                let leadId = null;
+                try {
+                    const autoLead = localStorage.getItem('autoDashboardOriginalLead');
+                    if (autoLead) {
+                        const lead = JSON.parse(autoLead);
+                        leadId = lead.leadId || lead.email || 'default';
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Could not get lead ID:', e);
+                }
+                
+                // Clear localStorage
+                const storageKey = `propertyData_${leadId || 'default'}`;
+                localStorage.removeItem(storageKey);
+                
+                // Reset state
+                this.userType = null;
+                this.primaryType = null;
+                this.rentalProperties = [];
+                this.rentalIdCounter = 1;
+                this.hasUnsavedChanges = false;
+                
+                // Reload page to reset UI
+                location.reload();
+            },
+
+            // Load from LocalStorage or Database
+            loadFromLocalStorage: function() {
+                // Get lead-specific storage key
+                let leadId = null;
+                try {
+                    const autoLead = localStorage.getItem('autoDashboardOriginalLead');
+                    if (autoLead) {
+                        const lead = JSON.parse(autoLead);
+                        leadId = lead.leadId || lead.email || 'default';
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Could not get lead ID:', e);
+                }
+                
+                // First try localStorage with lead-specific key
+                try {
+                    const storageKey = `propertyData_${leadId || 'default'}`;
+                    const savedData = localStorage.getItem(storageKey);
+                    if (savedData) {
+                        const parsedData = JSON.parse(savedData);
+                        // Check if V2 format
+                        if (parsedData.userType && parsedData.primaryProperty) {
+                            this.restoreData(parsedData);
+                            console.log(`✅ Property data restored from localStorage (key: ${storageKey})`);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Error loading from localStorage:', e);
+                }
+                
+                // If localStorage is empty, try to fetch from database
+                this.loadFromDatabase();
+            },
+
+            // Load from Database
+            loadFromDatabase: function() {
+                // Try to get email from URL params or localStorage (from auto dashboard)
+                const urlParams = new URLSearchParams(window.location.search);
+                let email = urlParams.get('email');
+                
+                if (!email) {
+                    try {
+                        const autoLead = localStorage.getItem('autoDashboardOriginalLead');
+                        if (autoLead) {
+                            const lead = JSON.parse(autoLead);
+                            email = lead.email;
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Could not get email from auto dashboard lead');
+                    }
+                }
+                
+                if (!email) {
+                    console.log('ℹ️ No email available, showing selection modal');
+                    this.showSelectionModal();
+                    return;
+                }
+                
+                console.log(`📂 Loading property data from database for: ${email}`);
+                
+                fetch(`/api/get-property-data/${email}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data) {
+                            const savedRecord = result.data;
+                            const savedCustomer = savedRecord.customer || {};
+                            
+                            // Check if this is V2 format (redesigned page data)
+                            if (savedCustomer.version === 'v2') {
+                                console.log('📂 Found V2 property data in database');
+                                this.restoreData({
+                                    userType: savedCustomer.userType,
+                                    primaryType: savedCustomer.primaryType,
+                                    customer: savedCustomer.customer,
+                                    primaryProperty: savedCustomer.primaryProperty,
+                                    rentalProperties: savedCustomer.rentalProperties || []
+                                });
+                                console.log('✅ Property data restored from database');
+                            } else {
+                                console.log('ℹ️ Database has old format data, showing selection modal');
+                                this.showSelectionModal();
+                            }
+                        } else {
+                            console.log('ℹ️ No saved property data found in database, showing selection modal');
+                            this.showSelectionModal();
+                        }
+                    })
+                    .catch(error => {
+                        console.warn('⚠️ Error loading from database:', error);
+                        this.showSelectionModal();
+                    });
+            },
+
+            // Restore Data (common function for localStorage and database)
+            restoreData: function(data) {
+                if (!data.userType) return;
+                
+                this.userType = data.userType;
+                this.primaryType = data.primaryType;
+                this.rentalProperties = data.rentalProperties || [];
+                this.rentalIdCounter = Math.max(...this.rentalProperties.map(r => r.id), 0) + 1;
+                
+                // Skip selection modal and show main content
+                document.getElementById('selection-modal').classList.remove('active');
+                document.getElementById('main-content').classList.remove('hidden');
+                
+                // Configure UI
+                if (this.userType === 'homeowner') {
+                    document.getElementById('header-subtitle').textContent = 'Homeowner Insurance';
+                    document.getElementById('rental-properties-section').classList.remove('hidden');
+                } else {
+                    document.getElementById('header-subtitle').textContent = 'Tenant Insurance';
+                    document.getElementById('primary-property-title').textContent = 'Rental Property (Your Home)';
+                    document.getElementById('primary-type-selection').classList.add('hidden');
+                    document.getElementById('rental-properties-section').classList.add('hidden');
+                }
+                
+                // Restore customer data
+                if (data.customer) {
+                    Object.keys(data.customer).forEach(key => {
+                        const input = document.querySelector(`[data-key="${key}"]:not([data-scope]):not([data-rental-id])`);
+                        if (input) input.value = data.customer[key] || '';
+                    });
+                }
+                
+                // Restore primary property data
+                if (data.primaryProperty) {
+                    Object.keys(data.primaryProperty).forEach(key => {
+                        const input = document.querySelector(`[data-scope="primary"][data-key="${key}"]`);
+                        if (input) input.value = data.primaryProperty[key] || '';
+                    });
+                }
+                
+                // Restore primary type selection
+                if (data.primaryType) {
+                    const cards = document.querySelectorAll('#primary-type-selection .type-card');
+                    cards.forEach(card => {
+                        const radio = card.querySelector('input[type="radio"]');
+                        if (radio && radio.value === data.primaryType) {
+                            card.classList.add('selected');
+                            radio.checked = true;
+                        }
+                    });
+                }
+                
+                // Restore rental properties
+                if (data.rentalProperties && data.rentalProperties.length > 0) {
+                    const container = document.getElementById('rental-properties-container');
+                    container.innerHTML = '';
+                    data.rentalProperties.forEach(rental => {
+                        this.renderRentalProperty(rental);
+                        // Populate fields
+                        Object.keys(rental).forEach(key => {
+                            if (key !== 'id' && key !== 'type' && key !== 'collapsed') {
+                                const input = document.querySelector(`[data-rental-id="${rental.id}"][data-key="${key}"]`);
+                                if (input) input.value = rental[key] || '';
+                            }
+                        });
+                        // Update address preview
+                        this.updateRentalProperty(rental.id);
+                    });
+                }
+            },
+
+            // Input Masking Functions
+            maskDate: function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 2) value = value.slice(0, 2) + '-' + value.slice(2);
+                if (value.length >= 5) value = value.slice(0, 5) + '-' + value.slice(5);
+                e.target.value = value.slice(0, 10);
+            },
+
+            maskPhone: function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 1) value = '(' + value;
+                if (value.length >= 4) value = value.slice(0, 4) + ') ' + value.slice(4);
+                if (value.length >= 9) value = value.slice(0, 9) + '-' + value.slice(9);
+                e.target.value = value.slice(0, 14);
+            }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            PropertyApp.init();
+            
+            // Auto-populate address from Auto Dashboard
+            try {
+                const autoDashboardDrivers = localStorage.getItem('autoDashboardDrivers');
+                const currDrvIdx = parseInt(localStorage.getItem('autoDashboardCurrDrvIdx') || '0');
+                
+                if (autoDashboardDrivers) {
+                    const drivers = JSON.parse(autoDashboardDrivers);
+                    if (drivers && drivers[currDrvIdx]) {
+                        const driver = drivers[currDrvIdx];
+                        
+                        // Populate primary property address from Auto Dashboard personal info
+                        if (driver.personalAddress) {
+                            const addressInput = document.querySelector('[data-scope="primary"][data-key="address"]');
+                            if (addressInput && !addressInput.value) addressInput.value = driver.personalAddress;
+                        }
+                        if (driver.personalCity) {
+                            const cityInput = document.querySelector('[data-scope="primary"][data-key="city"]');
+                            if (cityInput && !cityInput.value) cityInput.value = driver.personalCity;
+                        }
+                        if (driver.personalPostalCode) {
+                            const postalInput = document.querySelector('[data-scope="primary"][data-key="postal"]');
+                            if (postalInput && !postalInput.value) postalInput.value = driver.personalPostalCode;
+                        }
+                        
+                        // Populate insured person DOB and Gender from Auto Dashboard
+                        if (driver.personalDob) {
+                            const dobInput = document.querySelector('[data-key="insDob"]:not([data-scope])');
+                            if (dobInput && !dobInput.value) dobInput.value = driver.personalDob;
+                        }
+                        if (driver.personalGender) {
+                            const genderInput = document.querySelector('[data-key="insGender"]:not([data-scope])');
+                            if (genderInput && !genderInput.value) genderInput.value = driver.personalGender;
+                        }
+                        
+                        console.log('✅ Auto-populated address and customer info from Auto Dashboard');
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Could not auto-populate from Auto Dashboard:', e);
+            }
+        });
+    </script>
+
+</body>
+</html>

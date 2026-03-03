@@ -50,17 +50,12 @@
 </head>
 <body class="bg-gray-100 font-sans h-screen flex overflow-hidden">
 
+    <!-- Authentication Guard (server-side JWT verification) -->
+    <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
     <!-- LEFT SIDEBAR (Data Entry) -->
     <aside class="w-96 bg-white border-r border-gray-200 flex flex-col shadow-xl z-30 no-print flex-shrink-0 relative">
         <div class="p-6 border-b border-gray-200 bg-blue-50">
-            <div class="mb-3 flex gap-2">
-                <a href="Auto dashboard.html" class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-all border border-blue-200 hover:border-blue-300 shadow-sm" title="Back to Dashboard">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                </a>
-                <button onclick="autoFillFromDashboard()" class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-all border border-blue-200 hover:border-blue-300 shadow-sm" title="Auto-fill from Dashboard">
-                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Auto Fill
-                </button>
-            </div>
             <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <i data-lucide="file-check" class="text-blue-600"></i>
                 <span>Broker Wizard</span>
@@ -135,6 +130,7 @@
                     <div><label class="label-text">First Name</label><input type="text" id="input-firstName" class="input-field"></div>
                     <div><label class="label-text">Policy Num</label><input type="text" id="input-policyNumber" class="input-field"></div>
                 </div>
+                <div><label class="label-text">Last Name</label><input type="text" id="input-lastName" class="input-field"></div>
                 <div><label class="label-text">Address</label><input type="text" id="input-address" class="input-field"></div>
                 <div class="grid grid-cols-3 gap-2">
                     <div class="col-span-1"><label class="label-text">City</label><input type="text" id="input-city" class="input-field"></div>
@@ -196,6 +192,41 @@
 
     <!-- RIGHT PANEL (Preview & Tools) -->
     <main class="flex-1 bg-gray-200 relative flex flex-col min-w-0">
+        <!-- Breadcrumb Navigation Header -->
+        <div class="bg-slate-50/95 backdrop-blur-md border-b border-slate-200 px-6 py-3 flex justify-between items-center shadow-sm">
+            <div>
+                <h2 class="text-base font-bold text-slate-800">PAC Form (Broker Wizard)</h2>
+                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Vector PDF Generator</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Workflow Breadcrumb -->
+                <a href="meta dashboard.html" class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i> Leads
+                </a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i>
+                <a href="Auto dashboard.html" onclick="sessionStorage.setItem('navigatedFromPage', 'pac'); return true;" class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    <i data-lucide="car" class="w-3.5 h-3.5"></i> Auto
+                </a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i>
+                <a href="property_redesigned.html" onclick="sessionStorage.setItem('navigatedFromPage', 'pac'); sessionStorage.setItem('propertySessionActive', 'true'); return true;" class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Property
+                </a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i>
+                <a href="final review page.html" class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline transition-colors">
+                    <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i> Review
+                </a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-slate-700 border border-slate-300 bg-slate-50">
+                    <i data-lucide="file-check" class="w-3.5 h-3.5"></i> PAC Form
+                </span>
+                <div class="h-4 w-px bg-slate-300 mx-2"></div>
+                <!-- Action -->
+                <button onclick="autoFillFromDashboard()" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm bg-slate-600 text-white hover:bg-slate-700">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Auto Fill
+                </button>
+            </div>
+        </div>
+        
         <!-- Toolbar (High Z-Index to stay on top) -->
         <div class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-40 relative">
             <div class="flex items-center gap-4">
@@ -265,8 +296,26 @@
         // AUTO-FILL FROM DASHBOARD FUNCTION
         function autoFillFromDashboard() {
             try {
-                // Get data from localStorage (Auto Dashboard saves after parsing DASH/MVR)
-                const dashData = JSON.parse(localStorage.getItem('dashData') || '{}');
+                // Try lead-specific key first, then fall back to generic dashData
+                let dashData = {};
+                try {
+                    const originalLead = JSON.parse(localStorage.getItem('autoDashboardOriginalLead') || '{}');
+                    const leadEmail = originalLead.email || '';
+                    if (leadEmail) {
+                        const specific = localStorage.getItem('dashData_' + leadEmail);
+                        if (specific) {
+                            dashData = JSON.parse(specific);
+                            console.log('✅ PAC: Using lead-specific dashData for:', leadEmail);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ PAC: Failed to read lead-specific dashData', e);
+                }
+                // Fallback to generic key (backward compatibility)
+                if (!dashData.name && !dashData.address) {
+                    dashData = JSON.parse(localStorage.getItem('dashData') || '{}');
+                    console.log('ℹ️ PAC: Using generic dashData (fallback)');
+                }
                 
                 if (!dashData.name && !dashData.address) {
                     alert('⚠️ No data found. Please parse DASH/MVR in Auto Dashboard first.');
@@ -317,7 +366,7 @@
         const DB_NAME = 'BrokerPDF_V11_CopyPages'; 
         const STORE_NAME = 'forms';
         const FIELD_IDS = [
-            'brokerName', 'date', 'firstName', 'policyNumber', 'address', 'city', 'province', 'postalCode',
+            'brokerName', 'date', 'firstName1', 'firstName2', 'lastName1', 'lastName2', 'policyNumber', 'address', 'city', 'province', 'postalCode',
             'bankName', 'transit', 'institution', 'account',
             'checkMonthly', 'checkFullPay', 'checkPersonal', 'checkBusiness',
             'ccType', 'ccNumber', 'ccExpiry', 'ccCvc', 'ccName'
@@ -363,6 +412,18 @@
             const el = document.getElementById(id.startsWith('check') ? id : `input-${id}`);
             if (el) dom.inputs[id] = el;
         });
+
+        // Map duplicate firstName/lastName fields to same inputs (for overlay duplication)
+        const firstNameInput = document.getElementById('input-firstName');
+        const lastNameInput = document.getElementById('input-lastName');
+        if (firstNameInput) {
+            dom.inputs['firstName1'] = firstNameInput;
+            dom.inputs['firstName2'] = firstNameInput;
+        }
+        if (lastNameInput) {
+            dom.inputs['lastName1'] = lastNameInput;
+            dom.inputs['lastName2'] = lastNameInput;
+        }
 
         // --- TAB LOGIC ---
         const tabBank = document.getElementById('tab-bank');

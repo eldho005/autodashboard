@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Suppress verbose console.log in production; errors/warnings still appear -->
+    <script>if(window.location.hostname!=='localhost'&&window.location.hostname!=='127.0.0.1'){var _n=function(){};console.log=_n;console.info=_n;console.debug=_n;}</script>
+    <!-- Auto-attach JWT cookie to all same-origin API fetch calls -->
+    <script>(function(){var _f=window.fetch;window.fetch=function(input,init){var url=typeof input==='string'?input:(input&&input.url?input.url:'');var same=!url.startsWith('http')||url.startsWith(window.location.origin);if(same){init=Object.assign({},init);init.credentials=init.credentials||'include';}return _f.apply(this,[input,init]);};})();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Meta Leads Dashboard</title>
@@ -59,6 +63,7 @@
 
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
         .toast-enter { animation: slideDown 0.3s ease-out forwards; }
         .bulk-bar-enter { animation: slideUp 0.3s ease-out forwards; }
@@ -88,6 +93,20 @@
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-600 antialiased selection:bg-indigo-100 selection:text-indigo-700 pb-20 md:pb-0">
+
+    <!-- Authentication Guard (server-side JWT verification) -->
+    <script>
+        (async function() {
+            try {
+                const res = await fetch('/api/verify-token', { credentials: 'include' });
+                if (!res.ok) throw new Error('Not authenticated');
+            } catch (e) {
+                sessionStorage.removeItem('metaDashboardAuth');
+                sessionStorage.removeItem('metaDashboardUser');
+                window.location.href = 'meta-login.html';
+            }
+        })();
+    </script>
 
     <div id="toast-container" class="fixed top-4 left-0 right-0 z-[60] flex justify-center pointer-events-none"></div>
 
@@ -191,15 +210,15 @@
 
     <!-- Reminder Modal -->
     <div id="reminder-modal" class="modal hidden fixed inset-0 z-[80] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden transform scale-100">
-            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center">
+        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center sticky top-0">
                 <h3 class="text-lg font-bold text-amber-900"><i class="fa-solid fa-bell text-amber-500 mr-2"></i> Set Reminder</h3>
                 <button type="button" class="js-close-reminder text-amber-400 hover:text-amber-600 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
             
-            <form id="reminder-form" class="p-6 space-y-4">
+            <form id="reminder-form" class="p-6 space-y-4 border-b border-slate-200">
                 <input type="hidden" name="reminder_lead_id" id="reminder_lead_id">
                 
                 <div>
@@ -220,6 +239,49 @@
                     <button type="submit" class="flex-1 h-10 rounded-lg bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 shadow-md shadow-amber-200 transition-all">Set Reminder</button>
                 </div>
             </form>
+
+            <!-- Existing Reminders List -->
+            <div id="existing-reminders" class="p-6 space-y-3">
+                <!-- Reminders will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- View All Data Modal -->
+    <div id="view-data-modal" class="modal hidden fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
+            <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center sticky top-0 z-10">
+                <h3 class="text-lg font-bold text-indigo-900"><i class="fa-solid fa-database text-indigo-500 mr-2"></i> Complete Lead Data</h3>
+                <button type="button" class="js-close-view-data text-indigo-400 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div id="view-data-content" class="p-6 space-y-6">
+                <!-- Facebook Lead Data Section -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-brands fa-meta text-blue-500"></i> Facebook Lead Data
+                    </h4>
+                    <div id="fb-lead-data" class="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Parsed DASH/MVR Data Section -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-file-lines text-emerald-500"></i> Parsed DASH/MVR Data
+                    </h4>
+                    <div id="parsed-data" class="bg-emerald-50 rounded-lg border border-emerald-200 p-4 space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                <button type="button" class="js-close-view-data w-full h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-md transition-all">Close</button>
+            </div>
         </div>
     </div>
 
@@ -236,7 +298,22 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <div class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200">JD</div>
+                <!-- User Menu -->
+                <div class="relative">
+                    <button id="userMenuBtn" class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200 hover:bg-indigo-200 transition-all">JD</button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="userMenu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden py-1">
+                        <div class="px-4 py-3 border-b border-slate-100">
+                            <p class="text-xs font-bold text-slate-800" id="userEmail">policy@meta.com</p>
+                            <p class="text-[10px] text-slate-400">Logged In</p>
+                        </div>
+                        <button id="logoutBtn" class="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -383,7 +460,6 @@
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-44">Contact Info</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-36">Status</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider min-w-[180px]" id="header-calculator">Policy Details</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32" id="header-date-type">Renewal Date</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-36 bg-indigo-50/50">Meta Signal</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right w-32">Action</th>
                         </tr>
@@ -415,8 +491,8 @@
                         </div>
                         <div class="lead-id-badge text-[10px] font-mono mt-1 px-1.5 py-0.5 rounded border w-fit ml-7">ID</div>
                         <div class="mt-1 ml-7">
-                            <div class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200">
-                                <i class="fa-regular fa-clock text-[9px]"></i> <span class="text-[10px] font-bold lead-age">--</span>
+                            <div class="inline-flex items-center gap-1.5">
+                                <i class="fa-regular fa-clock text-[9px] text-slate-400"></i> <span class="text-[10px] font-medium text-slate-500 lead-age">--</span>
                             </div>
                         </div>
                         <div class="text-[10px] text-slate-400 mt-1 italic hidden lead-notes-preview ml-7"><i class="fa-regular fa-note-sticky mr-1"></i> <span class="notes-text"></span></div>
@@ -445,12 +521,9 @@
                     <select class="status-select w-full h-8 pl-2 pr-7 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 appearance-none cursor-pointer">
                         <option value="New Lead">New Lead</option>
                         <option value="Qualified">Qualified</option>
+                        <option value="Sold">Sold</option>
                         <option value="Unqualified">Unqualified</option>
-                        <option value="Called">Called</option>
-                        <option value="Didn't Pickup">Didn't Pickup</option>
-                        <option value="Asked to call back">Asked to call back</option>
-                        <option value="Closed Won">Closed Won</option>
-                        <option value="Closed Lost">Closed Lost</option>
+                        <option value="Lost">Lost</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
                 </div>
@@ -460,32 +533,20 @@
                 <!-- Content Injected via JS -->
             </td>
 
-            <td class="p-2 md:p-3 align-top date-type-cell">
-               <!-- Content Injected via JS: Renewal Date OR Insurance Type -->
-            </td>
-
             <td class="p-2 md:p-3 align-top bg-indigo-50/20 md:bg-indigo-50/30 border-l border-r border-indigo-100/50">
                 <span class="mobile-label">Meta Signal Control</span>
                 
-                <div class="flex justify-center mb-2">
-                    <div class="inline-flex bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm">
-                        <button class="action-signal-green w-9 py-1 rounded-md text-[9px] font-bold transition-all text-slate-400 hover:text-emerald-600">
-                            <i class="fa-solid fa-check pointer-events-none"></i>
-                        </button>
-                        <div class="w-px bg-slate-200 my-0.5"></div>
-                        <button class="action-signal-red w-9 py-1 rounded-md text-[9px] font-bold transition-all text-slate-400 hover:text-rose-600">
-                            <i class="fa-solid fa-xmark pointer-events-none"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <button class="action-sync w-full h-7 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1">
+                <button class="action-sync w-full h-7 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1 mt-1">
                     <i class="fa-brands fa-meta pointer-events-none"></i> Sync
                 </button>
 
                 <div class="sync-timestamp text-[9px] text-slate-400 text-center mt-1.5 font-mono opacity-0 transition-opacity whitespace-nowrap leading-tight">
                     Pending
                 </div>
+                
+                <button class="action-view-data text-[9px] text-indigo-600 hover:text-indigo-700 font-medium text-center mt-1.5 transition-colors w-full" title="View All Lead Data">
+                    View Data
+                </button>
             </td>
 
             <td class="p-2 md:p-3 align-top md:text-right">
@@ -513,6 +574,12 @@
         // ========== BACKEND CONFIG ==========
         const BACKEND_URL = window.location.origin; // Use same domain for API calls
         
+        // ========== UTILITY: HTML Escaping (XSS Prevention) ==========
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+        }
+
         // ========== GOOGLE CONTACTS CONFIG ==========
         const GOOGLE_CLIENT_ID = '780511047670-gcs7iv3pnb3798c1qa1rf44u7l803mtr.apps.googleusercontent.com';
         const GOOGLE_CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts';
@@ -581,6 +648,8 @@
                     reminderModal: document.getElementById('reminder-modal'),
                     reminderForm: document.getElementById('reminder-form'),
                     closeReminderBtns: document.querySelectorAll('.js-close-reminder'),
+                    viewDataModal: document.getElementById('view-data-modal'),
+                    closeViewDataBtns: document.querySelectorAll('.js-close-view-data'),
                     
                     modalTitle: document.getElementById('modal-title'),
                     modalSubmitBtn: document.getElementById('modal-submit-btn'),
@@ -598,7 +667,6 @@
                     closeBulkBar: document.getElementById('close-bulk-bar'),
                     tabBtns: document.querySelectorAll('.tab-btn'),
                     headerCalculator: document.getElementById('header-calculator'),
-                    headerDateType: document.getElementById('header-date-type'),
                     
                     // Stats Elements
                     statNew: document.getElementById('stat-new'),
@@ -628,6 +696,10 @@
                 await this.loadExistingLeadsFromDatabase();
                 this.renderAll();
                 this.updateStats();
+                
+                // Start checking for reminders every minute
+                this.checkAllReminders();
+                setInterval(() => this.checkAllReminders(), 60000); // Check every 60 seconds
                 
                 // Connect to WebSocket for REAL-TIME lead push from webhook
                 this.startAutoRefresh(); // Setup WebSocket listener for new leads
@@ -781,7 +853,7 @@
 
                     // MAIN: Receive new leads from webhook via WebSocket
                     this.socket.on('new_lead', (data) => {
-                        const lead = data.lead;
+                        const lead = this.normalizeLead(data.lead);
                         const source = data.source || 'unknown';
                         
                         console.log(`⚡ RECEIVED LIVE LEAD from ${source}: ${lead.name}`);
@@ -789,6 +861,19 @@
                         // Ensure lead is marked as from Facebook if from webhook
                         if (source === 'webhook' && !lead.is_manual) {
                             lead.source = 'facebook_webhook';
+                        }
+                        
+                        // Check for duplicates before adding
+                        const uniqueKey = lead.meta_lead_id || lead.email || lead.id;
+                        const exists = this.state.leads.some(l => 
+                            (l.meta_lead_id && l.meta_lead_id === lead.meta_lead_id) ||
+                            (l.email && l.email === lead.email) ||
+                            (l.id && l.id === lead.id)
+                        );
+                        
+                        if (exists) {
+                            console.log(`⚠️ Lead already exists (${uniqueKey}), skipping duplicate`);
+                            return;
                         }
                         
                         // ADD TO DASHBOARD AT TOP (this is the ONLY way leads appear)
@@ -860,6 +945,18 @@
                 }
             }
 
+            // Normalize lead: ensure 'name' field exists (construct from first_name/last_name if missing)
+            normalizeLead(lead) {
+                if (!lead.name || lead.name === 'undefined' || lead.name === 'null') {
+                    const first = lead.first_name || '';
+                    const last = lead.last_name || '';
+                    const combined = `${first} ${last}`.trim();
+                    lead.name = combined || lead.email || lead.meta_lead_id || 'Unknown';
+                }
+                if (!lead.phone) lead.phone = lead.phone_number || '';
+                return lead;
+            }
+
             async loadExistingLeadsFromDatabase() {
                 // Load Facebook leads from Leads Center API + Manual leads from database
                 // New leads after this come ONLY from WebSocket webhook push
@@ -896,8 +993,25 @@
                     console.log('📋 Loaded from Facebook Leads Center:', facebookLeads.length, 'leads');
                     console.log('✍️ Loaded manual leads from database:', manualLeads.length, 'leads');
                     
-                    // Merge and sort by date (newest first)
-                    this.state.leads = [...manualLeads, ...facebookLeads].sort((a, b) => 
+                    // Normalize all leads (construct name from first_name/last_name if missing)
+                    facebookLeads.forEach(l => this.normalizeLead(l));
+                    manualLeads.forEach(l => this.normalizeLead(l));
+
+                    // Merge and deduplicate leads (prefer Facebook leads over manual for same meta_lead_id/email)
+                    const allLeads = [...manualLeads, ...facebookLeads];
+                    const seen = new Set();
+                    const deduped = allLeads.filter(lead => {
+                        // Use meta_lead_id, email, or id as unique identifier (in order of preference)
+                        const uniqueKey = lead.meta_lead_id || lead.email || lead.id;
+                        if (!uniqueKey || seen.has(uniqueKey)) {
+                            return false;
+                        }
+                        seen.add(uniqueKey);
+                        return true;
+                    });
+                    
+                    // Sort by date (newest first)
+                    this.state.leads = deduped.sort((a, b) => 
                         new Date(b.created_at || 0) - new Date(a.created_at || 0)
                     );
                     
@@ -907,7 +1021,8 @@
                     // Sync manual leads to localStorage for backup
                     manualLeads.forEach(lead => this.upsertStoredManualLead(lead));
                     
-                    console.log(`✅ Total leads: ${this.state.leads.length} (${manualLeads.length} manual + ${facebookLeads.length} Facebook)`);
+                    const dupeCount = allLeads.length - deduped.length;
+                    console.log(`✅ Total leads: ${this.state.leads.length} (${manualLeads.length} manual + ${facebookLeads.length} Facebook, ${dupeCount} duplicates removed)`);
                     this.state.loading = false;
                 } catch (error) {
                     console.error('❌ Error loading leads on startup:', error);
@@ -920,11 +1035,15 @@
             }
 
             async loadLeadsFromDatabase() {
-                // ❌ NO LONGER USED - KEPT FOR REFERENCE ONLY
-                // Dashboard displays leads ONLY from WebSocket (webhook push)
-                // This function should never be called after init
-                console.warn('⚠️  loadLeadsFromDatabase() called - but dashboard uses WebSocket only');
-                return [];
+                // Reload leads from backend (called after manual sync)
+                console.log('🔄 Reloading leads from backend...');
+                try {
+                    await this.loadExistingLeadsFromDatabase();
+                    this.renderAll();
+                    this.updateStats();
+                } catch (e) {
+                    console.error('Error reloading leads:', e);
+                }
             }
 
             async syncLeadsWithMeta() {
@@ -1080,6 +1199,9 @@
                 this.dom.closeReminderBtns.forEach(btn => btn.addEventListener('click', () => this.closeReminderModal()));
                 this.dom.reminderForm.addEventListener('submit', (e) => this.handleReminderSubmit(e));
                 
+                // View Data Modal Events
+                this.dom.closeViewDataBtns.forEach(btn => btn.addEventListener('click', () => this.closeViewDataModal()));
+                
                 // Modal Type Switching
                 const typeRadios = this.dom.form.querySelectorAll('input[name="lead_type"]');
                 typeRadios.forEach(radio => {
@@ -1128,24 +1250,19 @@
 
                 // Update Header Text based on Tab
                 const headerCalc = this.dom.headerCalculator;
-                const headerDate = this.dom.headerDateType;
                 
                 switch(this.state.activeTab) {
                     case CONFIG.TYPES.GENERAL: 
                         headerCalc.textContent = 'Auto/Home Calc'; 
-                        headerDate.textContent = 'Renewal Date';
                         break;
                     case CONFIG.TYPES.LIFE: 
                         headerCalc.textContent = 'Coverage Details'; 
-                        headerDate.textContent = 'Policy Type';
                         break;
                     case CONFIG.TYPES.TRAVEL: 
                         headerCalc.textContent = 'Travel Details'; 
-                        headerDate.textContent = 'Trip Dates';
                         break;
                     default: 
                         headerCalc.textContent = 'Policy Details'; 
-                        headerDate.textContent = 'Renewal/Type';
                         break;
                 }
             }
@@ -1239,7 +1356,9 @@
                 const clone = this.dom.template.content.cloneNode(true);
                 const row = clone.querySelector('tr');
 
-                row.dataset.id = lead.id;
+                // Use database ID for manual leads, meta_lead_id for Facebook leads
+                const uniqueId = lead.id || lead.meta_lead_id;
+                row.dataset.id = uniqueId;
                 row.dataset.name = lead.name || '';
                 row.dataset.phone = lead.phone || '';
                 row.dataset.email = lead.email || '';
@@ -1269,14 +1388,10 @@
 
                 // Dynamic Columns (The heavy lifting refactored out)
                 this._renderDynamicCell(row, lead);
-                this._renderDateTypeCell(row, lead);
 
                 // Checkbox & Reminder
                 row.querySelector('.lead-checkbox').checked = this.state.selectedIds.has(lead.id);
                 this._renderReminderButton(row, lead);
-
-                // Meta Signal Sync UI (Mock random signal)
-                this.updateSignalUI(row, Math.random() > 0.4 ? 'green' : 'red'); 
 
                 this.dom.tbody.appendChild(clone);
             }
@@ -1310,14 +1425,27 @@
                 // Check both isManual and is_manual (database returns is_manual)
                 if (lead.isManual || lead.is_manual) {
                     badge.textContent = 'Manual Lead';
-                    badge.className = 'lead-id-badge text-[10px] font-bold mt-1 px-2 py-1 rounded border w-fit ml-7 bg-yellow-100 text-yellow-700 border-yellow-300';
+                    badge.className = 'lead-id-badge text-[10px] font-medium mt-1 ml-7 text-amber-600';
+                } else if (lead.is_auto_qualified !== undefined && lead.is_auto_qualified !== null) {
+                    // Show qualification badge based on is_auto_qualified field
+                    if (lead.is_auto_qualified) {
+                        badge.innerHTML = '<i class="fa-solid fa-check mr-1"></i>5+ Years';
+                        badge.className = 'lead-id-badge text-[10px] font-medium mt-1 ml-7 text-emerald-600';
+                    } else {
+                        badge.textContent = '< 5 Years';
+                        badge.className = 'lead-id-badge text-[10px] font-medium mt-1 ml-7 text-slate-500';
+                    }
+                    // Show license date as tooltip if available
+                    if (lead.driver_license_received) {
+                        badge.title = `License Date: ${lead.driver_license_received}`;
+                    }
                 } else if (lead.driver_license_received) {
-                    // Display the driver's license received answer as plain text
+                    // Display the driver's license received answer as plain text (fallback)
                     badge.textContent = lead.driver_license_received;
                     badge.className = 'lead-id-badge text-[10px] font-normal mt-1 ml-7 text-slate-500';
                 } else {
                     badge.textContent = `ID: #${lead.id}`;
-                    badge.className = 'lead-id-badge text-[10px] font-mono mt-1 px-1.5 py-0.5 rounded border w-fit ml-7 text-slate-400 bg-slate-50 border-slate-100';
+                    badge.className = 'lead-id-badge text-[10px] font-mono mt-1 ml-7 text-slate-400';
                 }
             }
 
@@ -1351,10 +1479,10 @@
                      calcCell.innerHTML = `
                         <div class="space-y-1.5">
                             <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-shield-heart text-[9px]"></i></div>
-                                <input type="number" placeholder="Coverage" value="${lead.coverage || ''}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
+                                <input type="number" placeholder="Coverage" value="${escapeHtml(lead.coverage || '')}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
                             </div>
                             <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-500"><i class="fa-solid fa-dollar-sign text-[9px]"></i></div>
-                                <input type="text" placeholder="Est. Prem" value="${lead.premium || ''}" class="h-7 w-full bg-slate-100 border border-slate-200 text-slate-900 text-[10px] font-bold rounded block pl-4 px-1">
+                                <input type="text" placeholder="Est. Prem" value="${escapeHtml(lead.premium || '')}" class="h-7 w-full bg-slate-100 border border-slate-200 text-slate-900 text-[10px] font-bold rounded block pl-4 px-1">
                             </div>
                         </div>`;
                 } else if (lead.type === CONFIG.TYPES.TRAVEL) {
@@ -1368,7 +1496,7 @@
                             </div>
                              <div class="flex gap-1">
                                 <div class="relative w-full"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-shield-halved text-[9px]"></i></div>
-                                    <input type="number" placeholder="Coverage Amount" value="${lead.coverage || ''}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1">
+                                    <input type="number" placeholder="Coverage Amount" value="${escapeHtml(lead.coverage || '')}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1">
                                 </div>
                             </div>
                         </div>`;
@@ -1391,43 +1519,6 @@
                                 <input type="text" placeholder="Total" readonly value="${lead.premium || ''}" class="calc-total h-7 w-full bg-slate-100 border border-slate-200 text-slate-900 text-[10px] font-bold rounded block pl-5 px-1">
                             </div>
                         </div>`;
-                }
-            }
-
-            _renderDateTypeCell(row, lead) {
-                const dateTypeCell = row.querySelector('.date-type-cell');
-                if (lead.type === CONFIG.TYPES.LIFE) {
-                    dateTypeCell.innerHTML = `
-                        <span class="mobile-label">Policy Type</span>
-                        <div class="relative">
-                            <select class="insurance-type-select h-8 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-medium rounded-lg px-2 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 cursor-pointer">
-                                <option value="Term Life">Term Life</option>
-                                <option value="Whole Life">Whole Life</option>
-                                <option value="Critical Illness">Critical Illness</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
-                        </div>`;
-                    if(lead.insuranceType) dateTypeCell.querySelector('select').value = lead.insuranceType;
-                } else if (lead.type === CONFIG.TYPES.TRAVEL) {
-                    dateTypeCell.innerHTML = `
-                        <span class="mobile-label">Trip Dates</span>
-                        <div class="space-y-1">
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-1 pointer-events-none text-slate-400 text-[9px]">S:</div>
-                                <input type="text" class="date-picker trip-start h-6 w-full bg-white border border-slate-200 text-slate-700 text-[9px] font-medium rounded px-1 pl-4 focus:ring-1 focus:ring-indigo-500 cursor-pointer" value="${lead.tripStart || ''}" placeholder="mm/dd/yyyy">
-                            </div>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-1 pointer-events-none text-slate-400 text-[9px]">E:</div>
-                                <input type="text" class="date-picker trip-end h-6 w-full bg-white border border-slate-200 text-slate-700 text-[9px] font-medium rounded px-1 pl-4 focus:ring-1 focus:ring-indigo-500 cursor-pointer" value="${lead.tripEnd || ''}" placeholder="mm/dd/yyyy">
-                            </div>
-                        </div>`;
-                } else {
-                    dateTypeCell.innerHTML = `
-                        <span class="mobile-label">Renewal Date</span>
-                        <div class="relative">
-                            <input type="text" class="date-picker renewal-date h-8 w-full bg-white border border-slate-200 text-slate-700 text-[11px] font-medium rounded-lg px-2 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 cursor-pointer" placeholder="mm/dd/yyyy">
-                        </div>`;
-                    if (lead.renewal) dateTypeCell.querySelector('input').value = lead.renewal;
                 }
             }
 
@@ -1484,7 +1575,8 @@
                         const params = new URLSearchParams({
                             name: rowName,
                             phone: rowPhone,
-                            email: rowEmail
+                            email: rowEmail,
+                            leadId: lead.id || lead.lead_id || ''
                         });
 
                         // Persist clicked lead for Auto Dashboard fallback (in case URL params are lost)
@@ -1507,7 +1599,7 @@
                             if (lead.insuranceType.toLowerCase().includes('home') || 
                                 lead.insuranceType.toLowerCase().includes('property') ||
                                 lead.insuranceType.toLowerCase().includes('dwelling')) {
-                                destinationPage = 'property.html';
+                                destinationPage = 'property_redesigned.html';
                             }
                         }
                         
@@ -1519,7 +1611,8 @@
                         const params = new URLSearchParams({
                             name: rowName,
                             phone: rowPhone,
-                            email: rowEmail
+                            email: rowEmail,
+                            leadId: row.dataset.id || ''
                         });
                         try {
                             localStorage.setItem('autoDashboardLeadFromMeta', JSON.stringify({
@@ -1528,6 +1621,9 @@
                                 email: rowEmail,
                                 leadId: row.dataset.id || ''
                             }));
+                            // Clear property session when selecting a new lead from Meta Dashboard
+                            sessionStorage.removeItem('propertySessionActive');
+                            console.log('🧹 Cleared property session for new lead from Meta Dashboard');
                         } catch (e) {
                             console.warn('⚠️ Could not store fallback lead for Auto Dashboard', e);
                         }
@@ -1539,14 +1635,12 @@
                     this.deleteLead(row.dataset.id);
                 } else if (target.closest('.action-save-google')) {
                     this.saveToGoogle(target.closest('.action-save-google'), row);
-                } else if (target.closest('.action-signal-green')) {
-                    this.updateSignalUI(row, 'green');
-                } else if (target.closest('.action-signal-red')) {
-                    this.updateSignalUI(row, 'red');
                 } else if (target.closest('.action-sync')) {
                     this.syncMetaSignal(target.closest('.action-sync'), row);
                 } else if (target.closest('.action-reminder')) {
                     this.openReminderModal(row.dataset.id);
+                } else if (target.closest('.action-view-data')) {
+                    this.openViewDataModal(row.dataset.id);
                 }
             }
 
@@ -1595,7 +1689,10 @@
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' }
                     })
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) throw new Error('Server returned ' + res.status);
+                        return res.json();
+                    })
                     .then(result => {
                         this.state.selectedIds.delete(id);
                         // Remove from localStorage if it's a manual lead
@@ -1864,27 +1961,198 @@
             }
 
             openReminderModal(leadId) {
-                const lead = this.state.leads.find(l => l.id === leadId);
+                const lead = this.state.leads.find(l => (l.id || l.meta_lead_id) === leadId);
                 if(!lead) return;
 
                 document.getElementById('reminder_lead_id').value = leadId;
                 const timeInput = document.getElementById('reminder-time');
                 const noteInput = document.getElementById('reminder-note');
                 
-                if(lead.reminder) {
-                    timeInput.value = lead.reminder.time;
-                    noteInput.value = lead.reminder.note;
-                } else {
-                    timeInput.value = '';
-                    noteInput.value = '';
-                }
+                // Always start with blank form to allow multiple reminders
+                timeInput.value = '';
+                noteInput.value = '';
+
+                // Display existing reminders
+                this.displayExistingReminders(leadId);
 
                 this.dom.reminderModal.classList.remove('hidden');
                 this.initDatePickers();
             }
 
+            displayExistingReminders(leadId) {
+                const reminderKey = `reminder_${leadId}`;
+                const reminders = JSON.parse(localStorage.getItem(reminderKey) || '[]');
+                const container = document.getElementById('existing-reminders');
+
+                if (reminders.length === 0) {
+                    container.innerHTML = '<p class="text-slate-400 text-sm italic text-center py-4">No reminders set yet for this lead</p>';
+                    return;
+                }
+
+                let html = '<h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fa-solid fa-list text-amber-500 mr-1"></i> Existing Reminders</h4>';
+                reminders.forEach((reminder, index) => {
+                    const reminderTime = new Date(reminder.time).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    html += `
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 relative group">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-bold text-amber-900"><i class="fa-regular fa-clock text-amber-500 mr-1.5"></i>${reminderTime}</p>
+                                    <p class="text-sm text-amber-800 mt-1 break-words">${reminder.note}</p>
+                                </div>
+                                <button type="button" class="delete-reminder flex-shrink-0 text-slate-400 hover:text-rose-500 transition-colors ml-2" data-index="${index}" data-lead-id="${leadId}">
+                                    <i class="fa-solid fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+                // Add delete handlers
+                container.querySelectorAll('.delete-reminder').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const index = parseInt(btn.dataset.index);
+                        const leadId = btn.dataset.leadId;
+                        this.deleteReminder(leadId, index);
+                    });
+                });
+            }
+
+            deleteReminder(leadId, index) {
+                const reminderKey = `reminder_${leadId}`;
+                const reminders = JSON.parse(localStorage.getItem(reminderKey) || '[]');
+                reminders.splice(index, 1);
+                localStorage.setItem(reminderKey, JSON.stringify(reminders));
+                
+                this.showToast('Reminder deleted', 'success');
+                this.displayExistingReminders(leadId);
+            }
+
             closeReminderModal() {
                 this.dom.reminderModal.classList.add('hidden');
+            }
+
+            async openViewDataModal(leadId) {
+                const lead = this.state.leads.find(l => 
+                    String(l.id) === String(leadId) || 
+                    String(l.lead_id) === String(leadId) || 
+                    String(l.meta_lead_id) === String(leadId)
+                );
+                if (!lead) {
+                    this.showToast('Lead not found', 'error');
+                    return;
+                }
+
+                // Show modal immediately with loading state
+                const fbDataContainer = document.getElementById('fb-lead-data');
+                const parsedContainer = document.getElementById('parsed-data');
+                
+                fbDataContainer.innerHTML = '<p class="text-slate-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</p>';
+                parsedContainer.innerHTML = '<p class="text-emerald-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</p>';
+                
+                this.dom.viewDataModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+
+                // Fetch full data from backend (includes auto_data enrichment)
+                // Pass email as query param in case lead not in database
+                try {
+                    const emailParam = lead.email ? `?email=${encodeURIComponent(lead.email)}` : '';
+                    const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}/full-data${emailParam}`);
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to fetch data');
+                    }
+
+                    // Merge backend lead data with local lead data (local has Facebook info)
+                    const backendLead = result.lead || {};
+                    const leadData = {
+                        name: backendLead.name || lead.name,
+                        phone: backendLead.phone || lead.phone,
+                        email: backendLead.email || lead.email,
+                        status: backendLead.status || lead.status,
+                        type: backendLead.type || lead.type,
+                        driver_license_received: backendLead.driver_license_received || lead.driver_license_received,
+                        is_auto_qualified: backendLead.is_auto_qualified ?? lead.is_auto_qualified,
+                        meta_lead_id: backendLead.meta_lead_id || lead.meta_lead_id,
+                        created_at: backendLead.created_at || lead.created_at
+                    };
+                    const parsedData = result.parsed_data;
+
+                    // Populate Facebook Lead Data
+                    const fbFields = [
+                        { label: 'Name', value: leadData.name, icon: 'fa-user' },
+                        { label: 'Phone', value: leadData.phone, icon: 'fa-phone' },
+                        { label: 'Email', value: leadData.email, icon: 'fa-envelope' },
+                        { label: 'Status', value: leadData.status, icon: 'fa-flag' },
+                        { label: 'Type', value: leadData.type || 'Auto', icon: 'fa-car' },
+                        { label: 'Driver License', value: leadData.driver_license_received, icon: 'fa-id-card' },
+                        { label: 'Auto Qualified', value: leadData.is_auto_qualified ? 'Yes (5+ years)' : 'No', icon: 'fa-check-circle' },
+                        { label: 'Meta Lead ID', value: leadData.meta_lead_id, icon: 'fa-fingerprint' },
+                        { label: 'Created', value: leadData.created_at ? new Date(leadData.created_at).toLocaleString() : '', icon: 'fa-calendar' }
+                    ];
+
+                    fbDataContainer.innerHTML = fbFields
+                        .filter(f => f.value)
+                        .map(f => `
+                            <div class="flex items-start gap-2 text-sm">
+                                <i class="fa-solid ${f.icon} text-slate-400 w-4 mt-0.5"></i>
+                                <span class="font-medium text-slate-600 min-w-[100px]">${f.label}:</span>
+                                <span class="text-slate-800 break-all">${f.value}</span>
+                            </div>
+                        `).join('') || '<p class="text-slate-400 text-sm italic">No Facebook lead data available</p>';
+
+                    // Populate Parsed DASH/MVR Data
+                    if (parsedData.has_parsed_data) {
+                        const parsedFields = [
+                            { label: 'Full Name', value: parsedData.full_name, icon: 'fa-user' },
+                            { label: 'First Name', value: parsedData.first_name, icon: 'fa-user' },
+                            { label: 'Last Name', value: parsedData.last_name, icon: 'fa-user' },
+                            { label: 'Full Address', value: parsedData.address, icon: 'fa-location-dot' },
+                            { label: 'City', value: parsedData.city, icon: 'fa-city' },
+                            { label: 'Postal Code', value: parsedData.postal_code, icon: 'fa-mailbox' },
+                            { label: 'Date of Birth', value: parsedData.date_of_birth, icon: 'fa-cake-candles' },
+                            { label: 'Gender', value: parsedData.gender, icon: 'fa-venus-mars' },
+                            { label: 'Marital Status', value: parsedData.marital_status, icon: 'fa-ring' },
+                            { label: 'MVR Issue Date', value: parsedData.mvr_issue_date, icon: 'fa-calendar-check' }
+                        ];
+
+                        parsedContainer.innerHTML = parsedFields
+                            .filter(f => f.value)
+                            .map(f => `
+                                <div class="flex items-start gap-2 text-sm">
+                                    <i class="fa-solid ${f.icon} text-emerald-500 w-4 mt-0.5"></i>
+                                    <span class="font-medium text-emerald-700 min-w-[100px]">${f.label}:</span>
+                                    <span class="text-emerald-900 break-all">${f.value}</span>
+                                </div>
+                            `).join('');
+                    } else {
+                        parsedContainer.innerHTML = `
+                            <div class="text-center py-4">
+                                <i class="fa-solid fa-file-circle-question text-3xl text-slate-300 mb-2"></i>
+                                <p class="text-slate-400 text-sm">No parsed DASH/MVR data found</p>
+                                <p class="text-slate-400 text-xs mt-1">Process this lead in Auto Dashboard to parse documents</p>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error fetching full lead data:', error);
+                    fbDataContainer.innerHTML = '<p class="text-rose-500 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</p>';
+                    parsedContainer.innerHTML = '<p class="text-rose-500 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</p>';
+                }
+            }
+
+            closeViewDataModal() {
+                this.dom.viewDataModal.classList.add('hidden');
+                document.body.style.overflow = '';
             }
 
             handleReminderSubmit(e) {
@@ -1893,13 +2161,78 @@
                 const time = document.getElementById('reminder-time').value;
                 const note = document.getElementById('reminder-note').value;
 
-                const lead = this.state.leads.find(l => l.id === leadId);
-                if(lead) {
-                    lead.reminder = { time, note };
-                    this.showToast('Reminder set successfully', 'success');
-                    this.renderAll(); 
-                    this.closeReminderModal();
+                if (!time || !note) {
+                    this.showToast('Please fill in all fields', 'error');
+                    return;
                 }
+
+                const lead = this.state.leads.find(l => (l.id || l.meta_lead_id) === leadId);
+                if(lead) {
+                    // Store reminder in localStorage with unique key
+                    const reminderKey = `reminder_${leadId}`;
+                    const reminders = JSON.parse(localStorage.getItem(reminderKey) || '[]');
+                    reminders.push({ time, note, createdAt: new Date().toISOString() });
+                    localStorage.setItem(reminderKey, JSON.stringify(reminders));
+                    
+                    this.showToast('Reminder set successfully', 'success');
+                    this.closeReminderModal();
+                    this.checkAllReminders(); // Check if any reminders are due
+                }
+            }
+
+            checkAllReminders() {
+                const now = new Date();
+                this.state.leads.forEach(lead => {
+                    const leadId = lead.id || lead.meta_lead_id;
+                    const reminderKey = `reminder_${leadId}`;
+                    const reminders = JSON.parse(localStorage.getItem(reminderKey) || '[]');
+                    
+                    reminders.forEach((reminder, index) => {
+                        const reminderTime = new Date(reminder.time);
+                        const timeDiff = reminderTime - now;
+                        
+                        // Show notification ONLY when reminder time has arrived (not before)
+                        // timeDiff <= 0 means the scheduled time has passed or is now
+                        // timeDiff >= -60000 means it's within 60 seconds of the scheduled time
+                        if (timeDiff <= 0 && timeDiff >= -60000) {
+                            const notificationKey = `notified_${leadId}_${index}`;
+                            if (!sessionStorage.getItem(notificationKey)) {
+                                this.showReminderNotification(lead, reminder);
+                                sessionStorage.setItem(notificationKey, 'true');
+                            }
+                        }
+                    });
+                });
+            }
+
+            showReminderNotification(lead, reminder) {
+                const leadName = lead.name || 'Unknown Lead';
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-amber-50 border-2 border-amber-400 rounded-lg shadow-2xl p-4 z-[100] max-w-sm animate-fade-in';
+                notification.style.animation = 'slideInRight 0.3s ease-out';
+                notification.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-bell text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-sm font-bold text-slate-800 mb-1">🔔 Reminder</h4>
+                            <p class="text-xs font-bold text-amber-600 mb-2">${leadName}</p>
+                            <p class="text-xs text-slate-700">${reminder.note}</p>
+                        </div>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 30 seconds
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 30000);
             }
 
             calculatePremium(row) {
@@ -1938,31 +2271,32 @@
 
             updateSignalUI(row, type) {
                 const leadId = row.dataset.id;
-                const greenBtn = row.querySelector('.action-signal-green');
-                const redBtn = row.querySelector('.action-signal-red');
                 const syncBtn = row.querySelector('.action-sync');
                 
                 // Update UI locally
                 if (type === 'green') {
-                    greenBtn.className = "action-signal-green w-9 py-1 rounded-md text-[9px] font-bold transition-all bg-emerald-100 text-emerald-700 shadow-inner";
-                    redBtn.className = "action-signal-red w-9 py-1 rounded-md text-[9px] font-bold transition-all text-slate-300 hover:text-rose-600";
                     syncBtn.disabled = false;
-                    syncBtn.className = "action-sync w-full h-7 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1";
+                    syncBtn.className = "action-sync w-full h-7 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1";
                     syncBtn.innerHTML = '<i class="fa-brands fa-meta pointer-events-none"></i> Sync';
                 } else {
-                    greenBtn.className = "action-signal-green w-9 py-1 rounded-md text-[9px] font-bold transition-all text-slate-300 hover:text-emerald-600";
-                    redBtn.className = "action-signal-red w-9 py-1 rounded-md text-[9px] font-bold transition-all bg-rose-100 text-rose-700 shadow-inner";
                     syncBtn.disabled = true;
                     syncBtn.className = "action-sync w-full h-7 bg-slate-100 text-slate-400 border border-slate-200 rounded text-[9px] font-bold flex items-center justify-center gap-1 cursor-not-allowed";
                     syncBtn.innerHTML = 'No Sync';
                 }
                 
-                // Skip API call if leadId is undefined/null/empty
+                // Skip API call if leadId is undefined/null/empty or is meta_lead_id (Facebook lead)
                 if (!leadId || leadId === 'undefined' || leadId === 'null') {
                     return;
                 }
                 
-                // Send to backend
+                // Only send to backend if it's a manual lead (has database id)
+                const lead = this.state.leads.find(l => (l.id || l.meta_lead_id) === leadId);
+                if (!lead || lead.meta_lead_id) {
+                    // Skip backend call for Facebook leads (meta_lead_id only)
+                    return;
+                }
+                
+                // Send to backend only for manual leads
                 fetch(`${BACKEND_URL}/api/leads/${leadId}/signal`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1973,7 +2307,7 @@
                     // Backend sync successful
                 })
                 .catch(error => {
-                    console.error('Error updating signal:', error);
+                    // Silently ignore errors for Facebook leads
                 });
             }
 
@@ -1984,6 +2318,21 @@
                 const phone = row.querySelector('.lead-phone').textContent;
                 const email = row.querySelector('.lead-email').textContent;
                 const timestampEl = row.querySelector('.sync-timestamp');
+                const status = row.querySelector('.status-select').value;
+                
+                // Determine event type based on status
+                const STATUS_TO_EVENT = {
+                    'Qualified': 'QualifiedLead',
+                    'Sold': 'Purchase'
+                };
+                
+                const eventType = STATUS_TO_EVENT[status];
+                
+                // Block if status is not Qualified or Sold
+                if (!eventType) {
+                    this.showToast(`Change status to "Qualified" or "Sold" to sync to Meta`, 'error');
+                    return;
+                }
                 
                 btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin pointer-events-none"></i>';
                 btn.disabled = true;
@@ -1995,17 +2344,17 @@
                 console.log(`👤 Name: ${name}`);
                 console.log(`📞 Phone: ${phone}`);
                 console.log(`📧 Email: ${email}`);
+                console.log(`📊 Status: ${status}`);
+                console.log(`🎯 Event Type: ${eventType}`);
                 console.log(`⏰ Sync Time: ${new Date().toLocaleString()}`);
                 console.log(`📍 Destination: Facebook Event Manager (Conversions API)`);
-                console.log(`🎯 Event Type: Lead`);
-                console.log(`📊 Check events at: https://business.facebook.com/events_manager2`);
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 
                 // Send event to Meta via backend
                 fetch(`${BACKEND_URL}/api/leads/${leadId}/sync-event`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_type: 'Lead' })
+                    body: JSON.stringify({ event_type: eventType })
                 })
                 .then(res => res.json())
                 .then(result => {
@@ -2014,6 +2363,22 @@
                     console.log(`✨ Lead successfully sent to Meta Event Manager`);
                     console.log(`🔗 API Response:`, result);
                     console.log(`📊 Meta Response Details:`, result.meta_response);
+                    
+                    // Show all the data that was sent to Meta
+                    if (result.data_sent_to_meta) {
+                        console.log('📦 DATA SENT TO META (Enriched from Backend):');
+                        console.log(`   📧 Email: ${result.data_sent_to_meta.email || 'N/A'}`);
+                        console.log(`   📞 Phone: ${result.data_sent_to_meta.phone || 'N/A'}`);
+                        console.log(`   👤 Name: ${result.data_sent_to_meta.name || 'N/A'}`);
+                        console.log(`   🏙️ City: ${result.data_sent_to_meta.city || 'N/A'}`);
+                        console.log(`   📮 Postal Code: ${result.data_sent_to_meta.postal_code || 'N/A'}`);
+                        console.log(`   🗺️ State/Province: ${result.data_sent_to_meta.state || 'N/A'}`);
+                        console.log(`   🎂 Date of Birth: ${result.data_sent_to_meta.date_of_birth || 'N/A'}`);
+                        console.log(`   🌍 Country: ${result.data_sent_to_meta.country || 'N/A'}`);
+                        console.log(`   🔗 Meta Lead ID: ${result.data_sent_to_meta.meta_lead_id || 'N/A'}`);
+                        console.log('   ✅ Fields Sent:', result.data_sent_to_meta.fields_sent);
+                    }
+                    
                     console.log(`⏱️  Confirmation Time: ${new Date().toLocaleString()}`);
                     console.log(`🎯 TO VERIFY IN FACEBOOK:`);
                     console.log(`   1. Go to: https://business.facebook.com/events_manager2`);
@@ -2204,7 +2569,44 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => { window.dashboardApp = new DashboardApp(); });
+        document.addEventListener('DOMContentLoaded', () => { 
+            window.dashboardApp = new DashboardApp(); 
+            
+            // User Menu functionality
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            const userMenu = document.getElementById('userMenu');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userEmail = document.getElementById('userEmail');
+            
+            // Display logged in user email
+            const loggedInUser = sessionStorage.getItem('metaDashboardUser');
+            if (loggedInUser) {
+                userEmail.textContent = loggedInUser;
+            }
+            
+            // Toggle user menu
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenu.classList.toggle('hidden');
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+            
+            // Logout functionality (clears server-side JWT cookie + sessionStorage)
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+                } catch (e) { /* ignore network errors on logout */ }
+                sessionStorage.removeItem('metaDashboardAuth');
+                sessionStorage.removeItem('metaDashboardUser');
+                window.location.href = 'meta-login.html';
+            });
+        });
     </script>
 </body>
 </html>

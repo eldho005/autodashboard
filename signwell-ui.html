@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Auto-attach JWT cookie to all same-origin API fetch calls -->
+    <script>(function(){var _f=window.fetch;window.fetch=function(input,init){var url=typeof input==='string'?input:(input&&input.url?input.url:'');var same=!url.startsWith('http')||url.startsWith(window.location.origin);if(same){init=Object.assign({},init);init.credentials=init.credentials||'include';}return _f.apply(this,[input,init]);};})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrokerFlow — SignWell Signing UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        tailwind.config = { theme: { extend: { colors: { brand: '#4f46e5' } } } };
+    </script>
+
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        #pdf-scroll-area { overflow-y: auto; }
+
+        /* Page wrapper */
+        .page-wrapper {
+            position: relative;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.12);
+            border: 1px solid #e2e8f0;
+            background: white;
+            flex-shrink: 0;
+            display: block;
+        }
+        .page-canvas { display: block; width: 100%; height: auto; }
+
+        /* Dropped fields */
+        .sig-field {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing:.4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            border-width: 2px;
+            overflow: hidden;
+            white-space: nowrap;
+            z-index: 10;
+            transition: box-shadow .15s;
+        }
+        .sig-field:active { cursor: grabbing; z-index: 60; }
+        .sig-field:hover { z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+        .sig-field .del-btn {
+            position: absolute; top: 0; right: 0;
+            background: #ef4444; color: white;
+            width: 16px; height: 16px;
+            display: none; align-items: center; justify-content: center;
+            font-size: 9px; cursor: pointer; border-bottom-left-radius: 3px;
+        }
+        .sig-field:hover .del-btn { display: flex; }
+        .sig-field .resize-handle {
+            position: absolute; bottom: 0; right: 0;
+            width: 10px; height: 10px; cursor: se-resize;
+            background: rgba(0,0,0,.2); border-top-left-radius: 3px;
+        }
+
+        /* Field palette drag items */
+        .palette-item {
+            cursor: grab; user-select: none; border-width: 1.5px;
+            transition: all .15s; font-size: 11px; font-weight: 700;
+        }
+        .palette-item:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+
+        /* Template badge */
+        .template-badge { animation: pulse-in .3s ease; }
+        @keyframes pulse-in { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Signer dot */
+        .signer-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Scroll area */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* Resize handle bar */
+        #resizer {
+            width: 4px; cursor: col-resize; background: #e2e8f0;
+            transition: background .15s; flex-shrink: 0;
+        }
+        #resizer:hover { background: #818cf8; }
+
+        /* Tab highlight */
+        .tab-active { background: white; color: #4338ca; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+        /* Signer address book */
+        .sw-ab-wrap { position: relative; }
+        .sw-ab-btn {
+            position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer; padding: 0;
+            color: #94a3b8; font-size: 11px; line-height: 1; transition: color .15s;
+        }
+        .sw-ab-btn:hover { color: #6366f1; }
+        .sw-ab-dropdown {
+            display: none; position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+            z-index: 900; box-shadow: 0 6px 20px rgba(0,0,0,.12);
+            max-height: 160px; overflow-y: auto;
+        }
+        .sw-ab-dropdown.sw-ab-open { display: block; }
+        .sw-ab-item {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 6px; padding: 6px 10px; font-size: 11px; color: #334155;
+            cursor: pointer; transition: background .1s;
+        }
+        .sw-ab-item:hover { background: #f1f5f9; }
+        .sw-ab-email { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sw-ab-del { color: #cbd5e1; font-size: 10px; flex-shrink: 0; }
+        .sw-ab-del:hover { color: #ef4444; }
+        .sw-ab-empty { padding: 8px 10px; font-size: 11px; color: #94a3b8; text-align: center; }
+    </style>
+</head>
+
+<body class="bg-slate-100 font-sans flex flex-col text-slate-900">
+
+<!-- Authentication Guard (server-side JWT verification) -->
+<script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════════════ -->
+<header class="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-5 shrink-0 z-20 shadow-sm">
+    <!-- Brand + workflow breadcrumb -->
+    <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow">
+                <i class="fa-solid fa-pen-nib text-white text-sm"></i>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-slate-800">SignWell <span class="text-indigo-600">Signing UI</span></div>
+                <div class="text-[10px] text-slate-400 leading-none">Phase 2 — Signature Setup & Send</div>
+            </div>
+        </div>
+
+        <!-- Phase breadcrumb -->
+        <div class="hidden md:flex items-center gap-1 ml-2">
+            <a href="/" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition">
+                <i class="fa-solid fa-users text-[9px]"></i> Leads
+            </a>
+            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+            <a href="/auto" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition">
+                <i class="fa-solid fa-car text-[9px]"></i> Auto
+            </a>
+            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+            <a href="/coverpage" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition">
+                <i class="fa-solid fa-file-contract text-[9px]"></i> Auto Cover
+            </a>
+            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+            <a href="/document-upload-dashboard" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition">
+                <i class="fa-solid fa-shield-check text-[9px]"></i> Doc Processing
+            </a>
+            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+            <div class="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100">
+                <i class="fa-solid fa-pen-nib text-[9px]"></i> eSign
+            </div>
+            <i class="fa-solid fa-chevron-right text-[9px] text-slate-300"></i>
+            <a href="/signed-documents" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-violet-500 hover:text-violet-800 hover:bg-violet-50 transition">
+                <i class="fa-solid fa-inbox text-[9px]"></i> Signed Docs
+            </a>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center gap-2">
+        <!-- Lead selector -->
+        <select id="lead-selector" onchange="onLeadSelected()" class="px-3 py-1.5 text-[11px] font-bold border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm">
+            <option value="">— Select Lead —</option>
+        </select>
+
+        <!-- Load docs -->
+        <button onclick="loadSigningDocuments()" id="btn-load"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition shadow-sm">
+            <i class="fa-solid fa-folder-open"></i> Load Signing Docs
+        </button>
+
+        <div class="h-5 w-px bg-slate-200"></div>
+
+        <!-- Send button -->
+        <button onclick="openSendModal()" id="btn-send"
+            class="flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled>
+            <i class="fa-solid fa-paper-plane"></i> Send for Signing
+        </button>
+    </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MAIN LAYOUT  (sidebar │ resizer │ canvas)
+══════════════════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 overflow-hidden" style="height:calc(100vh - 56px)">
+
+    <!-- ─── LEFT SIDEBAR ─── -->
+    <div id="sidebar" class="w-80 min-w-56 max-w-md bg-white border-r border-slate-200 flex flex-col overflow-hidden" style="width:300px">
+
+        <!-- Tab row -->
+        <div class="flex bg-slate-100 p-1 gap-0.5 border-b border-slate-200">
+            <button onclick="showTab('docs')" id="tab-docs" class="flex-1 px-2 py-1.5 text-[10px] font-bold rounded tab-active transition">
+                <i class="fa-solid fa-file-pdf text-red-500 mr-1"></i>Documents
+            </button>
+            <button onclick="showTab('signers')" id="tab-signers" class="flex-1 px-2 py-1.5 text-[10px] font-bold rounded text-slate-500 transition">
+                <i class="fa-solid fa-users mr-1"></i>Signers
+            </button>
+        </div>
+
+        <!-- ── DOCUMENTS TAB ── -->
+        <div id="tab-docs-panel" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div id="docs-empty" class="text-center py-10 text-slate-400">
+                <i class="fa-solid fa-folder-open text-3xl mb-2 block text-slate-300"></i>
+                <p class="text-xs">Select a lead and click<br><strong>Load Signing Docs</strong></p>
+            </div>
+            <div id="docs-list" class="space-y-2 hidden"></div>
+        </div>
+
+        <!-- ── SIGNERS TAB ── -->
+        <div id="tab-signers-panel" class="flex-1 overflow-y-auto p-3 space-y-2 hidden">
+            <div id="signer-list" class="space-y-2"></div>
+            <button onclick="addSigner()" class="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold text-indigo-600 border border-dashed border-indigo-300 rounded-lg hover:bg-indigo-50 transition">
+                <i class="fa-solid fa-plus"></i> Add Signer
+            </button>
+            <p class="text-[10px] text-slate-400 text-center">Click a signer to make them active before dragging fields</p>
+        </div>
+
+        <!-- Sidebar footer -->
+        <div class="border-t border-slate-100 p-2 bg-slate-50 text-[10px] text-slate-400 flex items-center justify-between">
+            <span id="doc-status-bar">No documents loaded</span>
+            <span id="field-status-bar" class="font-semibold text-indigo-500"></span>
+        </div>
+    </div>
+
+    <!-- ─── RESIZER ─── -->
+    <div id="resizer"></div>
+
+    <!-- ─── PDF CANVAS AREA ─── -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-slate-200">
+
+        <!-- Canvas toolbar -->
+        <div class="flex items-center gap-3 px-4 py-2 bg-slate-100 border-b border-slate-200 shrink-0">
+            <div id="template-status" class="hidden flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 template-badge">
+                <i class="fa-solid fa-magic-wand-sparkles"></i>
+                <span id="template-status-text">Template detected</span>
+            </div>
+            <div class="flex-1"></div>
+            <label class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 cursor-pointer">
+                <input type="checkbox" id="snap-grid" class="rounded"> Snap to grid
+            </label>
+            <div class="flex items-center gap-1 bg-white rounded border border-slate-200 px-2 py-1">
+                <button onclick="setZoom(-0.15)" class="text-slate-400 hover:text-slate-700 w-5 h-5 flex items-center justify-center"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                <span id="zoom-label" class="text-[10px] font-bold text-slate-600 w-8 text-center">100%</span>
+                <button onclick="setZoom(0.15)" class="text-slate-400 hover:text-slate-700 w-5 h-5 flex items-center justify-center"><i class="fa-solid fa-plus text-[10px]"></i></button>
+            </div>
+        </div>
+
+        <!-- PDF scroll area -->
+        <div id="pdf-scroll-area" class="flex-1 overflow-y-auto px-8 py-6">
+            <!-- Empty state -->
+            <div id="canvas-empty" class="flex flex-col items-center justify-center h-full text-slate-400">
+                <div class="w-20 h-20 rounded-2xl bg-slate-300 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-file-signature text-3xl text-slate-400"></i>
+                </div>
+                <p class="text-base font-semibold">No documents loaded</p>
+                <p class="text-sm mt-1">Select a lead and load signing documents to begin</p>
+                <a href="/document-upload-dashboard" class="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
+                    Go to Upload & Verify →
+                </a>
+            </div>
+            <!-- Page containers injected here -->
+            <div id="page-container" class="hidden space-y-0"></div>
+        </div>
+    </div>
+
+    <!-- ─── RIGHT SIDEBAR — Fields ─── -->
+    <div id="right-sidebar" class="w-52 bg-white border-l border-slate-200 flex flex-col overflow-hidden shrink-0">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-pen text-indigo-500 text-[11px]"></i>
+                <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Fields</span>
+            </div>
+            <span class="text-[10px] font-semibold text-indigo-500" id="field-count-badge">0 placed</span>
+        </div>
+
+        <!-- Active signer -->
+        <div class="px-3 py-2 border-b border-slate-100 bg-white">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1">Active Signer</p>
+            <div id="active-signer-badge" class="px-2 py-1.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 truncate">
+                None selected
+            </div>
+        </div>
+
+        <!-- Field palette -->
+        <div class="flex-1 overflow-y-auto p-2">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-2 px-1">Drag onto document</p>
+            <div class="space-y-1.5" id="palette-container"></div>
+
+            <div class="mt-3 pt-3 border-t border-slate-100">
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1 px-1">Placed fields (<span id="field-count">0</span>)</p>
+                <div id="placed-fields-list" class="space-y-1 text-[10px]"></div>
+            </div>
+        </div>
+
+        <!-- Tip -->
+        <div class="px-3 py-2 border-t border-slate-100 bg-slate-50">
+            <p class="text-[9px] text-slate-400 leading-tight">Select a signer in the Signers tab, then drag a field onto the PDF.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SEND MODAL
+══════════════════════════════════════════════════════════════════════ -->
+<div id="send-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-white">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span class="font-bold">Send for Signing via SignWell</span>
+            </div>
+            <button onclick="closeSendModal()" class="text-white/70 hover:text-white"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <!-- Document summary -->
+            <div id="modal-doc-summary" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm space-y-1"></div>
+
+            <!-- Signer summary -->
+            <div>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Signers</p>
+                <div id="modal-signer-summary" class="space-y-1"></div>
+            </div>
+
+            <!-- Message -->
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">Email Message (optional)</label>
+                <textarea id="modal-message" rows="2" placeholder="Any message to include in the signing email…"
+                    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none resize-none"></textarea>
+            </div>
+
+            <!-- Test mode -->
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="modal-test-mode" class="rounded border-slate-300">
+                <span class="text-xs text-slate-600">Test mode <span class="text-slate-400">(free, not legally binding)</span></span>
+            </label>
+
+            <!-- Error display -->
+            <div id="modal-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+        </div>
+
+        <div class="px-6 pb-6 flex gap-3">
+            <button onclick="closeSendModal()" class="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 text-sm transition">Cancel</button>
+            <button onclick="sendForSigning()" id="modal-send-btn"
+                class="flex-1 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 text-sm transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Confirm & Send
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════════════════════════════ -->
+<div id="toast" class="hidden fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white max-w-sm"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════
+   TEMPLATE DEFINITIONS
+   Coordinates: PDF points (72 DPI), origin TOP-LEFT
+   Letter page = 612 × 792 pts
+   Adjust x/y per real document layouts.
+═══════════════════════════════════════════ */
+const DOCUMENT_TEMPLATES = {
+    // ── AB Buy Up Option Report ─────────────────────────────────────
+    'AB_Buy_Up_Option_Report': {
+        label: 'AB Buy Up Option Report',
+        matchPatterns: ['ab_buy_up', 'ab buy up', 'buy_up_option', 'buy up option'],
+        fields: [
+            { type: 'signature',   page: 1, x: 390, y: 685, w: 160, h: 38, recipientIdx: 0, note: 'Client Signature' },
+            { type: 'date_signed', page: 1, x: 390, y: 730, w: 120, h: 24, recipientIdx: 0, note: 'Date' },
+        ]
+    },
+    // ── Canada Habitational Insurance Application ───────────────────
+    'Canada_Habitational_Insurance_Application': {
+        label: 'Canada Habitational Insurance Application',
+        matchPatterns: ['canada habitational', 'habitational insurance', 'habitational_insurance'],
+        fields: [
+            { type: 'signature',   page: 1, x: 380, y: 695, w: 160, h: 38, recipientIdx: 0, note: 'Applicant Signature' },
+            { type: 'date_signed', page: 1, x: 380, y: 738, w: 120, h: 24, recipientIdx: 0, note: 'Date' },
+            { type: 'signature',   page: 1, x: 70,  y: 695, w: 160, h: 38, recipientIdx: 1, note: 'Broker Signature' },
+        ]
+    },
+    // ── Ontario Automobile Insurance Application ────────────────────
+    'Ontario_Automobile_Insurance_Application': {
+        label: 'Ontario Automobile Insurance Application',
+        matchPatterns: ['ontario automobile', 'ontario auto', 'oaf', 'ontario_automobile'],
+        fields: [
+            { type: 'signature',   page: 1, x: 375, y: 700, w: 160, h: 38, recipientIdx: 0, note: 'Applicant Signature p1' },
+            { type: 'date_signed', page: 1, x: 375, y: 742, w: 120, h: 24, recipientIdx: 0, note: 'Date p1' },
+            { type: 'signature',   page: 2, x: 375, y: 700, w: 160, h: 38, recipientIdx: 0, note: 'Applicant Signature p2' },
+            { type: 'date_signed', page: 2, x: 375, y: 742, w: 120, h: 24, recipientIdx: 0, note: 'Date p2' },
+            { type: 'signature',   page: 2, x: 70,  y: 700, w: 160, h: 38, recipientIdx: 1, note: 'Broker Signature p2' },
+        ]
+    },
+    // ── PAC Form ────────────────────────────────────────────────────
+    'PAC_Form': {
+        label: 'PAC Form',
+        matchPatterns: ['pac form', 'pac_form', 'pre-authorized', 'preauthorized'],
+        fields: [
+            { type: 'signature',   page: 1, x: 50,  y: 620, w: 160, h: 38, recipientIdx: 0, note: 'Account Holder Signature' },
+            { type: 'date_signed', page: 1, x: 295, y: 620, w: 120, h: 24, recipientIdx: 0, note: 'Date' },
+        ]
+    },
+    // ── Personal Information Consent ────────────────────────────────
+    'Personal_Information_Consent': {
+        label: 'Personal Information Consent',
+        matchPatterns: ['personal information consent', 'pi consent', 'personal_information', 'privacy consent'],
+        fields: [
+            { type: 'signature',   page: 1, x: 50,  y: 695, w: 160, h: 38, recipientIdx: 0, note: 'Client Signature' },
+            { type: 'date_signed', page: 1, x: 295, y: 695, w: 120, h: 24, recipientIdx: 0, note: 'Date' },
+        ]
+    }
+};
+
+/* ═══════════════════════════════════════════
+   FIELD TYPE DEFINITIONS
+═══════════════════════════════════════════ */
+const FIELD_TYPES = [
+    { type: 'signature',   label: 'Signature',   icon: 'fa-signature',  bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8', w: 160, h: 40 },
+    { type: 'initials',    label: 'Initials',    icon: 'fa-pen',        bg: '#f0fdf4', border: '#22c55e', text: '#15803d', w: 80,  h: 32 },
+    { type: 'date_signed', label: 'Date',        icon: 'fa-calendar',   bg: '#fef3c7', border: '#f59e0b', text: '#b45309', w: 120, h: 28 },
+    { type: 'name',        label: 'Full Name',   icon: 'fa-user',       bg: '#fdf4ff', border: '#a855f7', text: '#7e22ce', w: 160, h: 28 },
+    { type: 'text',        label: 'Text Field',  icon: 'fa-font',       bg: '#f8fafc', border: '#94a3b8', text: '#475569', w: 160, h: 28 },
+    { type: 'checkbox',    label: 'Checkbox',    icon: 'fa-square-check', bg: '#fff7ed', border: '#f97316', text: '#c2410c', w: 24,  h: 24 },
+];
+
+/* Per-signer colour palette */
+const SIGNER_COLORS = [
+    { bg:'#eff6ff', border:'#2563eb', text:'#1e40af', dot:'#2563eb' }, // blue
+    { bg:'#ecfdf5', border:'#059669', text:'#065f46', dot:'#059669' }, // green
+    { bg:'#fff7ed', border:'#ea580c', text:'#9a3412', dot:'#ea580c' }, // orange
+    { bg:'#fdf2f8', border:'#db2777', text:'#9d174d', dot:'#db2777' }, // pink
+    { bg:'#faf5ff', border:'#9333ea', text:'#6b21a8', dot:'#9333ea' }, // purple
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const STATE = {
+    leadId: null,
+    clientName: null,
+    category: 'auto',
+    loadedDocs: [],           // [{id, original_filename, storage_path, download_url, template_key, pageCount}]
+    signers: [
+        { id: 's1', label: 'Client 1', name: '', email: '' },
+        { id: 'broker', label: 'Broker',   name: '', email: '' },
+    ],
+    activeSigner: 's1',
+    fields: [],               // [{id, type, docIdx, page, x, y, w, h, signerId, note}]
+    pdfScale: 1.2,
+    pageOffsets: [],          // cumulative page counts per doc  e.g. [0, 2, 5, ...]
+    pageDims: [],             // {widthPt, heightPt} per global page index
+    draggingType: null,
+    draggingFieldId: null,
+    dragOx: 0, dragOy: 0,
+    fieldCounter: 0,
+};
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+    renderPalette();
+    renderSignerList();
+    loadLeads();
+    initResizer();
+});
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+function showTab(name) {
+    ['docs','signers'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.remove('tab-active');
+        document.getElementById(`tab-${t}`).classList.add('text-slate-500');
+        document.getElementById(`tab-${t}-panel`).classList.add('hidden');
+    });
+    document.getElementById(`tab-${name}`).classList.add('tab-active');
+    document.getElementById(`tab-${name}`).classList.remove('text-slate-500');
+    document.getElementById(`tab-${name}-panel`).classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════
+   LEADS
+═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   SIGNER ADDRESS BOOK
+═══════════════════════════════════════════ */
+const _SW_AB_KEY = 'sw_address_book';
+
+function swAbLoad() {
+    try { const r = localStorage.getItem(_SW_AB_KEY); return r ? JSON.parse(r) : []; } catch(e) { return []; }
+}
+function swAbSave(list) {
+    try { localStorage.setItem(_SW_AB_KEY, JSON.stringify(list)); } catch(e) {}
+}
+function swAbAdd(email) {
+    if (!email || !email.includes('@')) return;
+    email = email.trim().toLowerCase();
+    const list = swAbLoad();
+    const idx = list.indexOf(email);
+    if (idx > -1) list.splice(idx, 1);
+    list.unshift(email);
+    swAbSave(list);
+}
+function swAbRemove(email) {
+    swAbSave(swAbLoad().filter(e => e !== email));
+}
+function swToggleAddressBook(dropdownId, inputId) {
+    document.querySelectorAll('.sw-ab-dropdown.sw-ab-open').forEach(d => {
+        if (d.id !== dropdownId) d.classList.remove('sw-ab-open');
+    });
+    const dd = document.getElementById(dropdownId);
+    if (!dd) return;
+    if (dd.classList.contains('sw-ab-open')) { dd.classList.remove('sw-ab-open'); return; }
+    const list = swAbLoad();
+    if (!list.length) {
+        dd.innerHTML = '<div class="sw-ab-empty">No saved addresses</div>';
+    } else {
+        dd.innerHTML = list.map(e =>
+            `<div class="sw-ab-item" onclick="swAbSelect('${inputId}','${e}','${dropdownId}')">`+
+            `<span class="sw-ab-email">${e}</span>`+
+            `<span class="sw-ab-del" title="Remove" onclick="event.stopPropagation();swAbRemoveAndRefresh('${e}','${dropdownId}','${inputId}')"><i class="fa-solid fa-xmark"></i></span>`+
+            `</div>`
+        ).join('');
+    }
+    dd.classList.add('sw-ab-open');
+}
+function swAbSelect(inputId, email, dropdownId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = email;
+        const signerId = inputId.replace('sw-email-', '');
+        const s = STATE.signers.find(s => s.id === signerId);
+        if (s) s.email = email;
+    }
+    const dd = document.getElementById(dropdownId);
+    if (dd) dd.classList.remove('sw-ab-open');
+}
+function swAbRemoveAndRefresh(email, dropdownId, inputId) {
+    swAbRemove(email);
+    swToggleAddressBook(dropdownId, inputId);
+    const dd = document.getElementById(dropdownId);
+    if (dd) dd.classList.add('sw-ab-open');
+}
+document.addEventListener('click', function() {
+    document.querySelectorAll('.sw-ab-dropdown.sw-ab-open').forEach(d => d.classList.remove('sw-ab-open'));
+});
+
+async function loadLeads() {
+    try {
+        const r = await fetch('/api/leads?limit=200');
+        const data = await r.json();
+        const sel = document.getElementById('lead-selector');
+        (data.leads || data || []).forEach(lead => {
+            const opt = document.createElement('option');
+            opt.value = lead.id || lead.lead_id;
+            opt.textContent = lead.name || lead.full_name || `Lead ${opt.value}`;
+            opt.dataset.name = opt.textContent;
+            opt.dataset.email = lead.email || '';
+            sel.appendChild(opt);
+        });
+        // Pre-select lead from URL params (when navigating from Document Processing Center)
+        const params = new URLSearchParams(window.location.search);
+        const urlLeadId = params.get('lead_id');
+        const urlClientName = decodeURIComponent(params.get('client_name') || '');
+        const urlCategory  = params.get('category');
+        if (urlLeadId) {
+            sel.value = urlLeadId;
+            if (sel.value !== urlLeadId) {
+                // Lead not yet synced into dropdown — add a placeholder
+                const opt = document.createElement('option');
+                opt.value = urlLeadId;
+                opt.textContent = urlClientName || `Lead ${urlLeadId}`;
+                opt.dataset.name = opt.textContent;
+                sel.appendChild(opt);
+                sel.value = urlLeadId;
+            }
+            STATE.leadId     = urlLeadId;
+            STATE.clientName = urlClientName || sel.options[sel.selectedIndex]?.dataset.name || '';
+            if (urlCategory) STATE.category = urlCategory; // kept for legacy URL compat
+            showToast(`Lead pre-selected: ${STATE.clientName} — loading docs…`, 'info');
+            // Auto-load signing docs when opened from DPC
+            setTimeout(() => loadSigningDocuments(), 600);
+        }
+    } catch(e) { console.warn('Could not load leads', e); }
+}
+
+function onLeadSelected() {
+    const sel = document.getElementById('lead-selector');
+    const opt = sel.options[sel.selectedIndex];
+    STATE.leadId = sel.value;
+    STATE.clientName = opt.dataset.name || '';
+    // Auto-fill Client 1 email from lead email
+    const leadEmail = (opt.dataset.email || '').trim();
+    if (leadEmail) {
+        const s1 = STATE.signers.find(s => s.id === 's1');
+        if (s1) { s1.email = leadEmail; renderSignerList(); }
+    }
+    clearCanvas();
+}
+
+/* setCategory removed — page loads both auto and home together */
+
+/* ═══════════════════════════════════════════
+   LOAD SIGNING DOCUMENTS
+═══════════════════════════════════════════ */
+async function loadSigningDocuments() {
+    if (!STATE.leadId || !STATE.clientName) {
+        return showToast('Please select a lead first', 'warning');
+    }
+    const btn = document.getElementById('btn-load');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading…';
+    btn.disabled = true;
+
+    try {
+        const params = new URLSearchParams({ client_name: STATE.clientName, lead_id: STATE.leadId });
+        const r = await fetch(`/api/client-documents/signing?${params}`);
+        if (!r.ok) throw new Error('Failed to load documents');
+        const data = await r.json();
+
+        if (!data.documents?.length) {
+            showToast(`No signing documents found for ${STATE.clientName}`, 'warning');
+            return;
+        }
+
+        STATE.loadedDocs = data.documents;
+        STATE.fields = [];
+        renderDocsList();
+        await renderAllPDFs();
+        document.getElementById('btn-send').disabled = false;
+        showToast(`Loaded ${data.documents.length} signing document(s)`, 'success');
+    } catch(e) {
+        showToast('Error loading documents: ' + e.message, 'error');
+    } finally {
+        btn.innerHTML = '<i class="fa-solid fa-folder-open"></i> Load Signing Docs';
+        btn.disabled = false;
+    }
+}
+
+/* ─── Template detection ─── */
+function detectTemplate(filename) {
+    const lower = filename.toLowerCase();
+    for (const [key, tpl] of Object.entries(DOCUMENT_TEMPLATES)) {
+        if (tpl.matchPatterns.some(p => lower.includes(p.toLowerCase()))) return key;
+    }
+    return null;
+}
+
+/* ═══════════════════════════════════════════
+   RENDER DOCS LIST (sidebar)
+═══════════════════════════════════════════ */
+function renderDocsList() {
+    const list = document.getElementById('docs-list');
+    const empty = document.getElementById('docs-empty');
+    empty.classList.add('hidden');
+    list.classList.remove('hidden');
+    list.innerHTML = '';
+
+    STATE.loadedDocs.forEach((doc, idx) => {
+        const tpl = doc.template_key ? DOCUMENT_TEMPLATES[doc.template_key] : null;
+        const div = document.createElement('div');
+        div.className = 'p-2.5 rounded-lg border border-slate-200 bg-white hover:border-indigo-300 cursor-pointer transition group';
+        div.onclick = () => scrollToDoc(idx);
+        div.innerHTML = `
+            <div class="flex items-start gap-2">
+                <i class="fa-solid fa-file-pdf text-red-400 mt-0.5 text-sm shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                    <div class="text-[11px] font-semibold text-slate-700 truncate">${doc.original_filename || 'Unknown'}</div>
+                    <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                        ${tpl ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                            <i class="fa-solid fa-magic-wand-sparkles mr-0.5"></i>${tpl.label}</span>` :
+                        `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500">Manual placement</span>`}
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${doc.category === 'home' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-600'}">${(doc.category || 'auto').toUpperCase()}</span>
+                    </div>
+                </div>
+                ${tpl ? `<button onclick="event.stopPropagation();applyTemplate(${idx})" 
+                    class="text-[9px] font-bold px-1.5 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition opacity-0 group-hover:opacity-100 shrink-0">
+                    ✦ Apply</button>` : ''}
+            </div>
+        `;
+        list.appendChild(div);
+    });
+
+    document.getElementById('doc-status-bar').textContent = `${STATE.loadedDocs.length} doc(s) loaded`;
+}
+
+/* ═══════════════════════════════════════════
+   PDF RENDERING
+═══════════════════════════════════════════ */
+async function renderAllPDFs() {
+    const container = document.getElementById('page-container');
+    const emptyState = document.getElementById('canvas-empty');
+    container.innerHTML = '';
+    container.classList.remove('hidden');
+    emptyState.classList.add('hidden');
+
+    STATE.pageOffsets = [];
+    STATE.pageDims = [];
+    let globalPage = 0;
+
+    for (let docIdx = 0; docIdx < STATE.loadedDocs.length; docIdx++) {
+        const doc = STATE.loadedDocs[docIdx];
+        STATE.pageOffsets.push(globalPage);
+
+        // Doc header
+        const hdr = document.createElement('div');
+        hdr.className = 'flex items-center justify-between px-3 py-2 bg-slate-300/50 border border-b-0 border-slate-300 rounded-t-lg mt-4 first:mt-0';
+        hdr.dataset.docIdx = docIdx;
+        hdr.id = `doc-hdr-${docIdx}`;
+        hdr.innerHTML = `
+            <div class="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+                <i class="fa-solid fa-file-pdf text-red-500"></i>
+                ${doc.original_filename || 'Document ' + (docIdx+1)}
+            </div>
+            <div class="flex items-center gap-1.5">
+                ${doc.template_key ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    <i class="fa-solid fa-magic-wand-sparkles mr-0.5"></i>${DOCUMENT_TEMPLATES[doc.template_key].label}</span>` : ''}
+                <button onclick="applyTemplate(${docIdx})" class="${doc.template_key ? '' : 'hidden'} px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition">Apply Template</button>
+            </div>
+        `;
+        container.appendChild(hdr);
+
+        try {
+            const resp = await fetch(doc.download_url);
+            const buf = await resp.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+            doc.pageCount = pdf.numPages;
+
+            for (let pNum = 1; pNum <= pdf.numPages; pNum++) {
+                const page = await pdf.getPage(pNum);
+                const vp = page.getViewport({ scale: STATE.pdfScale });
+                STATE.pageDims.push({ widthPt: vp.width / STATE.pdfScale, heightPt: vp.height / STATE.pdfScale });
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'page-wrapper';
+                wrapper.style.width = vp.width + 'px';
+                wrapper.style.height = vp.height + 'px';
+                wrapper.dataset.globalPage = globalPage + 1; // 1-indexed
+                wrapper.dataset.docIdx = docIdx;
+                wrapper.dataset.localPage = pNum;
+
+                const canvas = document.createElement('canvas');
+                canvas.className = 'page-canvas';
+                canvas.width = vp.width;
+                canvas.height = vp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                wrapper.appendChild(canvas);
+
+                // Drop zone events
+                wrapper.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+                wrapper.addEventListener('drop', e => onDropField(e, wrapper));
+
+                container.appendChild(wrapper);
+                globalPage++;
+            }
+        } catch(err) {
+            console.error('PDF render error for doc', docIdx, err);
+            const errDiv = document.createElement('div');
+            errDiv.className = 'page-wrapper flex items-center justify-center bg-red-50 border border-red-200 rounded-lg p-8 text-red-600 text-sm';
+            errDiv.style.width = '650px'; errDiv.style.height = '200px';
+            errDiv.textContent = `Could not render: ${doc.original_filename} — ${err.message}`;
+            container.appendChild(errDiv);
+            globalPage++;
+        }
+    }
+
+    updateFieldUI();
+}
+
+/* ═══════════════════════════════════════════
+   TEMPLATE APPLICATION
+═══════════════════════════════════════════ */
+function applyTemplate(docIdx, silent = false) {
+    const doc = STATE.loadedDocs[docIdx];
+    if (!doc.template_key) return showToast('No template for this document', 'warning');
+
+    const tpl = DOCUMENT_TEMPLATES[doc.template_key];
+    const offset = STATE.pageOffsets[docIdx]; // 0-indexed global page offset
+
+    // Remove existing template fields for this doc
+    STATE.fields = STATE.fields.filter(f => f.docIdx !== docIdx || !f.fromTemplate);
+
+    // Place new fields
+    tpl.fields.forEach(tf => {
+        const signer = STATE.signers[tf.recipientIdx] || STATE.signers[0];
+        const colorSet = SIGNER_COLORS[Math.min(tf.recipientIdx, SIGNER_COLORS.length - 1)];
+        const fieldId = 'f' + (++STATE.fieldCounter);
+
+        const newField = {
+            id: fieldId,
+            type: tf.type,
+            docIdx,
+            page: offset + tf.page, // global 1-indexed page
+            x: tf.x,
+            y: tf.y,
+            w: tf.w,
+            h: tf.h,
+            signerId: signer.id,
+            note: tf.note || '',
+            fromTemplate: true,
+            color: colorSet,
+        };
+        STATE.fields.push(newField);
+        renderFieldDOM(newField);
+    });
+
+    if (!silent) showToast(`Template applied: ${tpl.label} (${tpl.fields.length} fields)`, 'success');
+    updateFieldUI();
+}
+
+/* ═══════════════════════════════════════════
+   FIELD DOM RENDERING
+═══════════════════════════════════════════ */
+function renderFieldDOM(field) {
+    const wrapper = document.querySelector(`.page-wrapper[data-global-page="${field.page}"]`);
+    if (!wrapper) return;
+
+    const ft = FIELD_TYPES.find(t => t.type === field.type) || FIELD_TYPES[0];
+    const colorSet = field.color || SIGNER_COLORS[0];
+
+    const el = document.createElement('div');
+    el.className = 'sig-field';
+    el.id = `field-${field.id}`;
+    el.style.cssText = `
+        left: ${Math.round(field.x * STATE.pdfScale)}px;
+        top: ${Math.round(field.y * STATE.pdfScale)}px;
+        width: ${Math.round(field.w * STATE.pdfScale)}px;
+        height: ${Math.round(field.h * STATE.pdfScale)}px;
+        background: ${colorSet.bg};
+        border-color: ${colorSet.border};
+        color: ${colorSet.text};
+    `;
+    el.innerHTML = `
+        <i class="fa-solid ${ft.icon} mr-1 text-[9px]"></i>${ft.label}
+        ${field.note ? `<span class="text-[8px] opacity-70 ml-1">(${field.note})</span>` : ''}
+        <div class="del-btn" onclick="deleteField('${field.id}')"><i class="fa-solid fa-times text-[8px]"></i></div>
+        <div class="resize-handle"></div>
+    `;
+
+    // Drag-to-move
+    el.addEventListener('mousedown', e => {
+        if (e.target.classList.contains('del-btn') || e.target.closest('.del-btn')) return;
+        if (e.target.classList.contains('resize-handle')) return;
+        e.stopPropagation();
+        STATE.draggingFieldId = field.id;
+        const rect = el.getBoundingClientRect();
+        STATE.dragOx = e.clientX - rect.left;
+        STATE.dragOy = e.clientY - rect.top;
+    });
+
+    // Resize handle
+    const rh = el.querySelector('.resize-handle');
+    rh.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        const startW = field.w * STATE.pdfScale;
+        const startH = field.h * STATE.pdfScale;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const onMove = mv => {
+            const nw = Math.max(40, startW + (mv.clientX - startX));
+            const nh = Math.max(20, startH + (mv.clientY - startY));
+            field.w = nw / STATE.pdfScale;
+            field.h = nh / STATE.pdfScale;
+            el.style.width = nw + 'px';
+            el.style.height = nh + 'px';
+        };
+        const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+
+    wrapper.appendChild(el);
+}
+
+/* ─── Global mouse move / up for dragging ─── */
+document.addEventListener('mousemove', e => {
+    if (!STATE.draggingFieldId) return;
+    const field = STATE.fields.find(f => f.id === STATE.draggingFieldId);
+    if (!field) return;
+    const el = document.getElementById(`field-${field.id}`);
+    const wrapper = document.querySelector(`.page-wrapper[data-global-page="${field.page}"]`);
+    if (!el || !wrapper) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    let nx = e.clientX - rect.left - STATE.dragOx;
+    let ny = e.clientY - rect.top - STATE.dragOy;
+
+    // Clamp within page
+    nx = Math.max(0, Math.min(nx, rect.width - el.offsetWidth));
+    ny = Math.max(0, Math.min(ny, rect.height - el.offsetHeight));
+
+    if (document.getElementById('snap-grid').checked) {
+        const gridPx = 10 * STATE.pdfScale;
+        nx = Math.round(nx / gridPx) * gridPx;
+        ny = Math.round(ny / gridPx) * gridPx;
+    }
+
+    el.style.left = nx + 'px';
+    el.style.top  = ny + 'px';
+    field.x = nx / STATE.pdfScale;
+    field.y = ny / STATE.pdfScale;
+});
+
+document.addEventListener('mouseup', () => { STATE.draggingFieldId = null; });
+
+/* ─── Drop from palette ─── */
+function onDropField(e, wrapper) {
+    e.preventDefault();
+    if (!STATE.draggingType) return;
+    const ft = FIELD_TYPES.find(t => t.type === STATE.draggingType);
+    if (!ft) return;
+
+    const globalPage = parseInt(wrapper.dataset.globalPage);
+    const docIdx = parseInt(wrapper.dataset.docIdx);
+    const rect = wrapper.getBoundingClientRect();
+    let nx = (e.clientX - rect.left) / STATE.pdfScale;
+    let ny = (e.clientY - rect.top)  / STATE.pdfScale;
+    nx = Math.max(0, nx); ny = Math.max(0, ny);
+
+    const activeSigner = STATE.signers.find(s => s.id === STATE.activeSigner) || STATE.signers[0];
+    const signerIdx = STATE.signers.indexOf(activeSigner);
+    const colorSet = SIGNER_COLORS[Math.min(signerIdx, SIGNER_COLORS.length - 1)];
+
+    const fieldId = 'f' + (++STATE.fieldCounter);
+    const newField = {
+        id: fieldId, type: ft.type, docIdx, page: globalPage,
+        x: nx, y: ny, w: ft.w, h: ft.h,
+        signerId: activeSigner.id, note: '', fromTemplate: false, color: colorSet,
+    };
+    STATE.fields.push(newField);
+    renderFieldDOM(newField);
+    updateFieldUI();
+    STATE.draggingType = null;
+}
+
+function deleteField(fieldId) {
+    STATE.fields = STATE.fields.filter(f => f.id !== fieldId);
+    const el = document.getElementById(`field-${fieldId}`);
+    if (el) el.remove();
+    updateFieldUI();
+}
+
+/* ═══════════════════════════════════════════
+   PALETTE
+═══════════════════════════════════════════ */
+function renderPalette() {
+    const container = document.getElementById('palette-container');
+    FIELD_TYPES.forEach(ft => {
+        const btn = document.createElement('div');
+        btn.className = 'palette-item flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab select-none';
+        btn.style.cssText = `background:${ft.bg}; border-color:${ft.border}; color:${ft.text};`;
+        btn.draggable = true;
+        btn.innerHTML = `<i class="fa-solid ${ft.icon} text-xs w-4 text-center"></i><span>${ft.label}</span>
+            <span class="ml-auto text-[9px] opacity-60">${ft.w}×${ft.h}</span>`;
+
+        btn.addEventListener('dragstart', e => {
+            STATE.draggingType = ft.type;
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+        container.appendChild(btn);
+    });
+}
+
+/* ═══════════════════════════════════════════
+   SIGNERS
+═══════════════════════════════════════════ */
+function renderSignerList() {
+    const container = document.getElementById('signer-list');
+    container.innerHTML = '';
+    STATE.signers.forEach((signer, idx) => {
+        const colors = SIGNER_COLORS[Math.min(idx, SIGNER_COLORS.length-1)];
+        const isActive = signer.id === STATE.activeSigner;
+        const div = document.createElement('div');
+        div.className = `p-2.5 rounded-lg border-2 cursor-pointer transition ${isActive ? 'shadow-sm' : 'border-slate-200'}`;
+        div.style.cssText = isActive ? `background:${colors.bg}; border-color:${colors.border};` : '';
+        div.onclick = () => setActiveSigner(signer.id);
+        div.innerHTML = `
+            <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5">
+                    <div class="signer-dot" style="background:${colors.dot}"></div>
+                    <span class="text-[11px] font-bold" style="color:${colors.text}">${signer.label}</span>
+                    ${isActive ? '<span class="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">Active</span>' : ''}
+                </div>
+                ${idx > 0 ? `<button onclick="event.stopPropagation();removeSigner('${signer.id}')" class="text-slate-300 hover:text-red-500 transition">
+                    <i class="fa-solid fa-times text-xs"></i></button>` : ''}
+            </div>
+            <input value="${signer.name}" placeholder="Full name"
+                oninput="updateSigner('${signer.id}','name',this.value)" onclick="event.stopPropagation()"
+                class="w-full text-[10px] bg-white border border-slate-200 rounded px-2 py-1.5 mb-1 focus:ring-1 outline-none focus:ring-indigo-400 transition placeholder-slate-300">
+            <div class="sw-ab-wrap" onclick="event.stopPropagation()">
+                <input value="${signer.email}" placeholder="Email address" type="email"
+                    id="sw-email-${signer.id}"
+                    oninput="updateSigner('${signer.id}','email',this.value)"
+                    class="w-full text-[10px] bg-white border border-slate-200 rounded px-2 py-1.5 focus:ring-1 outline-none focus:ring-indigo-400 transition placeholder-slate-300" style="padding-right:26px">
+                <button type="button" class="sw-ab-btn" title="Address book"
+                    onclick="swToggleAddressBook('sw-ab-${signer.id}','sw-email-${signer.id}')"><i class="fa-solid fa-address-book"></i></button>
+                <div class="sw-ab-dropdown" id="sw-ab-${signer.id}"></div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    // Update active signer badge in fields tab
+    const active = STATE.signers.find(s => s.id === STATE.activeSigner);
+    const idx = STATE.signers.indexOf(active);
+    const colors = SIGNER_COLORS[Math.min(idx, SIGNER_COLORS.length-1)];
+    const badge = document.getElementById('active-signer-badge');
+    if (active) {
+        badge.textContent = `${active.label} ${active.name ? '— ' + active.name : '(unnamed)'}`;
+        badge.style.cssText = `background:${colors.bg}; border-color:${colors.border}; color:${colors.text}; border-width:1px; border-style:solid;`;
+    }
+}
+
+function setActiveSigner(id) {
+    STATE.activeSigner = id;
+    renderSignerList();
+}
+
+function updateSigner(id, field, val) {
+    const s = STATE.signers.find(s => s.id === id);
+    if (s) s[field] = val;
+}
+
+function addSigner() {
+    const clients = STATE.signers.filter(s => s.id.startsWith('s'));
+    const nextNum = clients.length + 1;
+    if (nextNum > 4) return showToast('Max 4 client signers supported', 'warning');
+    STATE.signers.push({ id: `s${nextNum}`, label: `Client ${nextNum}`, name: '', email: '' });
+    renderSignerList();
+}
+
+function removeSigner(id) {
+    if (!confirm('Remove this signer? Their fields will be removed.')) return;
+    STATE.fields = STATE.fields.filter(f => f.signerId !== id);
+    document.querySelectorAll('.sig-field').forEach(el => {
+        const fid = el.id.replace('field-', '');
+        if (!STATE.fields.find(f => f.id === fid)) el.remove();
+    });
+    STATE.signers = STATE.signers.filter(s => s.id !== id);
+    if (STATE.activeSigner === id) STATE.activeSigner = STATE.signers[0].id;
+    renderSignerList();
+    updateFieldUI();
+}
+
+/* ═══════════════════════════════════════════
+   FIELD UI UPDATES
+═══════════════════════════════════════════ */
+function updateFieldUI() {
+    document.getElementById('field-count').textContent = STATE.fields.length;
+    const badgeEl = document.getElementById('field-count-badge');
+    if (badgeEl) badgeEl.textContent = `${STATE.fields.length} placed`;
+    document.getElementById('field-status-bar').textContent = STATE.fields.length > 0 ? `${STATE.fields.length} field(s)` : '';
+
+    const list = document.getElementById('placed-fields-list');
+    list.innerHTML = STATE.fields.length === 0
+        ? '<p class="text-slate-400 italic">No fields placed yet</p>'
+        : STATE.fields.map(f => {
+            const signer = STATE.signers.find(s => s.id === f.signerId);
+            const ft = FIELD_TYPES.find(t => t.type === f.type);
+            return `<div class="flex items-center gap-1 py-0.5 group">
+                <i class="fa-solid ${ft?.icon || 'fa-pen'} text-[9px] w-3" style="color:${f.color?.text || '#64748b'}"></i>
+                <span class="flex-1 truncate text-slate-600">${ft?.label} p${f.page}</span>
+                <span class="text-slate-400">${signer?.label || '?'}</span>
+                <button onclick="deleteField('${f.id}')" class="text-slate-200 hover:text-red-500 transition ml-1">
+                    <i class="fa-solid fa-times text-[8px]"></i></button>
+            </div>`;
+        }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   TEMPLATE STATUS BAR (canvas toolbar)
+═══════════════════════════════════════════ */
+function updateTemplateStatusBar() {
+    const detected = STATE.loadedDocs.filter(d => d.template_key);
+    const bar = document.getElementById('template-status');
+    const txt = document.getElementById('template-status-text');
+    if (detected.length > 0) {
+        bar.classList.remove('hidden');
+        txt.textContent = `${detected.length} template(s) auto-detected & applied`;
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+
+/* ═══════════════════════════════════════════
+   ZOOM
+═══════════════════════════════════════════ */
+function setZoom(delta) {
+    const newScale = Math.max(0.5, Math.min(2.5, STATE.pdfScale + delta));
+    if (newScale === STATE.pdfScale) return;
+    STATE.pdfScale = newScale;
+    document.getElementById('zoom-label').textContent = Math.round(newScale * 100) + '%';
+
+    // Re-render all fields at new scale
+    document.querySelectorAll('.sig-field').forEach(el => el.remove());
+    STATE.fields.forEach(f => renderFieldDOM(f));
+    // Re-render PDFs at new scale
+    renderAllPDFs();
+}
+
+/* ═══════════════════════════════════════════
+   SCROLL TO DOC
+═══════════════════════════════════════════ */
+function scrollToDoc(docIdx) {
+    const hdr = document.getElementById(`doc-hdr-${docIdx}`);
+    if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ═══════════════════════════════════════════
+   CLEAR CANVAS
+═══════════════════════════════════════════ */
+function clearCanvas() {
+    document.getElementById('page-container').innerHTML = '';
+    document.getElementById('page-container').classList.add('hidden');
+    document.getElementById('canvas-empty').classList.remove('hidden');
+    document.getElementById('docs-empty').classList.remove('hidden');
+    document.getElementById('docs-list').classList.add('hidden');
+    document.getElementById('docs-list').innerHTML = '';
+    document.getElementById('template-status').classList.add('hidden');
+    document.getElementById('btn-send').disabled = true;
+    STATE.loadedDocs = [];
+    STATE.fields = [];
+    STATE.pageOffsets = [];
+    STATE.pageDims = [];
+    updateFieldUI();
+}
+
+/* ═══════════════════════════════════════════
+   SEND MODAL
+═══════════════════════════════════════════ */
+function openSendModal() {
+    if (!STATE.loadedDocs.length) return showToast('Load documents first', 'warning');
+
+    // Validate signers
+    const validSigners = STATE.signers.filter(s => s.name && s.email);
+    if (validSigners.length === 0) {
+        showTab('signers');
+        return showToast('Please fill in signer name and email first', 'warning');
+    }
+
+    // Doc summary
+    const sumEl = document.getElementById('modal-doc-summary');
+    sumEl.innerHTML = `
+        <div class="flex items-center gap-2 mb-1">
+            <i class="fa-solid fa-file-pdf text-red-400"></i>
+            <span class="font-semibold text-slate-700">${STATE.loadedDocs.length} signing document(s)</span>
+        </div>
+        <div class="text-xs text-slate-500">${STATE.loadedDocs.map(d => d.original_filename).join(' · ')}</div>
+        <div class="mt-1 text-xs text-slate-500"><strong>${STATE.fields.length}</strong> field(s) placed
+            ${STATE.loadedDocs.filter(d=>d.template_key).length > 0 ? `· <span class="text-emerald-600">${STATE.loadedDocs.filter(d=>d.template_key).length} template(s)</span>` : ''}
+        </div>
+    `;
+
+    // Signer summary
+    const sigEl = document.getElementById('modal-signer-summary');
+    sigEl.innerHTML = validSigners.map((s, i) => {
+        const c = SIGNER_COLORS[Math.min(i, SIGNER_COLORS.length-1)];
+        return `<div class="flex items-center gap-2 p-2 rounded-lg" style="background:${c.bg};border:1px solid ${c.border}">
+            <div style="background:${c.dot}" class="w-2.5 h-2.5 rounded-full shrink-0"></div>
+            <div>
+                <div class="text-xs font-bold" style="color:${c.text}">${s.label} — ${s.name}</div>
+                <div class="text-[10px] text-slate-500">${s.email}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('modal-error').classList.add('hidden');
+    document.getElementById('send-modal').classList.remove('hidden');
+}
+
+function closeSendModal() {
+    document.getElementById('send-modal').classList.add('hidden');
+}
+
+async function sendForSigning() {
+    const validSigners = STATE.signers.filter(s => s.name && s.email);
+    const message = document.getElementById('modal-message').value.trim();
+    const testMode = document.getElementById('modal-test-mode').checked;
+    const btn = document.getElementById('modal-send-btn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending…';
+    document.getElementById('modal-error').classList.add('hidden');
+
+    // Build a stable map: internal signer id → 1-based recipient_id (position in validSigners only)
+    const signerToRecipId = {};
+    validSigners.forEach((s, i) => { signerToRecipId[s.id] = i + 1; });
+
+    try {
+        const payload = {
+            client_name: STATE.clientName,
+            lead_id: STATE.leadId,
+            category: STATE.category,
+            request_name: `${STATE.category.toUpperCase()} — ${STATE.clientName} — Signing Request`,
+            message,
+            test_mode: testMode,
+            documents: STATE.loadedDocs.map(d => ({
+                id: d.id,
+                storage_path: d.storage_path,
+                original_filename: d.original_filename,
+                category: d.category || 'auto',
+                document_type: d.document_type || 'signing',
+            })),
+            signers: validSigners.map((s, i) => ({
+                recipient_id: i + 1,
+                name: s.name,
+                email: s.email,
+                role: s.id === 'broker' ? 'broker' : 'client',
+                action_type: 'SIGN',
+            })),
+            // Only include fields whose signer is in validSigners and have a valid type
+            fields: STATE.fields
+                .filter(f => signerToRecipId[f.signerId] !== undefined && f.type)
+                .map(f => ({
+                    type: f.type || 'text',
+                    page: f.page,
+                    x: Math.round(f.x),
+                    y: Math.round(f.y),
+                    width: Math.round(f.w),
+                    height: Math.round(f.h),
+                    recipient_id: signerToRecipId[f.signerId],
+                })),
+        };
+
+        const r = await fetch('/api/signwell/send-for-signing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await r.json();
+
+        if (!r.ok || result.error) throw new Error(result.error || 'Send failed');
+
+        // Save signer emails to address book
+        validSigners.forEach(s => swAbAdd(s.email));
+
+        closeSendModal();
+        showToast(`✅ Sent! Document ID: ${result.document_id}`, 'success');
+
+        // Disable send button to prevent re-send
+        document.getElementById('btn-send').disabled = true;
+
+    } catch(err) {
+        const errEl = document.getElementById('modal-error');
+        errEl.textContent = 'Error: ' + err.message;
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Confirm & Send';
+    }
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR RESIZER
+═══════════════════════════════════════════ */
+function initResizer() {
+    const resizer = document.getElementById('resizer');
+    const sidebar = document.getElementById('sidebar');
+    let isResizing = false, startX = 0, startW = 0;
+
+    resizer.addEventListener('mousedown', e => {
+        isResizing = true;
+        startX = e.clientX;
+        startW = sidebar.offsetWidth;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', e => {
+        if (!isResizing) return;
+        const nw = Math.max(220, Math.min(480, startW + (e.clientX - startX)));
+        sidebar.style.width = nw + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (!isResizing) return;
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    const colors = { success:'bg-emerald-600', error:'bg-red-600', warning:'bg-amber-500', info:'bg-slate-700' };
+    const icons  = { success:'fa-check-circle', error:'fa-circle-xmark', warning:'fa-triangle-exclamation', info:'fa-circle-info' };
+    t.className = `fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white max-w-sm ${colors[type]}`;
+    t.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${msg}</span>`;
+    t.classList.remove('hidden');
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+</script>
+</body>
+</html>

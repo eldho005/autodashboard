@@ -7,6 +7,32 @@ import json
 from datetime import datetime
 import PyPDF2
 from io import BytesIO
+import os
+import base64
+
+# Import prompts from schema file - using V2 simplified coverpage-focused schema
+import quote_extraction_schema_v2
+EXTRACTION_PROMPTS = quote_extraction_schema_v2.EXTRACTION_PROMPTS
+QUOTE_TYPE_DETECTION_PROMPT = quote_extraction_schema_v2.QUOTE_TYPE_DETECTION_PROMPT
+get_extraction_prompt = quote_extraction_schema_v2.get_extraction_prompt
+transform_to_coverpage_format = quote_extraction_schema_v2.transform_to_coverpage_format
+validate_extraction = quote_extraction_schema_v2.validate_extraction
+
+# Vertex AI imports (optional - will use fallback if not available)
+try:
+    import vertexai
+    from vertexai.generative_models import GenerativeModel, Part
+    VERTEX_AI_AVAILABLE = True
+except ImportError:
+    VERTEX_AI_AVAILABLE = False
+    print("[WARNING] Vertex AI not available, using fallback PDF parsing")
+
+
+def to_sentence_case(text):
+    """Convert text to sentence case (first letter uppercase, rest lowercase)"""
+    if not text or not isinstance(text, str):
+        return text
+    return text[0].upper() + text[1:].lower() if len(text) > 0 else text
 
 
 def parse_dash_pdf(pdf_file):
@@ -98,6 +124,58 @@ def extract_dash_fields(text):
             data['address'] = match.group(1).strip()
             print(f"Found address: {data['address']}")
             break
+
+    # Marital Status - format: "Marital Status: Married"
+    marital_patterns = [
+        r'Marital\s*Status\s*[:/\-]?\s*([A-Za-z ]+?)(?=\s+Number\b|\s+$)',
+        r'Marital\s*Status\s*[:\s]+([A-Za-z ]+?)(?=\s+Number\b|\s+$)',
+        r'Marital\s*[:\s]+([A-Za-z ]+?)(?=\s+Number\b|\s+$)'
+    ]
+    for pattern in marital_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data['marital_status'] = match.group(1).strip()
+            print(f"Found marital status: {data['marital_status']}")
+            break
+    # Fallback: parse from line containing 'Marital Status'
+    if not data.get('marital_status'):
+        for line in text.splitlines():
+            if re.search(r'Marital\s*Status', line, re.IGNORECASE):
+                parts = re.split(r'Marital\s*Status\s*[:/\-]?\s*', line, flags=re.IGNORECASE)
+                if len(parts) > 1:
+                    value = parts[1].strip()
+                    # Trim trailing fields on the same line (e.g., "Number of ...")
+                    value = re.split(r'\s+Number\b', value, flags=re.IGNORECASE)[0].strip()
+                    if value:
+                        data['marital_status'] = value
+                        print(f"Found marital status (line fallback): {data['marital_status']}")
+                        break
+    
+    # Gender - format: "Gender: Male Number of Comprehensive..."
+    gender_patterns = [
+        r'Gender\s*[:/\-]?\s*([A-Za-z]+?)(?=\s+Number\b|\s+$)',
+        r'Gender\s*[:\s]+([A-Za-z]+?)(?=\s+Number\b|\s+$)',
+        r'Sex\s*[:/\-]?\s*([A-Za-z]+?)(?=\s+Number\b|\s+$)'
+    ]
+    for pattern in gender_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            data['gender'] = match.group(1).strip()
+            print(f"Found gender: {data['gender']}")
+            break
+    # Fallback: parse from line containing 'Gender'
+    if not data.get('gender'):
+        for line in text.splitlines():
+            if re.search(r'Gender', line, re.IGNORECASE):
+                parts = re.split(r'Gender\s*[:/\-]?\s*', line, flags=re.IGNORECASE)
+                if len(parts) > 1:
+                    value = parts[1].strip()
+                    # Trim trailing fields on the same line (e.g., "Number of ...")
+                    value = re.split(r'\s+Number\b', value, flags=re.IGNORECASE)[0].strip()
+                    if value:
+                        data['gender'] = value
+                        print(f"Found gender (line fallback): {data['gender']}")
+                        break
     
     # License Number - format: "DLN: G6043-37788-80203"
     license_patterns = [
@@ -297,32 +375,80 @@ def extract_dash_fields(text):
         print(f" Years of Continuous Insurance: {data['years_continuous_insurance']}")
     
     # Policy dates for gap calculation
-    # Find all policies in the Policies section: "#1 2025-08-08 to 2026-08-08 ..."
-    policies_section_match = re.search(r'Policies\s*\n(.*?)(?:Claims|Page \d+ of \d+|$)', text, re.DOTALL | re.IGNORECASE)
+    # DASH Report format: Extract from Policies table
+    # Pattern: #N YYYY-MM-DD to YYYY-MM-DD [Company] [Extra] [STATUS/REASON]
+    # Status appears in rightmost column of the table
+    policies_section_match = re.search(r'Policies\s*\n(.+?)(?:Claims|Previous Inquiries|Page \d+|$)', text, re.DOTALL | re.IGNORECASE)
+    
     if policies_section_match:
         policies_text = policies_section_match.group(1)
-        # Extract all policies with pattern: #N YYYY-MM-DD to YYYY-MM-DD
-        policy_pattern = r'#(\d+)\s+(\d{4}-\d{1,2}-\d{1,2})\s+to\s+(\d{4}-\d{1,2}-\d{1,2})'
-        policy_matches = list(re.finditer(policy_pattern, policies_text))
+        # Split by lines and process each policy row
+        all_policies = []
         
-        if policy_matches:
-            # Store ALL policies for gap calculation
-            # IMPORTANT: Preserve the order from the PDF (data source) - DO NOT SORT
-            all_policies = []
-            for match in policy_matches:
+        for line in policies_text.split('\n'):
+            line = line.strip()
+            if not line or 'Note:' in line or 'Information' in line:
+                continue
+            
+            # Look for pattern: #N (number) followed by dates
+            match = re.search(r'#(\d+)\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})', line)
+            
+            if match:
+                policy_num = int(match.group(1))
+                start_date = normalize_date(match.group(2))
+                end_date = normalize_date(match.group(3))
+                
+                # Extract company name - look for text after dates
+                # It usually comes before any status indicator
+                company = ''
+                remaining_text = line[match.end():].strip()
+                
+                # Split by overlap, cancelled, expired, etc. to separate company from status
+                import re as regex_module
+                status_pattern = r'(\*OVERLAP\*|Cancelled|Expired|Suspended|Non-Renewal|Active|active)'
+                status_match = regex_module.search(status_pattern, remaining_text, regex_module.IGNORECASE)
+                
+                if status_match:
+                    company = remaining_text[:status_match.start()].strip()
+                else:
+                    # If no status keyword found, take first part as company
+                    parts = remaining_text.split()
+                    if parts and len(parts[0]) > 5:  # company names are usually longer
+                        company = remaining_text.split('*')[0].strip()
+                
+                # Extract status/reason
+                status = 'active'  # default
+                
+                if remaining_text:
+                    if 'cancelled' in remaining_text.lower():
+                        status = 'cancelled'
+                        if '-' in remaining_text.lower():
+                            status = 'cancelled - ' + remaining_text.split('-', 1)[1].strip().lower()
+                    elif 'expired' in remaining_text.lower():
+                        status = 'expired'
+                    elif 'suspended' in remaining_text.lower():
+                        status = 'suspended'
+                    elif 'non-renewal' in remaining_text.lower():
+                        status = 'non-renewal'
+                    else:
+                        status = 'active'
+                
                 policy = {
-                    'number': int(match.group(1)),
-                    'start_date': normalize_date(match.group(2).replace(' ', '')),
-                    'end_date': normalize_date(match.group(3).replace(' ', ''))
+                    'number': policy_num,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'company': company,
+                    'status': status
                 }
                 all_policies.append(policy)
-            
-            # STRICT REQUIREMENT: DO NOT SORT - use order provided by data source
-            # The order of appearance in the PDF is the only source of truth
+                print(f"  Policy #{policy_num}: {start_date} to {end_date} - Company: {company} - Status: {status}")
+        
+        # If we found policies, store them
+        if all_policies:
             data['all_policies'] = all_policies
-            print(f" Extracted {len(all_policies)} policies in PDF order (NO SORTING)")
+            print(f" Extracted {len(all_policies)} policies with status from DASH Report table")
             
-            # Get the FIRST policy from the PDF (not necessarily Policy #1)
+            # Get the FIRST policy from the PDF
             first_policy_data = all_policies[0]
             
             # First insurance = start date of first policy in the list
@@ -557,6 +683,42 @@ def extract_dash_fields(text):
             else:
                 claim['fault'] = f'{at_fault_pct}%'
             
+            # Extract coverage information - search in the full PDF for detailed claim sections
+            coverage = ''
+            print(f"\n  [INFO] Claim #{claim_num} - Extracting Coverage...")
+            print(f"  [INFO] Claim Company: '{company}'")
+            print(f"  [INFO] Claim Date: '{loss_date}'")
+            
+            # Coverage is in the detailed claim pages (usually pages 12+)
+            # Pattern: Claim #X Date of Loss YYYY-MM-DD ... Coverage: VALUE
+            print(f"  -> SEARCHING for Coverage in full PDF text for Claim #{claim_num}...")
+            
+            # Build a detailed search pattern for this specific claim
+            detailed_pattern = rf'Claim\s*#\s*{claim_num}\b.*?Date\s+of\s+Loss\s+{re.escape(loss_date)}.*?Coverage\s*:\s*([A-Za-z0-9\-\/\,\s]+?)(?:\n|Policyholder|Vehicle|At-Fault|$)'
+            detailed_match = re.search(detailed_pattern, text, re.DOTALL | re.IGNORECASE)
+            
+            if detailed_match:
+                coverage = detailed_match.group(1).strip()
+                coverage = coverage.split('\n')[0].strip()
+                claim['coverage'] = coverage
+                print(f"  ✅ COVERAGE FOUND (detailed pages): '{coverage}'")
+            else:
+                # Try simpler pattern
+                print(f"  ❌ Detailed pattern not found, trying simpler search...")
+                claim_pattern = rf'Claim\s*#\s*{claim_num}\b.*?Coverage\s*:\s*([A-Za-z0-9\-\/\,\s]+?)(?:\n|Policyholder|Vehicle|$)'
+                simple_match = re.search(claim_pattern, text, re.DOTALL | re.IGNORECASE)
+                if simple_match:
+                    coverage = simple_match.group(1).strip()
+                    coverage = coverage.split('\n')[0].strip()
+                    claim['coverage'] = coverage
+                    print(f"  ✅ COVERAGE FOUND (simple pattern): '{coverage}'")
+            
+            # Ensure coverage field always exists
+            if 'coverage' not in claim:
+                claim['coverage'] = ''
+            
+            print(f"  -> Final coverage value: '{claim.get('coverage', '')}'")
+            
             # Try to find claim details in the detailed section below
             # Look for the specific claim number section and extract financial details
             claim_detail_pattern = rf'Claim #{claim_num}\s+Date of Loss\s+\d{{4}}-\d{{2}}-\d{{2}}.*?Total Loss:\s*\$\s*([\d,\.]+).*?Total Expense:\s*\$\s*([\d,\.]+)'
@@ -624,7 +786,8 @@ def extract_dash_fields(text):
             else:
                 claim['status'] = 'Closed'  # Default if not found
             
-            print(f" Claim #{claim_num}: {claim['date']}, Company={claim['company']}, At-Fault={claim['fault']}, Status={claim.get('status', 'N/A')}")
+            print(f" Claim #{claim_num}: {claim['date']}, Company={claim['company']}, At-Fault={claim['fault']}, Status={claim.get('status', 'N/A')}, Coverage={claim.get('coverage', 'MISSING')}")
+            print(f"  [DEBUG] Full claim keys before append: {list(claim.keys())}")
             claims.append(claim)
     else:
         print("[WARNING] No 'Claims' section found in PDF")
@@ -797,8 +960,14 @@ def extract_quote_fields(text):
     bi_match = re.search(r"Bodily\s*Injury\s*\$?([0-9,]+)", normalized, re.IGNORECASE)
     pd_match = re.search(r"Property\s*Damage\s*\$?([0-9,]+)", normalized, re.IGNORECASE)
     dc_match = re.search(r"Direct\s*Compensation\s*\$?([0-9,]+)\s*Ded\.?\s*\$?([0-9,]+)", normalized, re.IGNORECASE)
-    # All Perils - handle non-breaking spaces and format: "All Perils $1,000 Ded. $493"
-    all_perils_match = re.search(r"All\s+Perils[\s\xa0]*\$?[0-9,]+[\s\xa0]*Ded\.?[\s\xa0]*\$?([0-9,]+)", normalized, re.IGNORECASE)
+    
+    # All Perils - Capture the FIRST amount (deductible) not the second amount (premium)
+    # Pattern: "All Perils $1,000 Ded. $493" - capture $1,000 (the deductible amount before "Ded.")
+    all_perils_match = re.search(r"All\s+Perils[\s\xa0]*\$?([0-9,]+)[\s\xa0]*Ded", normalized, re.IGNORECASE)
+    # Fallback: "All Perils Ded. $1,000" or "All Perils Deductible: $1,000"
+    if not all_perils_match:
+        all_perils_match = re.search(r"All\s+Perils[\s\xa0]*(?:Ded\.?|Deductible:?)[\s\xa0]*\$?([0-9,]+)", normalized, re.IGNORECASE)
+    
     loss_use_match = re.search(r"#?20\s*L\s*o\s*s\s*s\s*of\s*U\s*s\s*e\s*\$?([0-9,]+)", normalized, re.IGNORECASE)
     fam_prot_match = re.search(r"#\s*44[^$]*\$?([0-9,]+)", normalized, re.IGNORECASE)
     if not fam_prot_match:
@@ -914,10 +1083,10 @@ def extract_mvr_fields(text):
     name_match = re.search(r'Name\s*:\s*([^\n]+?)(?=\s+(?:Birth|Gender|Address|Height|Demerit)|\n)', text, re.IGNORECASE)
     if name_match:
         name_raw = name_match.group(1).strip()
-        # PRESERVE THE EXACT RAW FORMAT - Do not modify commas, spaces, or any characters
-        # This ensures the displayed name matches the MVR response exactly, regardless of format
-        data['name'] = name_raw
-        print(f" ✓ Found Name (preserved raw format): {data['name']}")
+        # Convert each name part to sentence case
+        name_parts = [to_sentence_case(part.strip()) for part in name_raw.split(',')]
+        data['name'] = ','.join(name_parts)
+        print(f" ✓ Found Name (converted to sentence case): {data['name']}")
     
     if 'name' not in data:
         print(f" ⚠️  WARNING: Could not extract name from MVR")
@@ -1194,6 +1363,12 @@ def extract_mvr_fields(text):
             # Or: DISOBEY LEGAL SIGN / OFFENCE DATE 2024/12/28 (multi-line format)
             
             conv_detail_patterns = [
+                # Date on one line, description on next, OFFENCE DATE on following line
+                r'(\d{1,2}/\d{1,2}/\d{4})\s*\n\s*([A-Za-z\s\-\(\)0-9\.&/]+?)\s*\n\s*OFFENCE\s+DATE\s+(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})',
+                # Date + description + OFFENCE DATE on same line
+                r'(\d{1,2}/\d{1,2}/\d{4})\s+([A-Za-z\s\-\(\)0-9\.&/]+?)\s+OFFENCE\s+DATE\s+(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})',
+                # Date + description on one line, OFFENCE DATE on next line
+                r'(\d{1,2}/\d{1,2}/\d{4})\s+([A-Za-z\s\-\(\)0-9\.&/]+?)\s*\n\s*OFFENCE\s+DATE\s+(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})',
                 # Multi-line format: Description on one line, OFFENCE DATE on next
                 r'([A-Za-z\s\-\(\)0-9\.&/]+?)\s*\n\s*OFFENCE\s+DATE\s+(\d{1,2}/\d{1,2}/\d{4})',
                 # Date + offense + fine (most common MVR format)
@@ -1212,9 +1387,13 @@ def extract_mvr_fields(text):
                 matched_count = 0
                 
                 for match in conv_matches:
-                    # Handle both formats: (date, description) and (description, date)
-                    if 'OFFENCE' in pattern or 'OFFENCE' in match.group(0):
-                        # Format: description first, date second
+                    # Handle formats with an explicit OFFENCE DATE
+                    if match.lastindex == 3:
+                        # Format: conviction date, description, offence date
+                        description = match.group(2).strip()
+                        date_str = match.group(3).strip()
+                    elif 'OFFENCE' in pattern or 'OFFENCE' in match.group(0):
+                        # Format: description first, offence date second
                         description = match.group(1).strip()
                         date_str = match.group(2).strip()
                     else:
@@ -1226,12 +1405,18 @@ def extract_mvr_fields(text):
                     description = re.sub(r'\s+', ' ', description)
                     description = re.sub(r'\s*[Ff]ine:\s*\$?[\d,.]+\s*', '', description)
                     description = re.sub(r'\s*[Pp]enalty.*?$', '', description, flags=re.MULTILINE)
+                    description = re.sub(r'\s*OFFENCE\s+DATE\s+(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})', '', description, flags=re.IGNORECASE)
                     description = description.strip()
+
+                    # If OFFENCE DATE is present in the matched text, use it
+                    offence_match = re.search(r'OFFENCE\s+DATE\s+(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})', match.group(0), re.IGNORECASE)
+                    if offence_match:
+                        date_str = offence_match.group(1).strip()
                     
                     # Skip if description is empty or just punctuation
                     if description and description not in ['', '-', '*', 'N', 'None', 'NONE'] and len(description) > 2:
                         conviction = {
-                            'date': normalize_date(date_str),
+                            'date': date_str,
                             'description': description
                         }
                         # Avoid duplicates
@@ -1240,6 +1425,10 @@ def extract_mvr_fields(text):
                             matched_count += 1
                             print(f"   Found: {conviction['date']} - {conviction['description'][:60]}...")
                 
+                # If we found offence-date matches, prefer them and stop
+                if matched_count > 0 and 'OFFENCE' in pattern.upper():
+                    print(f" Pattern matched {matched_count} conviction(s) with OFFENCE DATE, stopping pattern search")
+                    break
                 # If we found enough convictions with this pattern, use it
                 if len(convictions) >= conv_count:
                     print(f" Pattern matched {matched_count} convictions, stopping pattern search")
@@ -1281,12 +1470,14 @@ def normalize_date(date_str):
     Convert various date formats to MM/DD/YYYY
     """
     try:
-        # Try different date formats
+        # Try different date formats - Check DD/MM/YYYY first (Canadian format in DASH PDFs)
+        # Then fall back to MM/DD/YYYY
         formats = [
-            '%m/%d/%Y', '%m-%d-%Y',
-            '%m/%d/%y', '%m-%d-%y',
-            '%d/%m/%Y', '%d-%m-%Y',
-            '%Y-%m-%d', '%Y/%m/%d'
+            '%d/%m/%Y', '%d-%m-%Y',  # DD/MM/YYYY first (DASH PDF format)
+            '%d/%m/%y', '%d-%m-%y',  # DD/MM/YY first (DASH PDF format)
+            '%m/%d/%Y', '%m-%d-%Y',  # MM/DD/YYYY (fallback)
+            '%m/%d/%y', '%m-%d-%y',  # MM/DD/YY (fallback)
+            '%Y-%m-%d', '%Y/%m/%d'   # ISO format
         ]
         
         for fmt in formats:
@@ -1299,3 +1490,496 @@ def normalize_date(date_str):
         return date_str  # Return original if no format matches
     except:
         return date_str
+
+
+def parse_property_quote_with_vertex_ai(pdf_content):
+    """
+    Parse Property/Tenant Quote PDF using Vertex AI Gemini model
+    Detects quote type (tenant vs property) and applies appropriate extraction
+    
+    Args:
+        pdf_content: Bytes of the PDF file OR file path string
+        
+    Returns:
+        dict: Extracted quote data with success status and quote type
+    """
+    try:
+        print("\n[VERTEX AI] Starting Quote PDF parsing with Gemini...")
+        
+        # Handle file path string - read the file bytes
+        if isinstance(pdf_content, str):
+            if os.path.exists(pdf_content):
+                with open(pdf_content, 'rb') as f:
+                    pdf_content = f.read()
+            else:
+                raise ValueError(f"File not found: {pdf_content}")
+        
+        # Initialize Vertex AI
+        project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
+        location = os.getenv('GOOGLE_CLOUD_LOCATION', 'us-central1')
+        
+        if not project_id:
+            raise ValueError("GOOGLE_CLOUD_PROJECT environment variable not set")
+        
+        vertexai.init(project=project_id, location=location)
+        model = GenerativeModel("gemini-2.0-flash")
+        
+        # Convert PDF to base64 (not used but kept for potential future use)
+        pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+        pdf_part = Part.from_data(
+            data=pdf_content,
+            mime_type="application/pdf"
+        )
+        
+        # STEP 1: Detect quote type (tenant vs property)
+        print("[VERTEX AI] Step 1: Detecting quote type...")
+        
+        type_response = model.generate_content([pdf_part, QUOTE_TYPE_DETECTION_PROMPT])
+        quote_type = type_response.text.strip().upper()
+        
+        # Normalize quote type
+        valid_types = ["TENANT", "HOMEOWNERS", "RENTED_DWELLING", "CONDO", "RENTED_CONDO", "MULTI_PROPERTY"]
+        if quote_type not in valid_types:
+            # Map legacy/common variations
+            if "MULTI" in quote_type:
+                quote_type = "MULTI_PROPERTY"
+            elif "TENANT" in quote_type:
+                quote_type = "TENANT"
+            elif "RENTED" in quote_type and "DWELLING" in quote_type:
+                quote_type = "RENTED_DWELLING"
+            elif "HOMEOWNER" in quote_type or "PROPERTY" in quote_type or "PRIMARY" in quote_type:
+                quote_type = "HOMEOWNERS"
+            else:
+                quote_type = "HOMEOWNERS"  # Default
+        
+        print(f"[VERTEX AI] Detected quote type: {quote_type}")
+        
+        # STEP 2: Extract data using appropriate prompt from schema
+        print(f"[VERTEX AI] Step 2: Extracting {quote_type} quote data...")
+        
+        extraction_prompt = get_extraction_prompt(quote_type)
+        
+        # Generate response
+        response = model.generate_content([pdf_part, extraction_prompt])
+        response_text = response.text.strip()
+        
+        print(f"[VERTEX AI] Received response ({len(response_text)} characters)")
+        
+        # Clean response - remove markdown code blocks if present
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse JSON response
+        try:
+            raw_data = json.loads(response_text)
+            print(f"[VERTEX AI SUCCESS] Extracted {len(raw_data)} fields from {quote_type} quote")
+            
+            # Transform to coverpage format
+            data = transform_to_coverpage_format(raw_data, quote_type)
+            
+            # Validate extraction
+            validation = validate_extraction(data, quote_type)
+            print(f"[VERTEX AI] Validation: {validation['found_count']}/{validation['total_required']} required fields found")
+            if validation['missing_fields']:
+                print(f"[VERTEX AI] Missing fields: {validation['missing_fields']}")
+            
+            # Log important fields based on type
+            print(f"[VERTEX AI] Quote Type: {quote_type}")
+            print(f"[VERTEX AI] Policy Holder: {data.get('policy_holder_name', 'N/A')}")
+            print(f"[VERTEX AI] Building Coverage: {data.get('building_coverage', 'N/A')}")
+            print(f"[VERTEX AI] Contents Coverage: {data.get('contents_coverage', 'N/A')}")
+            print(f"[VERTEX AI] ALE Coverage: {data.get('ale_coverage', 'N/A')}")
+            print(f"[VERTEX AI] Liability Coverage: {data.get('liability_coverage', 'N/A')}")
+            print(f"[VERTEX AI] Deductible: {data.get('deductible', 'N/A')}")
+            
+            # Log water coverages if present
+            water_fields = ['water_sewer_backup', 'water_ground_water', 'water_overland_water', 'water_above_ground', 'water_service_lines']
+            water_present = [f for f in water_fields if data.get(f)]
+            if water_present:
+                print(f"[VERTEX AI] Water Coverages: {', '.join(water_present)}")
+            
+            return {
+                "success": True,
+                "data": data,
+                "raw_data": raw_data,
+                "method": "vertex_ai",
+                "quote_type": quote_type,
+                "validation": validation
+            }
+        except json.JSONDecodeError as je:
+            print(f"[VERTEX AI ERROR] Failed to parse JSON response: {str(je)}")
+            print(f"[VERTEX AI] Raw response: {response_text[:500]}...")
+            return {
+                "success": False,
+                "error": f"Failed to parse AI response as JSON: {str(je)}",
+                "raw_response": response_text[:1000]
+            }
+        
+    except Exception as e:
+        print(f"[VERTEX AI ERROR] Quote parsing failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": f"Vertex AI parsing failed: {str(e)}"
+        }
+
+
+# Prompts are now imported from quote_extraction_schema.py
+
+
+def parse_property_quote_pdf(pdf_content):
+    """
+    Parse Property Insurance Quote PDF and extract key coverage information
+    Uses Vertex AI if available, falls back to regex-based extraction
+    
+    Args:
+        pdf_content: Bytes of the PDF file
+        
+    Returns:
+        dict: Extracted property quote data with success status
+    """
+    # Try Vertex AI first if available
+    if VERTEX_AI_AVAILABLE:
+        try:
+            result = parse_property_quote_with_vertex_ai(pdf_content)
+            if result['success']:
+                return result
+            else:
+                print("[WARNING] Vertex AI parsing failed, falling back to regex-based extraction")
+        except Exception as e:
+            print(f"[WARNING] Vertex AI error: {str(e)}, falling back to regex-based extraction")
+    
+    # Fallback to regex-based extraction
+    try:
+        print("\n[INFO] Starting Property Quote PDF parsing (regex fallback)...")
+        import pdfplumber
+        
+        if isinstance(pdf_content, bytes):
+            pdf_file = BytesIO(pdf_content)
+        else:
+            pdf_file = pdf_content
+            
+        full_text = ""
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            print(f"[PDF] PDF has {len(pdf.pages)} pages")
+            for page_idx, page in enumerate(pdf.pages):
+                try:
+                    page_text = page.extract_text()
+                    if page_text:
+                        full_text += page_text + "\n"
+                        print(f"  Page {page_idx + 1}: Extracted {len(page_text)} characters")
+                except Exception as page_error:
+                    print(f"  [ERROR] Page {page_idx + 1}: {str(page_error)}")
+        
+        print(f"[OK] Total text extracted: {len(full_text)} characters")
+        
+        if not full_text or len(full_text.strip()) < 50:
+            return {
+                "success": False,
+                "error": "No text could be extracted from PDF"
+            }
+        
+        # Extract property quote data
+        data = extract_property_fields(full_text)
+        
+        print(f"[SUCCESS] Extracted {len(data)} property quote fields")
+        
+        return {
+            "success": True,
+            "data": data,
+            "method": "regex_fallback"
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Property quote parsing failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+def extract_property_fields(text):
+    """
+    Extract key fields from Property Quote PDF text
+    """
+    data = {}
+    normalized = re.sub(r"\s+", " ", text).strip()
+    
+    # Broker Information
+    broker_match = re.search(r"Broker:?\s*([A-Z][A-Za-z\s,]+?)(?:\s*Email:|$)", text, re.IGNORECASE)
+    if broker_match:
+        data["broker_name"] = broker_match.group(1).strip()
+    
+    email_match = re.search(r"Email:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", text, re.IGNORECASE)
+    if email_match:
+        data["broker_email"] = email_match.group(1).strip()
+    
+    phone_match = re.search(r"(?:Phone|Tel|Telephone):?\s*([\d\s\-\(\)]+)", text, re.IGNORECASE)
+    if phone_match:
+        phone = re.sub(r"[^\d]", "", phone_match.group(1))
+        if len(phone) >= 10:
+            data["broker_phone"] = phone_match.group(1).strip()
+    
+    # Policy Information
+    policy_match = re.search(r"(?:Policy|Binder)\s*(?:#|No\.?|Number)?:?\s*([A-Z0-9\-]+)", text, re.IGNORECASE)
+    if policy_match:
+        data["policy_number"] = policy_match.group(1).strip()
+    
+    # Effective Date
+    effective_match = re.search(r"Effective\s*Date:?\s*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", text, re.IGNORECASE)
+    if effective_match:
+        data["effective_date"] = normalize_date(effective_match.group(1))
+    
+    # Insurance Company
+    company_patterns = [
+        r"(?:Insurance\s*Company|Insurer|Carrier):?\s*([A-Z][A-Za-z\s&]+(?:Insurance|Inc\.?))",
+        r"([A-Z][A-Za-z\s&]+Insurance(?:\s+Company)?)",
+    ]
+    for pattern in company_patterns:
+        company_match = re.search(pattern, text, re.IGNORECASE)
+        if company_match:
+            company = re.sub(r"\s+", " ", company_match.group(1)).strip()
+            data["insurance_company"] = company
+            break
+    
+    # Policy Holder
+    holder_patterns = [
+        r"(?:Policy\s*Holder|Insured|Named\s*Insured):?\s*([A-Z][A-Za-z\s,&]+?)(?:\s*Address:|$)",
+        r"Name:?\s*([A-Z][A-Za-z\s,&]+?)(?:\s*Address:|$)",
+    ]
+    for pattern in holder_patterns:
+        holder_match = re.search(pattern, text, re.IGNORECASE)
+        if holder_match:
+            data["policy_holder"] = holder_match.group(1).strip()
+            break
+    
+    # Property Address
+    address_match = re.search(r"(?:Property\s*)?Address:?\s*([0-9]+\s+[A-Za-z0-9\s,.-]+)", text, re.IGNORECASE)
+    if address_match:
+        data["property_address"] = address_match.group(1).strip()
+    
+    # Coverage Amounts - Extract from coverage table
+    # Format is typically: "Coverage Name $Amount" on separate lines
+    # IMPORTANT: Extract amounts for each coverage type separately
+    # Note: PDFs often have multiple coverage sections, we extract all of them
+    
+    # Helper function to extract coverage from a section
+    def extract_coverage_from_section(section_text):
+        coverage = {}
+        
+        # Building/Residence
+        res_match = re.search(r"^Residence\s+\$\s*([0-9,]+)", section_text, re.IGNORECASE | re.MULTILINE)
+        if res_match:
+            coverage["building_coverage"] = res_match.group(1).replace(",", "")
+        
+        # Contents
+        cont_match = re.search(r"^Contents\s+\$\s*([0-9,]+)", section_text, re.IGNORECASE | re.MULTILINE)
+        if cont_match:
+            coverage["contents_coverage"] = cont_match.group(1).replace(",", "")
+        
+        # Outbuildings
+        out_match = re.search(r"^Outbuildings?\s+\$\s*([0-9,]+)", section_text, re.IGNORECASE | re.MULTILINE)
+        if out_match:
+            coverage["outbuildings_coverage"] = out_match.group(1).replace(",", "")
+        
+        # Liability
+        liab_match = re.search(r"Single\s+Limit\s+\$\s*([0-9,]+)", section_text, re.IGNORECASE)
+        if liab_match:
+            coverage["liability_coverage"] = liab_match.group(1).replace(",", "")
+        
+        # Deductible
+        ded_match = re.search(r"^Deductible\s+\$\s*([0-9,]+)", section_text, re.IGNORECASE | re.MULTILINE)
+        if ded_match:
+            coverage["deductible"] = ded_match.group(1).replace(",", "")
+        
+        # ALE
+        ale_match = re.search(r"^Additional\s+Living\s+Expenses?\s+(.+?)$", section_text, re.IGNORECASE | re.MULTILINE)
+        if ale_match:
+            ale_value = ale_match.group(1).strip()
+            if "Inc" in ale_value:
+                coverage["ale_coverage"] = "Included"
+            elif "$" in ale_value:
+                amount_match = re.search(r"\$\s*([0-9,]+)", ale_value)
+                if amount_match:
+                    coverage["ale_coverage"] = amount_match.group(1).replace(",", "")
+        
+        return coverage
+    
+    # Extract ALL coverage occurrences (find all "Residence $X" patterns)
+    # Then assign to coverage types based on order
+    all_residence_finds = list(re.finditer(r"^Residence\s+\$\s*([0-9,]+)", text, re.IGNORECASE | re.MULTILINE))
+    
+    # Extract coverage for first occurrence (usually Homeowners if it exists)
+    if len(all_residence_finds) >= 1:
+        homeowners_section = text[max(0, all_residence_finds[0].start() - 1000):all_residence_finds[0].end() + 1000]
+        homeowners_coverage = extract_coverage_from_section(homeowners_section)
+        for key, value in homeowners_coverage.items():
+            data[f"homeowners_{key}"] = value
+            # Also set backwards-compatible keys (for first coverage type)
+            data[key] = value
+    
+    # Extract coverage for second occurrence (usually Rented Dwelling if it exists)
+    if len(all_residence_finds) >= 2:
+        rented_section = text[max(0, all_residence_finds[1].start() - 1000):all_residence_finds[1].end() + 1000]
+        rented_coverage = extract_coverage_from_section(rented_section)
+        for key, value in rented_coverage.items():
+            data[f"rented_dwelling_{key}"] = value
+    
+    # Extract coverage for third occurrence (usually Tenant or Condo)
+    if len(all_residence_finds) >= 3:
+        tenant_section = text[max(0, all_residence_finds[2].start() - 1000):all_residence_finds[2].end() + 1000]
+        tenant_coverage = extract_coverage_from_section(tenant_section)
+        for key, value in tenant_coverage.items():
+            data[f"tenant_{key}"] = value
+    
+    # Extract coverage for fourth occurrence (Condo)
+    if len(all_residence_finds) >= 4:
+        condo_section = text[max(0, all_residence_finds[3].start() - 1000):all_residence_finds[3].end() + 1000]
+        condo_coverage = extract_coverage_from_section(condo_section)
+        for key, value in condo_coverage.items():
+            data[f"condo_{key}"] = value
+    
+    # Also keep backwards compatibility - use Homeowners as default if it exists
+    if "homeowners_building_coverage" in data:
+        data["building_coverage"] = data["homeowners_building_coverage"]
+    if "homeowners_contents_coverage" in data:
+        data["contents_coverage"] = data["homeowners_contents_coverage"]
+    if "homeowners_outbuildings_coverage" in data:
+        data["outbuildings_coverage"] = data["homeowners_outbuildings_coverage"]
+    if "homeowners_liability_coverage" in data:
+        data["liability_coverage"] = data["homeowners_liability_coverage"]
+    if "homeowners_deductible" in data:
+        data["deductible"] = data["homeowners_deductible"]
+    if "homeowners_ale_coverage" in data:
+        data["ale_coverage"] = data["homeowners_ale_coverage"]
+    
+    # Water Coverages
+    if re.search(r"Sewer\s*Back[\s-]?up", normalized, re.IGNORECASE):
+        sewer_match = re.search(r"Sewer\s*Back[\s-]?up:?\s*(?:\$?\s*([0-9,]+)|Included)", normalized, re.IGNORECASE)
+        if sewer_match:
+            data["sewer_backup"] = sewer_match.group(1).replace(",", "") if sewer_match.group(1) else "Included"
+    
+    if re.search(r"Overland\s*Water", normalized, re.IGNORECASE):
+        overland_match = re.search(r"Overland\s*Water:?\s*(?:\$?\s*([0-9,]+)|Included)", normalized, re.IGNORECASE)
+        if overland_match:
+            data["overland_water"] = overland_match.group(1).replace(",", "") if overland_match.group(1) else "Included"
+    
+    if re.search(r"Ground\s*Water", normalized, re.IGNORECASE):
+        ground_match = re.search(r"Ground\s*Water:?\s*(?:\$?\s*([0-9,]+)|Included)", normalized, re.IGNORECASE)
+        if ground_match:
+            data["ground_water"] = ground_match.group(1).replace(",", "") if ground_match.group(1) else "Included"
+    
+    # Endorsements
+    if re.search(r"(?:Guaranteed|Building)\s*Replacement\s*Cost", normalized, re.IGNORECASE):
+        data["guaranteed_replacement"] = "Included"
+    
+    if re.search(r"Replacement\s*Cost\s*Contents", normalized, re.IGNORECASE):
+        data["replacement_cost_contents"] = "Included"
+    
+    # Detect Coverage Types (Homeowners, Tenant, Condo, Rented Dwelling)
+    # Use BOTH text patterns AND extracted data to determine coverage types
+    coverage_types = []
+    
+    print("\n[COVERAGE DETECTION] Starting coverage type detection...")
+    print(f"[COVERAGE DETECTION] Searching text length: {len(text)} chars")
+    
+    # Store what actual coverage data we extracted
+    has_building = "building_coverage" in data and data["building_coverage"]
+    has_dwelling = "dwelling_coverage" in data and data["dwelling_coverage"]
+    has_residence = "residence_limit" in data and data["residence_limit"]
+    has_contents = "contents_coverage" in data and data["contents_coverage"]
+    has_liability = "liability_coverage" in data and data["liability_coverage"]
+    has_outbuildings = "outbuildings_coverage" in data and data.get("outbuildings_coverage")
+    
+    print(f"[COVERAGE DATA] Building: {has_building}, Dwelling: {has_dwelling}, Residence: {has_residence}, Contents: {has_contents}, Liability: {has_liability}, Outbuildings: {has_outbuildings}")
+    
+    # STRATEGY 1: SECTION HEADER DETECTION (Most Reliable)
+    # Look for actual section headings that indicate coverage sections
+    # Real patterns from PDF quotes: "Primary - Homeowners", "Rented Dwelling", etc.
+    print("\n[COVERAGE DETECTION] Strategy 1: Looking for section headers...")
+    
+    # Homeowners - look for "Primary - Homeowners" pattern
+    if re.search(r"Primary\s*-\s*Homeowners?(?:\s+\(Protected\))?", text, re.IGNORECASE):
+        coverage_types.append("Homeowners")
+        print(f"[COVERAGE DETECTION] [OK] SECTION HEADER: 'Primary - Homeowners' found")
+    
+    # Tenant - look for "Tenant" as a section header (not in the middle of a sentence with commas)
+    if re.search(r"^\s*(?:\d+\s+of\s+\d+\s*\|\s*)?Tenant(?:\s+\(Protected\))?", text, re.IGNORECASE | re.MULTILINE):
+        coverage_types.append("Tenant")
+        print(f"[COVERAGE DETECTION] [OK] SECTION HEADER: 'Tenant' found as section")
+    
+    # Condo - look for "Condo" or "Condominium" as a section header
+    if re.search(r"^\s*(?:\d+\s+of\s+\d+\s*\|\s*)?(?:Condo|Condominium)(?:\s+\(Protected\))?", text, re.IGNORECASE | re.MULTILINE):
+        coverage_types.append("Condo")
+        print(f"[COVERAGE DETECTION] [OK] SECTION HEADER: 'Condo' found as section")
+    
+    # Rented Dwelling - look for "Rented Dwelling" as a section header
+    if re.search(r"^\s*(?:\d+\s+of\s+\d+\s*\|\s*)?Rented\s+Dwelling(?:\s+\(Protected\))?", text, re.IGNORECASE | re.MULTILINE):
+        coverage_types.append("Rented Dwelling")
+        print(f"[COVERAGE DETECTION] [OK] SECTION HEADER: 'Rented Dwelling' found as section")
+    
+    # Alternative patterns for Homeowners if standard pattern didn't match
+    if "Homeowners" not in coverage_types:
+        if re.search(r"^\s*(?:\d+\s+of\s+\d+\s*\|\s*)?.*Homeowners?(?:\s+\(Protected\))?", text, re.IGNORECASE | re.MULTILINE):
+            coverage_types.append("Homeowners")
+            print(f"[COVERAGE DETECTION] [OK] SECTION HEADER: 'Homeowners' found (alternative pattern)")
+    
+    # STRATEGY 2: HO CODE DETECTION (if no section headers found)
+    if not coverage_types:
+        print("[COVERAGE DETECTION] No section headers found, checking HO codes...")
+        
+        # HO3 = Homeowners, HO4 = Tenant, HO6 = Condo
+        if re.search(r"\bHO\s*-?\s*3\b", text, re.IGNORECASE):
+            coverage_types.append("Homeowners")
+            print(f"[COVERAGE DETECTION] [OK] HO CODE: HO3 (Homeowners) found")
+        if re.search(r"\bHO\s*-?\s*4\b", text, re.IGNORECASE):
+            coverage_types.append("Tenant")
+            print(f"[COVERAGE DETECTION] [OK] HO CODE: HO4 (Tenant) found")
+        if re.search(r"\bHO\s*-?\s*6\b", text, re.IGNORECASE):
+            coverage_types.append("Condo")
+            print(f"[COVERAGE DETECTION] [OK] HO CODE: HO6 (Condo) found")
+    
+    # STRATEGY 3: DATA-BASED DETECTION (if still nothing found)
+    if not coverage_types:
+        print("[COVERAGE DETECTION] No section headers or HO codes found, using data-based detection...")
+        
+        # If has building/residence + contents = Homeowners
+        if (has_building or has_dwelling or has_residence) and has_contents:
+            coverage_types.append("Homeowners")
+            print(f"[COVERAGE DETECTION] [OK] DATA-BASED: Homeowners (has building + contents)")
+        # If only contents, no building = Tenant
+        elif has_contents and not (has_building or has_dwelling or has_residence):
+            coverage_types.append("Tenant")
+            print(f"[COVERAGE DETECTION] [OK] DATA-BASED: Tenant (contents only, no building)")
+        # If has building only = Homeowners
+        elif (has_building or has_dwelling or has_residence):
+            coverage_types.append("Homeowners")
+            print(f"[COVERAGE DETECTION] [OK] DATA-BASED: Homeowners (building coverage only)")
+        else:
+            print(f"[COVERAGE DETECTION] No data fields detected to infer coverage type")
+    
+    print(f"\n[COVERAGE DETECTION] Total coverage types detected: {len(coverage_types)}")
+    print(f"[COVERAGE DETECTION] FINAL Coverage types: {coverage_types}")
+    
+    # CRITICAL: Only set coverage_types if we detected something concrete
+    if coverage_types:
+        # Remove duplicates while preserving order
+        coverage_types = list(dict.fromkeys(coverage_types))
+        data["coverage_types"] = coverage_types
+        data["policy_type"] = coverage_types[0]  # Set primary type as first detected
+        print(f"[COVERAGE DETECTION] [OK] STORED - coverage_types: {coverage_types}")
+    else:
+        # If still nothing detected, default to empty list (not all types)
+        data["coverage_types"] = []
+        print(f"[COVERAGE DETECTION] [WARNING] No coverage types could be detected, storing empty list")
+    
+    return data

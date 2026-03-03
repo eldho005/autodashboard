@@ -1,5 +1,6 @@
 .env.local
 .env.production
+.env
 *.pdf
 node_modules/
 dist/
@@ -17,3 +18,5 @@ __pycache__/
 venv/
 ENV/
 env/
+uploads/
+gcp-service-account-key.json
