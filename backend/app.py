@@ -30,7 +30,10 @@ import bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 # Import pdf_parser
-import pdf_parser
+try:
+    from . import pdf_parser  # when run as package (gunicorn backend.app:app)
+except ImportError:
+    import pdf_parser  # when run directly (python app.py)
 parse_mvr_pdf = pdf_parser.parse_mvr_pdf
 parse_dash_pdf = pdf_parser.parse_dash_pdf
 parse_quote_pdf = pdf_parser.parse_quote_pdf
