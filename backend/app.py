@@ -118,14 +118,13 @@ print(f"🔗 Supabase URL: {SUPABASE_URL}")
 print(f"🔑 Supabase Key: {'configured (' + str(len(SUPABASE_KEY)) + ' chars)' if SUPABASE_KEY else 'MISSING'}")
 
 # Initialize Supabase
+supabase = None
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("✅ Supabase client initialized successfully")
 except Exception as e:
     print(f"❌ Error initializing Supabase client: {e}")
-    print("⚠️ Please verify your VITE_SUPABASE_SERVICE_ROLE_KEY in backend/.env")
-    print("   Get it from: Supabase Dashboard > Settings > API > service_role key")
-    raise
+    print("⚠️ Set VITE_SUPABASE_URL and VITE_SUPABASE_SERVICE_ROLE_KEY environment variables")
 
 # Meta API Base URL
 META_API_VERSION = 'v18.0'
