@@ -5,16 +5,19 @@ Integrates with Facebook Lead API and Supabase
 
 import sys
 import io
+import os
 from io import BytesIO
+
+# Add backend directory to sys.path so local modules (pdf_parser, quote_extraction_schema_v2, etc.)
+# are importable both when run directly and when run as a package via gunicorn
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Configure UTF-8 encoding for Windows console
 if sys.platform == 'win32':
-    import os
     os.environ['PYTHONIOENCODING'] = 'utf-8'
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-import os
 import json
 import requests
 from datetime import datetime, timedelta, timezone
@@ -30,10 +33,7 @@ import bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 # Import pdf_parser
-try:
-    from . import pdf_parser  # when run as package (gunicorn backend.app:app)
-except ImportError:
-    import pdf_parser  # when run directly (python app.py)
+import pdf_parser
 parse_mvr_pdf = pdf_parser.parse_mvr_pdf
 parse_dash_pdf = pdf_parser.parse_dash_pdf
 parse_quote_pdf = pdf_parser.parse_quote_pdf
