@@ -838,13 +838,104 @@
             `;
         };
 
-        const renderPanel = (title, iconName, content) => {
+        // ── Validation Helpers ────────────────────────────────────────────
+        const isEmptyVal = (v) => !v || v === '-' || String(v).trim() === '';
+
+        const parseReviewDate = (dateStr) => {
+            if (!dateStr || dateStr === '-') return null;
+            const m1 = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (m1) return new Date(parseInt(m1[3]), parseInt(m1[1])-1, parseInt(m1[2]));
+            if (dateStr.length === 8 && !isNaN(dateStr))
+                return new Date(parseInt(dateStr.slice(4)), parseInt(dateStr.slice(0,2))-1, parseInt(dateStr.slice(2,4)));
+            return null;
+        };
+
+        const validateClient = (customer) => {
+            const issues = [];
+            if (isEmptyVal(customer['First Name']))    issues.push('First Name missing');
+            if (isEmptyVal(customer['Last Name']))     issues.push('Last Name missing');
+            if (isEmptyVal(customer['Address']))       issues.push('Address missing');
+            if (isEmptyVal(customer['City']))          issues.push('City missing');
+            if (isEmptyVal(customer['Postal Code']))   issues.push('Postal Code missing');
+            if (isEmptyVal(customer['Mobile']) && isEmptyVal(customer['Home Phone'])) issues.push('Phone missing');
+            if (isEmptyVal(customer['Effective Date'])) issues.push('Effective Date missing');
+            return issues;
+        };
+
+        const validateDriverPersonal = (driver) => {
+            const issues = [];
+            if (isEmptyVal(driver['First Name']))     issues.push('First Name missing');
+            if (isEmptyVal(driver['Last Name']))      issues.push('Last Name missing');
+            if (isEmptyVal(driver['Licence Number'])) issues.push('Licence # missing');
+            if (isEmptyVal(driver['Date of Birth']))  issues.push('Date of Birth missing');
+            return issues;
+        };
+
+        const validateDriverVehicles = (driver) => {
+            const issues = [];
+            if (!driver.vehicles || driver.vehicles.length === 0) { issues.push('No vehicles on record'); return issues; }
+            driver.vehicles.forEach((veh, i) => {
+                if (isEmptyVal(veh['VIN'])) issues.push(`Vehicle ${i+1}: VIN missing`);
+            });
+            return issues;
+        };
+
+        const validateDriverClaims = (driver) => {
+            const issues = [];
+            if (!driver.claims || driver.claims.length === 0) return issues;
+            driver.claims.forEach((c, i) => {
+                const hasCoverage = !isEmptyVal(c['TPBI']) || !isEmptyVal(c['TPPD']) || !isEmptyVal(c['AB']) || !isEmptyVal(c['COL']) || !isEmptyVal(c['Other']);
+                if (!hasCoverage) issues.push(`Claim ${i+1}: No coverage amount filled (TPBI/TPPD/AB/COLL/Other)`);
+            });
+            return issues;
+        };
+
+        const validateDriverLapses = (driver) => {
+            const issues = [];
+            if (!driver.lapses || driver.lapses.length === 0) return issues;
+            driver.lapses.forEach((l, i) => {
+                const reason = (l['Reason'] || '').trim();
+                if (isEmptyVal(reason) || reason === 'Select Reason') {
+                    issues.push(`Lapse ${i+1}: Reason not selected`);
+                }
+                const lapseDate = parseReviewDate(formatDateDisplay(l['Lapse Date'] || ''));
+                const reinstatedDate = parseReviewDate(formatDateDisplay(l['Reinstated'] || ''));
+                if (lapseDate && reinstatedDate) {
+                    const diffDays = Math.round((reinstatedDate - lapseDate) / (1000*60*60*24));
+                    if (diffDays <= 0) issues.push(`Lapse ${i+1}: Reinstated date must be after Lapse date`);
+                }
+            });
+            return issues;
+        };
+        // ─────────────────────────────────────────────────────────────────────
+
+        const renderPanel = (title, iconName, content, issues = []) => {
+            const hasIssues = issues.length > 0;
+            const badgeHtml = hasIssues
+                ? `<span class="ml-auto flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                    ${issues.length} issue${issues.length > 1 ? 's' : ''}
+                   </span>`
+                : `<span class="ml-auto flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 shrink-0">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                    OK
+                   </span>`;
+            const errorsHtml = hasIssues
+                ? `<div class="px-3 py-2 bg-amber-50 border-b border-amber-100 flex flex-wrap gap-x-4 gap-y-1">
+                    ${issues.map(iss => `<span class="text-[10px] text-amber-700 flex items-center gap-1">
+                        <svg class="w-2.5 h-2.5 flex-shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                        ${iss}
+                    </span>`).join('')}
+                   </div>`
+                : '';
             return `
-                <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
-                    <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center gap-2">
-                        <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-slate-500"></i>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">${title}</h3>
+                <div class="bg-white border ${hasIssues ? 'border-amber-200' : 'border-slate-200'} rounded-lg shadow-sm overflow-hidden flex flex-col">
+                    <div class="${hasIssues ? 'bg-amber-50/40 border-b border-amber-100' : 'bg-slate-50 border-b border-slate-200'} px-3 py-2 flex items-center gap-2">
+                        <i data-lucide="${iconName}" class="w-3.5 h-3.5 ${hasIssues ? 'text-amber-500' : 'text-slate-500'}"></i>
+                        <h3 class="text-xs font-bold uppercase tracking-wider ${hasIssues ? 'text-amber-700' : 'text-slate-700'}">${title}</h3>
+                        ${badgeHtml}
                     </div>
+                    ${errorsHtml}
                     <div class="p-3 overflow-auto">
                         ${content}
                     </div>
@@ -926,6 +1017,45 @@
             `;
 
             RAW_DATA.customers.forEach((customer, cIdx) => {
+
+                // ── Pre-compute validation for all sections ──────────────────
+                const clientIssues = validateClient(customer);
+                const driverValidation = customer.drivers.map(drv => ({
+                    personal: validateDriverPersonal(drv),
+                    vehicles: validateDriverVehicles(drv),
+                    claims:   validateDriverClaims(drv),
+                    lapses:   validateDriverLapses(drv)
+                }));
+                const allIssues = [
+                    ...clientIssues.map(i => `Client: ${i}`),
+                    ...driverValidation.flatMap((dv, di) => [
+                        ...dv.personal.map(i => `Driver ${di+1} Personal: ${i}`),
+                        ...dv.vehicles.map(i => `Driver ${di+1} Vehicles: ${i}`),
+                        ...dv.claims.map(i => `Driver ${di+1} Claims: ${i}`),
+                        ...dv.lapses.map(i => `Driver ${di+1} Lapses: ${i}`)
+                    ])
+                ];
+                const totalIssues = allIssues.length;
+
+                // Readiness Summary Bar
+                html += totalIssues === 0
+                    ? `<div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 shadow-sm">
+                        <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                        <span class="text-xs font-semibold text-emerald-800">All sections complete — ready to export</span>
+                       </div>`
+                    : `<div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                            <span class="text-xs font-semibold text-amber-800">${totalIssues} issue${totalIssues > 1 ? 's' : ''} need attention before export</span>
+                        </div>
+                        <div class="flex flex-wrap gap-x-5 gap-y-1">
+                            ${allIssues.map(i => `<span class="text-[10px] text-amber-700 flex items-center gap-1">
+                                <svg class="w-2 h-2 shrink-0" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>${i}
+                            </span>`).join('')}
+                        </div>
+                       </div>`;
+                // ─────────────────────────────────────────────────────────────
+
                 html += `<div class="grid grid-cols-12 gap-4">`;
                 
                 // 1. Client Details (Left Col) - Property Details Only
@@ -959,7 +1089,7 @@
                         </div>
                     </div>
                 `;
-                html += `<div class="col-span-12 lg:col-span-3">${renderPanel("Client Details", "mail", clientContent)}</div>`;
+                html += `<div class="col-span-12 lg:col-span-3">${renderPanel("Client Details", "mail", clientContent, clientIssues)}</div>`;
 
                 // Right Column Container
                 html += `<div class="col-span-12 lg:col-span-9 grid grid-cols-1 gap-4">`;
@@ -1029,7 +1159,7 @@
                             ${renderField("Comp insured", driver["Company Insured"])}
                         </div>
                     `;
-                    html += renderPanel(`Driver ${dIdx + 1}: Personal Details`, "user", driverDetailsContent);
+                    html += renderPanel(`Driver ${dIdx + 1}: Personal Details`, "user", driverDetailsContent, driverValidation[dIdx]?.personal || []);
 
                     // Vehicles for this driver - Full width
                     const vehiclesContent = (!driver.vehicles || driver.vehicles.length === 0) ? 
@@ -1053,7 +1183,7 @@
                                 </tr>
                             `).join('')}
                         </tbody></table></div>`;
-                    html += `<div class="col-span-1 md:col-span-2">${renderPanel(`Driver ${dIdx + 1}: Vehicles (${driver.vehicles?.length || 0})`, "car", vehiclesContent)}</div>`;
+                    html += `<div class="col-span-1 md:col-span-2">${renderPanel(`Driver ${dIdx + 1}: Vehicles (${driver.vehicles?.length || 0})`, "car", vehiclesContent, driverValidation[dIdx]?.vehicles || [])}</div>`;
                     
                     // Risk Grid - Claims full width, Convictions & Lapses side-by-side
                     html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
@@ -1074,7 +1204,7 @@
                                 <td class="px-2 py-1.5 border-b border-slate-50" style="display: ${isEditing ? 'table-cell' : 'none'};"><button onclick="deleteClaim(${dIdx}, ${cIdx})" style="color: #9ca3af; font-size: 12px; cursor: pointer; padding: 2px 4px;">✕</button></td>
                             </tr>
                         `).join('')}</tbody></table></div>`;
-                    html += `<div class="col-span-1 md:col-span-2">${renderPanel(`Driver ${dIdx + 1}: Claims`, "alert-circle", claimsContent)}</div>`;
+                    html += `<div class="col-span-1 md:col-span-2">${renderPanel(`Driver ${dIdx + 1}: Claims`, "alert-circle", claimsContent, driverValidation[dIdx]?.claims || [])}</div>`;
 
                     // Convictions - Takes 1 column
                     const convictionsContent = (!driver.convictions || driver.convictions.length === 0) ? 
@@ -1103,7 +1233,7 @@
                             </tr>
                         `;
                         }).join('')}</tbody></table></div>`;
-                    html += renderPanel(`Driver ${dIdx + 1}: Lapses`, "calendar", lapsesContent);
+                    html += renderPanel(`Driver ${dIdx + 1}: Lapses`, "calendar", lapsesContent, driverValidation[dIdx]?.lapses || []);
 
                     html += `</div>`; // End Risk Grid
                     html += `</div>`; // End Driver Block
@@ -1639,8 +1769,8 @@
                 const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
                 const filename = `policy-data-${timestamp}.json`;
                 
-                // Convert to pretty JSON string
-                const jsonString = JSON.stringify(exportData, null, 2);
+                // Convert to pretty JSON string (use \r\n for Windows Notepad compatibility)
+                const jsonString = JSON.stringify(exportData, null, 2).replace(/\n/g, '\r\n');
                 
                 // Create blob and download
                 const blob = new Blob([jsonString], { type: 'application/json' });
