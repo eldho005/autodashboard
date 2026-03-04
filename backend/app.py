@@ -60,15 +60,16 @@ CORS(app,
 )
 print(f"🔒 CORS allowed origins: {ALLOWED_ORIGINS}")
 
-# SocketIO async mode: use 'eventlet' only when already monkeypatched by the
-# Gunicorn eventlet worker. Fall back to 'threading' for direct `python app.py`
-# usage.
-# IMPORTANT: Do NOT import eventlet.patcher unconditionally — the import alone
-# has side-effects that corrupt httpx / h2, breaking the Supabase client.
-# Only touch it if Gunicorn's eventlet worker has already loaded it.
-if 'eventlet.patcher' in sys.modules:
-    _async_mode = 'eventlet' if sys.modules['eventlet.patcher'].is_monkey_patched('threading') else 'threading'
-else:
+# SocketIO async mode: use 'gevent' when gunicorn's gevent worker has already
+# monkey-patched the stdlib (production). Fall back to 'threading' for direct
+# `python app.py` usage (local dev).
+try:
+    from gevent import monkey as _gm
+    if _gm.is_module_patched('socket'):
+        _async_mode = 'gevent'
+    else:
+        _async_mode = 'threading'
+except ImportError:
     _async_mode = 'threading'
 print(f"⚙️  SocketIO async_mode: {_async_mode}")
 
