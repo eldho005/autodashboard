@@ -262,6 +262,13 @@
                             <i class="fa-solid fa-arrow-right text-xs"></i>
                         </a>
                         <div class="h-4 w-px bg-slate-300 mx-1"></div>
+                        <!-- Undo Button -->
+                        <button id="undoBtn" onclick="App.undo()" disabled title="Nothing to undo"
+                            class="relative group flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm transition-all opacity-40 cursor-not-allowed">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Undo</span>
+                            <span id="undo-badge" class="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-bold w-4 h-4 rounded-full items-center justify-center leading-none hidden"></span>
+                        </button>
                         <!-- Save Client Data Button -->
                         <button id="saveBtn" onclick="App.saveToDatabase()" class="group flex items-center gap-2 text-xs font-bold text-white bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-[0.98]">
                             <i class="fa-solid fa-database group-hover:scale-110 transition-transform"></i>
@@ -817,8 +824,7 @@
                         const key = input.dataset.key;
                         App.drivers[App.currDrvIdx][key] = input.value;
                         console.log(`✅ Updated ${key} to ${input.value}`);
-                        // Save to localStorage
-                        localStorage.setItem('autoDashboardDrivers', JSON.stringify(App.drivers));
+                        App.markUnsaved();
                     }
                 }
             },
@@ -832,8 +838,7 @@
                         const key = input.dataset.key;
                         App.drivers[App.currDrvIdx][key] = input.value;
                         console.log(`✅ Updated ${key} to ${input.value}`);
-                        // Save to localStorage
-                        localStorage.setItem('autoDashboardDrivers', JSON.stringify(App.drivers));
+                        App.markUnsaved();
                     }
                 }
             },
@@ -847,8 +852,7 @@
                         const key = input.dataset.key;
                         App.drivers[App.currDrvIdx][key] = input.value;
                         console.log(`✅ Updated ${key} to ${input.value}`);
-                        // Save to localStorage
-                        localStorage.setItem('autoDashboardDrivers', JSON.stringify(App.drivers));
+                        App.markUnsaved();
                     }
                 }
             },
@@ -862,8 +866,7 @@
                         const key = input.dataset.key;
                         App.drivers[App.currDrvIdx][key] = input.value;
                         console.log(`✅ Updated ${key} to ${input.value}`);
-                        // Save to localStorage
-                        localStorage.setItem('autoDashboardDrivers', JSON.stringify(App.drivers));
+                        App.markUnsaved();
                     }
                 }
             }
@@ -923,28 +926,28 @@
         // ========== APP LOGIC ==========
         const App = {
             drivers: [], currDrvIdx: 0, hasUnsavedChanges: false,
+            undoStack: [], MAX_UNDO: 5,
 
             init: function() {
                 this.initNewClient();
                 
-                // Auto-save to localStorage before leaving page
-                window.addEventListener('beforeunload', () => {
-                    this.saveToLocalStorage();
+                // Warn before leaving if there are unsaved changes
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.hasUnsavedChanges) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
                 });
                 
-                // Add Ctrl+S keyboard shortcut to save
+                // Add Ctrl+S keyboard shortcut to save to database
                 document.addEventListener('keydown', (e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                        e.preventDefault(); // Prevent browser's default save dialog
-                        this.saveToLocalStorage();
-                        console.log('💾 Client data saved via Ctrl+S');
-                        
-                        // Optional: Show brief save confirmation
-                        const saveMsg = document.createElement('div');
-                        saveMsg.textContent = '✓ Saved';
-                        saveMsg.className = 'fixed top-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg z-[9999] text-sm font-medium';
-                        document.body.appendChild(saveMsg);
-                        setTimeout(() => saveMsg.remove(), 1500);
+                        e.preventDefault();
+                        App.saveToDatabase();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                        e.preventDefault();
+                        this.undo();
                     }
                 });
                 
@@ -1334,8 +1337,7 @@
 
                 // Handle gap reason dropdown changes (no data-key, handled separately)
                 if (target.classList.contains('gap-reason-dropdown')) {
-                    console.log('📋 Gap reason changed, saving to localStorage...');
-                    this.saveToLocalStorage();
+                    this.markUnsaved();
                     return;
                 }
 
@@ -1358,8 +1360,7 @@
                         currentDriver.mainRel = target.value;
                         console.log(`✅ Saved mainRel: "${target.value}" to Driver ${currentDriver.id}`);
                     }
-                    // Save to localStorage
-                    this.saveToLocalStorage();
+                    this.markUnsaved();
                     return;
                 }
                 
@@ -1421,8 +1422,8 @@
                     // Note: Gap sections are now dynamically rendered and read-only
                     // Old single gap calculation no longer needed
                     
-                    // Save to localStorage after every input change
-                    this.saveToLocalStorage();
+                    // Mark unsaved — do NOT write to localStorage on every input change
+                    this.markUnsaved();
                 } 
                 else {
                     const vScope = target.closest('.hud__section[data-scope^="vehicle-"]');
@@ -1431,14 +1432,14 @@
                         const vehicle = currentDriver.vehicles.find(v => v.id === vehicleId);
                         if(vehicle) {
                             Binder.syncFromDom(`vehicle-${vehicleId}`, vehicle, target);
-                            // Save to localStorage after vehicle input change
-                            this.saveToLocalStorage();
+                            this.markUnsaved();
                         }
                     }
                 }
             },
 
             addVehicle: function() {
+                this.pushUndoSnapshot('Add vehicle');
                 const vs = this.drivers[this.currDrvIdx].vehicles;
                 // Generate next unique ID by finding the max ID and adding 1
                 const maxId = vs.length > 0 ? Math.max(...vs.map(v => v.id || 0)) : 0;
@@ -1487,12 +1488,9 @@
                 if (!drv.deletedVehicles) drv.deletedVehicles = [];
                 drv.deletedVehicles.push(deletedVehicle);
                 
-                // CRITICAL: Save to localStorage BEFORE removing from UI to prevent data loss
-                // Remove only the vehicle at the found index
+                // Remove the vehicle at the found index
+                this.pushUndoSnapshot('Delete vehicle');
                 vs.splice(vehicleIndex, 1);
-                
-                // Save immediately to ensure all vehicle data is persisted
-                this.saveToLocalStorage();
                 
                 console.log('  Remaining AFTER:', vs.map(v => v && v.id));
                 console.log('[ARCHIVE] Now contains:', drv.deletedVehicles.length, 'vehicle(s)');
@@ -1502,6 +1500,7 @@
             },
 
             addNewDriver: function() {
+                this.pushUndoSnapshot('Add driver');
                 const newDriver = this.createDriver(this.drivers.length + 1);
                 
                 // Auto-populate new driver with original lead's phone/email
@@ -1519,6 +1518,7 @@
             
             deleteDriver: function() {
                 if(this.drivers.length <= 1) return;
+                this.pushUndoSnapshot('Delete driver');
                 this.drivers.splice(this.currDrvIdx, 1); 
                 if (this.currDrvIdx >= this.drivers.length) this.currDrvIdx = this.drivers.length - 1;
                 this.drivers.forEach((d, i) => d.id = i + 1);
@@ -1564,8 +1564,8 @@
                 });
                 
                 // Save to localStorage
-                this.saveToLocalStorage();
-                console.log(`💾 Saved Driver ${currentDriver.id} data to localStorage`);
+                // this.saveToLocalStorage(); -- removed: sync happens in-memory, save on explicit Save button click
+                console.log(`💾 Synced Driver ${currentDriver.id} data in memory`);
                 
                 // Now switch to the new driver
                 this.currDrvIdx = parseInt(idx);
@@ -1732,7 +1732,6 @@
                 setTimeout(() => {
                     console.log('[DEPRECATED] Old calcInsuranceGap logic removed - using renderGapSections instead');
                 }, 50);
-                this.saveToLocalStorage();
             },
 
             markUnsaved: function() {
@@ -1753,6 +1752,54 @@
                 }
             },
 
+            pushUndoSnapshot: function(label) {
+                this.undoStack.push({
+                    label: label || 'Change',
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+                    drivers: JSON.parse(JSON.stringify(this.drivers)),
+                    currDrvIdx: this.currDrvIdx
+                });
+                if (this.undoStack.length > this.MAX_UNDO) this.undoStack.shift();
+                this.markUnsaved();
+                this.updateUndoUI();
+            },
+
+            undo: function() {
+                if (this.undoStack.length === 0) return;
+                const snapshot = this.undoStack.pop();
+                this.drivers = snapshot.drivers;
+                this.currDrvIdx = snapshot.currDrvIdx;
+                this.renderSelectors();
+                this.refreshUI();
+                this.updateUndoUI();
+                if (this.undoStack.length === 0) this.markUnsaved();
+                const msg = document.createElement('div');
+                msg.textContent = '\u21A9 Undid: ' + snapshot.label + ' (' + snapshot.time + ')';
+                msg.className = 'fixed top-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg z-[9999] text-sm font-medium';
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 1800);
+            },
+
+            updateUndoUI: function() {
+                const btn = document.getElementById('undoBtn');
+                if (!btn) return;
+                const count = this.undoStack.length;
+                const badge = document.getElementById('undo-badge');
+                if (count === 0) {
+                    btn.disabled = true;
+                    btn.title = 'Nothing to undo';
+                    btn.classList.add('opacity-40', 'cursor-not-allowed');
+                    btn.classList.remove('hover:bg-slate-700', 'hover:text-white');
+                    if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
+                } else {
+                    btn.disabled = false;
+                    btn.title = 'Undo: ' + this.undoStack[this.undoStack.length - 1].label + ' (' + count + ' step' + (count > 1 ? 's' : '') + ')';
+                    btn.classList.remove('opacity-40', 'cursor-not-allowed');
+                    btn.classList.add('hover:bg-slate-700', 'hover:text-white');
+                    if (badge) { badge.textContent = count; badge.classList.remove('hidden'); badge.classList.add('flex'); }
+                }
+            },
+
             saveToLocalStorage: function() {
                 try {
                     // Collect lapses data before saving to localStorage
@@ -1760,8 +1807,6 @@
                     
                     localStorage.setItem('autoDashboardDrivers', JSON.stringify(this.drivers));
                     localStorage.setItem('autoDashboardCurrDrvIdx', this.currDrvIdx.toString());
-                    // Mark button as unsaved whenever localStorage is updated
-                    this.markUnsaved();
                     if (this.originalLead) {
                         // CRITICAL: Also save city and postal from driver to originalLead for Final Review
                         const drv0 = this.drivers[0];
@@ -2553,6 +2598,14 @@
                     console.warn('Could not parse saved drivers from localStorage:', e);
                 }
                 
+                // Assign persistent claimNumbers to any claims that don't have one yet
+                let _maxClaimNumber = Math.max(0, ...claims.map(c => c.claimNumber || 0));
+                claims.forEach(claim => {
+                    if (!claim.claimNumber) {
+                        claim.claimNumber = ++_maxClaimNumber;
+                    }
+                });
+
                 claims.forEach((claim, index) => {
                     // Store this claim in driver.claims array
                     drv.claims.push(claim);
@@ -2565,17 +2618,17 @@
                         
                         const savedDescription = savedDrivers[this.currDrvIdx].claims[index].appliedDescription;
                         drv.claims[index].appliedDescription = savedDescription;
-                        console.log(`  ✓ Restored appliedDescription for claim #${index+1}: "${savedDescription}"`);
+                        console.log(`  ✓ Restored appliedDescription for claim #${claim.claimNumber}: "${savedDescription}"`);
                     }
                     
-                    console.log(`  → Claim #${index+1}:`, claim);
+                    console.log(`  → Claim #${claim.claimNumber}:`, claim);
                     
                     const claimHTML = `
                         <div class="bg-white rounded-xl shadow-soft border border-slate-200 overflow-hidden relative p-6 hover:shadow-md transition-shadow hud__card mb-6" data-claim-index="${index}">
                             <div class="absolute top-0 left-0 w-1 h-full bg-slate-400"></div>
                             <div class="absolute top-4 right-4 flex items-center gap-2">
                                 <input type="checkbox" class="claim-select-checkbox w-3.5 h-3.5 rounded accent-slate-500 cursor-pointer" data-claim-index="${index}" title="Select for deletion">
-                                <span class="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">#${index + 1}</span>
+                                <span class="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">#${claim.claimNumber}</span>
                                 <button onclick="App.deleteClaim(${index})" class="text-slate-300 hover:text-rose-400 transition-colors text-sm leading-none" title="Remove claim">&#x2715;</button>
                             </div>
 
@@ -3509,6 +3562,7 @@
             deleteClaim: function(index) {
                 const drv = this.drivers[this.currDrvIdx];
                 if (!drv.claims || !drv.claims[index]) return;
+                this.pushUndoSnapshot('Delete claim');
                 drv.claims.splice(index, 1);
                 this.renderClaimSections(drv.claims);
                 console.log(`🗑️ Deleted claim #${index + 1}`);
@@ -3520,6 +3574,7 @@
                     .map(c => parseInt(c.dataset.claimIndex))
                     .sort((a, b) => b - a); // descending so splicing doesn't shift remaining indices
                 if (indices.length === 0) return;
+                this.pushUndoSnapshot('Delete ' + indices.length + ' claim(s)');
                 const drv = this.drivers[this.currDrvIdx];
                 for (const idx of indices) {
                     if (drv.claims && drv.claims[idx] !== undefined) {
@@ -3532,6 +3587,7 @@
 
             deleteGapCard: function(gapIndex) {
                 const drv = this.drivers[this.currDrvIdx];
+                this.pushUndoSnapshot('Delete gap card');
                 // Instead of removing the policy, just hide the gap card
                 // This preserves the gap calculation logic
                 if (!drv.hiddenGapIndices) {
@@ -3541,7 +3597,6 @@
                     drv.hiddenGapIndices.push(gapIndex);
                 }
                 this.renderGapSections();
-                this.saveToLocalStorage();
                 console.log(`🗑️ Hidden gap card at index ${gapIndex} (policy data preserved)`);
             },
 
@@ -3549,8 +3604,8 @@
                 const checkboxes = document.querySelectorAll('#gap-sections-container .gap-select-checkbox:checked');
                 const indices = Array.from(checkboxes).map(c => parseInt(c.dataset.gapIndex));
                 if (indices.length === 0) return;
+                this.pushUndoSnapshot('Delete ' + indices.length + ' gap(s)');
                 const drv = this.drivers[this.currDrvIdx];
-                // Instead of removing policies, just hide the gap cards
                 if (!drv.hiddenGapIndices) {
                     drv.hiddenGapIndices = [];
                 }
@@ -3560,7 +3615,6 @@
                     }
                 }
                 this.renderGapSections();
-                this.saveToLocalStorage();
                 console.log(`🗑️ Hidden ${indices.length} gap card(s) at indices: ${indices.join(', ')} (policy data preserved)`);
             },
 
@@ -3708,6 +3762,9 @@
             saveToDatabase: async function() {
                 const btn = document.querySelector('button[onclick="App.saveToDatabase()"]');
                 const originalText = btn.innerHTML;
+                
+                // Save to localStorage first so page refresh shows current state
+                this.saveToLocalStorage();
                 
                 // Collect lapses data before saving
                 this.collectLapsesData();
