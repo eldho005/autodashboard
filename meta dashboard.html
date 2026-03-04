@@ -23,7 +23,7 @@
     <script src="https://accounts.google.com/gsi/client"></script>
     
     <!-- Socket.IO for real-time WebSocket communication -->
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Socket.IO removed: using simple auto-refresh polling instead -->
     
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -816,109 +816,32 @@
             }
 
             startAutoRefresh() {
-                // REAL-TIME WEBHOOK PUSH ARCHITECTURE
-                // - Dashboard connects to WebSocket
-                // - Webhook pushes new leads directly to dashboard
-                // - Dashboard ONLY displays leads from WebSocket (never from database)
-                // - Database is write-only storage
+                // AUTO-REFRESH ARCHITECTURE
+                // Polls backend every 30 seconds for new leads from webhook/database
+                // Simple, reliable, no WebSocket complexity
                 
-                console.log('🔗 Connecting to real-time WebSocket server...');
-                this.setupWebSocketListener();
-            }
-
-            setupWebSocketListener() {
-                // Connect to WebSocket for real-time lead updates
-                // This is the ONLY source of leads for display
-                try {
-                    // Connect to the WebSocket server
-                    this.socket = io(BACKEND_URL, {
-                        reconnection: true,
-                        reconnectionDelay: 1000,
-                        reconnectionDelayMax: 5000,
-                        reconnectionAttempts: 5
-                    });
-
-                    // Handle connection
-                    this.socket.on('connect', () => {
-                        console.log('✅ WebSocket connected to real-time server');
-                        // Join dashboard room to receive live lead updates
-                        this.socket.emit('join_dashboard');
-                    });
-
-                    // Handle joining dashboard room
-                    this.socket.on('joined_dashboard', (data) => {
-                        console.log('📊 Joined dashboard room - ready to receive live leads');
-                        this.showToast('Connected to real-time lead updates', 'success');
-                    });
-
-                    // MAIN: Receive new leads from webhook via WebSocket
-                    this.socket.on('new_lead', (data) => {
-                        const lead = this.normalizeLead(data.lead);
-                        const source = data.source || 'unknown';
-                        
-                        console.log(`⚡ RECEIVED LIVE LEAD from ${source}: ${lead.name}`);
-                        
-                        // Ensure lead is marked as from Facebook if from webhook
-                        if (source === 'webhook' && !lead.is_manual) {
-                            lead.source = 'facebook_webhook';
-                        }
-                        
-                        // Check for duplicates before adding
-                        const uniqueKey = lead.meta_lead_id || lead.email || lead.id;
-                        const exists = this.state.leads.some(l => 
-                            (l.meta_lead_id && l.meta_lead_id === lead.meta_lead_id) ||
-                            (l.email && l.email === lead.email) ||
-                            (l.id && l.id === lead.id)
-                        );
-                        
-                        if (exists) {
-                            console.log(`⚠️ Lead already exists (${uniqueKey}), skipping duplicate`);
-                            return;
-                        }
-                        
-                        // ADD TO DASHBOARD AT TOP (this is the ONLY way leads appear)
-                        // Use unshift() to prepend - NEW lead goes to index 0
-                        // All existing leads (manual and Facebook) shift down naturally
-                        this.state.leads.unshift(lead);
-                        
-                        // PERSIST immediately after new lead
-                        this.savePersistedLeads(this.state.leads);
-                        
+                console.log('🔄 Starting auto-refresh polling (every 30 seconds)...');
+                this._lastLeadCount = this.state.leads.length;
+                
+                this._refreshInterval = setInterval(async () => {
+                    try {
+                        const prevCount = this.state.leads.length;
+                        await this.loadExistingLeadsFromDatabase();
                         this.renderAll();
                         this.updateStats();
                         
-                        // Notify user of new lead
-                        this.showToast(`🎉 New lead received: ${lead.name}`, 'success');
-                    });
-
-                    // Handle connection response
-                    this.socket.on('connection_response', (data) => {
-                        console.log('📡 Server response:', data.data);
-                    });
-
-                    // Handle disconnection
-                    this.socket.on('disconnect', () => {
-                        console.log('⚠️  WebSocket disconnected - will attempt to reconnect');
-                        this.showToast('Disconnected from real-time updates', 'warning');
-                    });
-
-                    // Handle errors
-                    this.socket.on('error', (error) => {
-                        console.error('❌ WebSocket error:', error);
-                        this.showToast('Connection error: ' + error, 'error');
-                    });
-
-                    console.log('✅ WebSocket listener setup complete');
-                } catch (error) {
-                    console.error('❌ Failed to setup WebSocket listener:', error);
-                    this.showToast('Failed to setup real-time connection', 'error');
-                }
+                        const newCount = this.state.leads.length;
+                        if (newCount > prevCount) {
+                            const diff = newCount - prevCount;
+                            this.showToast(`🎉 ${diff} new lead${diff > 1 ? 's' : ''} received!`, 'success');
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Auto-refresh failed:', e.message);
+                    }
+                }, 30000); // Every 30 seconds
+                
+                console.log('✅ Auto-refresh polling active');
             }
-
-            // REMOVED: setupWebhookListener() - no longer needed
-            // REMOVED: 3-second polling - no longer needed
-            // REMOVED: 60-second fallback polling - no longer needed
-            // REMOVED: loadLeadsFromDatabase() for display - database is write-only
 
 
             async syncFromFacebook() {
