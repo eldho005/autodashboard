@@ -60,23 +60,16 @@ CORS(app,
 )
 print(f"🔒 CORS allowed origins: {ALLOWED_ORIGINS}")
 
-# SocketIO async mode: use 'gevent' when gunicorn's gevent worker has already
-# monkey-patched the stdlib (production). Fall back to 'threading' for direct
-# `python app.py` usage (local dev).
-try:
-    from gevent import monkey as _gm
-    if _gm.is_module_patched('socket'):
-        _async_mode = 'gevent'
-    else:
-        _async_mode = 'threading'
-except ImportError:
-    _async_mode = 'threading'
+# SocketIO: always use threading mode (works with gunicorn gthread worker).
+# Polling-only transport is reliable and doesn't need gevent/eventlet.
+_async_mode = 'threading'
 print(f"⚙️  SocketIO async_mode: {_async_mode}")
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS,
                      async_mode=_async_mode,
                      ping_timeout=60,
                      ping_interval=25,
+                     allow_upgrades=False,
                      engineio_logger=False)
 
 # ========== RATE LIMITING ==========
