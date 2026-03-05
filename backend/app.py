@@ -150,6 +150,7 @@ PUBLIC_ENDPOINTS = {
     '/webhook',
     '/api/signwell/webhook',
     '/api/signwell/webhook-legacy',
+    '/api/meta-diagnostics',
 }
 
 # Prefixes for static file serving (HTML pages handle their own auth guard)
