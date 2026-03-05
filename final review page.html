@@ -424,9 +424,8 @@
                 RAW_DATA.customers[0]["Postal Code"] = sanitize(primaryProp.postal || "");
                 RAW_DATA.customers[0]["Property Type"] = propertyType;
                 RAW_DATA.customers[0]["Insured Since"] = sanitize(primaryProp.insuredSince || "");
+                RAW_DATA.customers[0]["Insured with Brokerage Since"] = sanitize(primaryProp.insuredWithBrokerageSince || "");
                 RAW_DATA.customers[0]["Structure"] = sanitize(primaryProp.structureType || "");
-                RAW_DATA.customers[0]["Construction"] = sanitize(primaryProp.construction || "");
-                RAW_DATA.customers[0]["Exterior Finish"] = sanitize(primaryProp.exteriorFinish || "");
                 RAW_DATA.customers[0]["Stories"] = sanitize(primaryProp.storeys || "");
                 RAW_DATA.customers[0]["Total Living Area"] = sanitize(primaryProp.livingArea || "");
                 RAW_DATA.customers[0]["Full Bath"] = sanitize(primaryProp.fullBaths || "");
@@ -450,11 +449,10 @@
                     "Co-Insured DOB": sanitize(v2Customer.coDob || ""),
                     "Co-Insured Gender": sanitize(v2Customer.coGender || ""),
                     "Insured Since": sanitize(primaryProp.insuredSince || ""),
+                    "Insured with Brokerage Since": sanitize(primaryProp.insuredWithBrokerageSince || ""),
                     "Customer Address": sanitize(primaryProp.address || ""),
                     "City": sanitize(primaryProp.city || ""),
                     "Postal": sanitize(primaryProp.postal || ""),
-                    "Construction": sanitize(primaryProp.construction || ""),
-                    "Exterior Finish": sanitize(primaryProp.exteriorFinish || ""),
                     "Structure": sanitize(primaryProp.structureType || ""),
                     "structureType": sanitize(primaryProp.structureType || ""),
                     "Stories": sanitize(primaryProp.storeys || ""),
@@ -607,11 +605,10 @@
                     
                     // Policy History - insuredSince is also in customer scope
                     RAW_DATA.customers[0]["Insured Since"] = sanitize(propCustomer.insuredSince || primaryProp.insuredSince || "");
+                    RAW_DATA.customers[0]["Insured with Brokerage Since"] = sanitize(propCustomer.insuredWithBrokerageSince || primaryProp.insuredWithBrokerageSince || "");
                     
                     // Property Structure - available to both homeowners and tenants
                     RAW_DATA.customers[0]["Structure"] = sanitize(primaryProp.structureType || primaryProp.structure || "");
-                    RAW_DATA.customers[0]["Construction"] = sanitize(primaryProp.construction || "");
-                    RAW_DATA.customers[0]["Exterior Finish"] = sanitize(primaryProp.exteriorFinish || "");
                     RAW_DATA.customers[0]["Stories"] = sanitize(primaryProp.storeys || "");
                     RAW_DATA.customers[0]["Total Living Area"] = sanitize(primaryProp.livingArea || "");
                     RAW_DATA.customers[0]["Full Bath"] = sanitize(primaryProp.fullBaths || "");
@@ -1274,6 +1271,7 @@
 
                         <!-- Section 3: Insured Since -->
                         ${renderField("Insured Since", customer["Insured Since"])}
+                        ${renderField("Insured with Brokerage Since", customer["Insured with Brokerage Since"])}
 
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
@@ -1289,7 +1287,6 @@
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                         <!-- Section 5: Construction Details -->
-                        ${renderField("Construction", customer["Construction"])}
                         ${renderField("Structure", customer["Structure"])}
                         ${renderField("Stories", customer["Stories"])}
 
@@ -1340,6 +1337,7 @@
 
                                 <!-- Section 3: Construction Details -->
                                 ${renderField("Construction", property["Construction"] || property["construction"] || "")}
+                                ${renderField("Exterior Finish", property["Exterior Finish"] || property["exteriorFinish"] || "")}
                                 ${renderField("Structure", property["structureType"] || "")}
                                 ${renderField("Stories", property["Stories"] || property["storeys"] || "")}
 
@@ -1347,6 +1345,7 @@
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 4: Property Details -->
+                                ${renderField("Total Living Area", property["Total Living Area"] || property["livingArea"] || "")}
                                 ${renderField("Full Bath", property["Full Bath"] || property["fullBaths"] || "")}
                                 ${renderField("Half Bath", property["Half Bath"] || property["halfBaths"] || "")}
                                 ${renderField("Number of Cars", property["Number of Cars"] || property["numberOfCars"] || "")}
