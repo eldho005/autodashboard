@@ -294,24 +294,42 @@ def _fetch_leads_from_form(form_id, access_token):
 def get_leads_from_meta():
     """Fetch all leads from Meta Lead Form API.
     1. Tries META_LEAD_FORM_ID first (if configured)
-    2. Falls back to ALL forms on the Meta Page (uses META_PAGE_ID)
+    2. Tries the known hardcoded form ID 1459691498852435
+    3. Falls back to ALL forms on the Meta Page (uses META_PAGE_ID)
     """
+    # Known form IDs to always try (hardcoded as guaranteed fallback)
+    KNOWN_FORM_IDS = ['1459691498852435']
+
     try:
         token = META_PAGE_ACCESS_TOKEN
         if not token:
             print("❌ META_PAGE_ACCESS_TOKEN not set")
             return []
 
-        # --- Try the specific configured form first ---
-        if META_LEAD_FORM_ID:
-            print(f"📞 Fetching leads from configured form: {META_LEAD_FORM_ID}")
-            leads = _fetch_leads_from_form(META_LEAD_FORM_ID, token)
-            if leads:
-                print(f"✅ Got {len(leads)} leads from configured form")
-                return leads
-            print("⚠️ Configured form returned 0 leads — trying all page forms")
-        else:
-            print("⚠️ META_LEAD_FORM_ID not set — fetching all forms from page")
+        # Build list of form IDs to try (env var + known hardcoded IDs, deduped)
+        forms_to_try = []
+        if META_LEAD_FORM_ID and META_LEAD_FORM_ID not in KNOWN_FORM_IDS:
+            forms_to_try.append(META_LEAD_FORM_ID)
+        forms_to_try.extend(KNOWN_FORM_IDS)
+
+        # --- Try each known form ID ---
+        all_leads = []
+        seen_ids = set()
+        for fid in forms_to_try:
+            print(f"📞 Fetching leads from form: {fid}")
+            leads = _fetch_leads_from_form(fid, token)
+            for lead in leads:
+                lid = lead.get('id')
+                if lid not in seen_ids:
+                    seen_ids.add(lid)
+                    all_leads.append(lead)
+
+        if all_leads:
+            all_leads.sort(key=lambda x: x.get('created_time', ''), reverse=True)
+            print(f"✅ Got {len(all_leads)} leads from known form IDs")
+            return all_leads
+
+        print("⚠️ Known form IDs returned 0 leads — trying all page forms")
 
         # --- Fallback: fetch from ALL forms on the page ---
         if not META_PAGE_ID:
