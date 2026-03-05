@@ -1279,7 +1279,6 @@
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                         <!-- Section 4: Property Details -->
-                        ${renderField("Total Living Area", customer["Total Living Area"])}
                         ${renderField("Full Bath", customer["Full Bath"])}
                         ${renderField("Half Bath", customer["Half Bath"])}
                         ${renderField("Number of Cars", customer["Number of Cars"])}
@@ -1291,7 +1290,6 @@
 
                         <!-- Section 5: Construction Details -->
                         ${renderField("Construction", customer["Construction"])}
-                        ${renderField("Exterior Finish", customer["Exterior Finish"])}
                         ${renderField("Structure", customer["Structure"])}
                         ${renderField("Stories", customer["Stories"])}
 
@@ -1342,7 +1340,6 @@
 
                                 <!-- Section 3: Construction Details -->
                                 ${renderField("Construction", property["Construction"] || property["construction"] || "")}
-                                ${renderField("Exterior Finish", property["Exterior Finish"] || property["exteriorFinish"] || "")}
                                 ${renderField("Structure", property["structureType"] || "")}
                                 ${renderField("Stories", property["Stories"] || property["storeys"] || "")}
 
@@ -1350,7 +1347,6 @@
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 4: Property Details -->
-                                ${renderField("Total Living Area", property["Total Living Area"] || property["livingArea"] || "")}
                                 ${renderField("Full Bath", property["Full Bath"] || property["fullBaths"] || "")}
                                 ${renderField("Half Bath", property["Half Bath"] || property["halfBaths"] || "")}
                                 ${renderField("Number of Cars", property["Number of Cars"] || property["numberOfCars"] || "")}
