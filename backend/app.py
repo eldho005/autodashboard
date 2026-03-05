@@ -5622,6 +5622,94 @@ def signed_documents_stats():
         return jsonify({'error': str(e)}), 500
 
 
+# ========== POWERBROKER ENDPOINTS ==========
+
+@app.route('/api/save-powerbroker', methods=['POST'])
+def save_powerbroker():
+    """Save PowerBroker data to Supabase powerbroker_data table, linked to a lead"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+        email = (data.get('email') or '').strip().lower()
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+
+        print(f"\n⚡ [PowerBroker] Saving data for email: {email}")
+
+        # Look up lead by email
+        lead_id = None
+        try:
+            result = supabase.table('leads').select('id').eq('email', email).limit(1).execute()
+            if result.data:
+                lead_id = result.data[0]['id']
+                print(f"✅ Found lead: {lead_id}")
+        except Exception as e:
+            print(f"⚠️ Lead lookup error: {e}")
+
+        save_data = {
+            'email': email,
+            'powerbroker_data': data.get('powerbroker_data', {}),
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        if lead_id:
+            save_data['lead_id'] = lead_id
+
+        # Upsert: update existing or insert new
+        try:
+            existing = None
+            if lead_id:
+                existing = supabase.table('powerbroker_data').select('id').eq('lead_id', lead_id).limit(1).execute()
+            if not (existing and existing.data):
+                existing = supabase.table('powerbroker_data').select('id').eq('email', email).limit(1).execute()
+
+            if existing and existing.data:
+                record_id = existing.data[0]['id']
+                supabase.table('powerbroker_data').update(save_data).eq('id', record_id).execute()
+                print(f"🔄 Updated record id={record_id}")
+            else:
+                supabase.table('powerbroker_data').insert(save_data).execute()
+                print(f"📝 Inserted new record")
+
+            return jsonify({'success': True, 'message': 'PowerBroker data saved'})
+        except Exception as e:
+            print(f"❌ DB save error: {e}")
+            import traceback; traceback.print_exc()
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    except Exception as e:
+        print(f"❌ save-powerbroker error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/get-powerbroker/<query>', methods=['GET'])
+def get_powerbroker(query):
+    """Retrieve saved PowerBroker data by email or lead_id"""
+    try:
+        if not query:
+            return jsonify({'success': False, 'error': 'Query required'}), 400
+
+        result = None
+        # Try by lead_id first if numeric
+        if query.isdigit():
+            result = supabase.table('powerbroker_data').select('*').eq('lead_id', int(query)).limit(1).execute()
+
+        # Fallback to email
+        if not (result and result.data):
+            result = supabase.table('powerbroker_data').select('*').eq('email', query.lower()).limit(1).execute()
+
+        if result and result.data:
+            print(f"✅ [PowerBroker] Loaded data for query: {query}")
+            return jsonify({'success': True, 'data': result.data[0].get('powerbroker_data', {})})
+        else:
+            return jsonify({'success': True, 'data': None})
+
+    except Exception as e:
+        print(f"❌ get-powerbroker error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Create tables if they don't exist
     try:

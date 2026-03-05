@@ -69,6 +69,10 @@
                     <!-- Current Page -->
                     <span class="text-xs font-semibold text-slate-800">PowerBroker</span>
                     <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Save Indicator + Lead Badge -->
+                    <span id="pb-save-indicator" class="hidden text-xs font-medium flex items-center gap-1"></span>
+                    <span id="pb-lead-badge" class="hidden text-xs text-slate-400 font-mono max-w-[130px] truncate" title="Connected lead"></span>
+                    <div class="h-4 w-px bg-slate-300"></div>
                     <!-- Next Page Button -->
                     <a href="property-coverpage-temp.html" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
                         <span>Auto Cover</span>
@@ -1530,6 +1534,271 @@ W01,"Writer, Publisher"`;
             document.getElementById('secondHomeMortgageProv').value = 'ON';
             document.getElementById('secondHomeMortgagePostal').value = '';
         };
+
+        // ==========================================
+        // POWERBROKER SAVE / LOAD  (Lead-connected)
+        // ==========================================
+
+        let pbSaveTimeout = null;
+        let pbCurrentEmail = null;
+
+        function pbGetField(id) {
+            const el = document.getElementById(id);
+            if (!el) return '';
+            return el.value || '';
+        }
+
+        function pbSetField(id, value) {
+            const el = document.getElementById(id);
+            if (!el || value === undefined || value === null) return;
+            el.value = value;
+        }
+
+        function pbCollectData() {
+            const secondAutoVisible = !!(document.getElementById('secondAutoSection') && !document.getElementById('secondAutoSection').classList.contains('hidden'));
+            const secondHomeVisible = !!(document.getElementById('secondHomeSection') && !document.getElementById('secondHomeSection').classList.contains('hidden'));
+            const telematicsEl = document.getElementById('telematicsYes');
+            const telematicsYes = telematicsEl && telematicsEl.checked;
+            return {
+                auto: {
+                    prevInsurerName: pbGetField('prevInsurerName'),
+                    prevInsurerCode: pbGetField('prevInsurerCode'),
+                    priorStatusName: pbGetField('priorStatusName'),
+                    priorStatusCode: pbGetField('priorStatusCode'),
+                    prevAutoPolicyNumber: pbGetField('prevAutoPolicyNumber'),
+                    prevAutoExpiryDate: pbGetField('prevAutoExpiryDate'),
+                    prevAutoContinuouslyInsuredSince: pbGetField('prevAutoContinuouslyInsuredSince'),
+                    winterTires: pbGetField('winterTires'),
+                    noOfCarsInHousehold: pbGetField('noOfCarsInHousehold'),
+                    financeName: pbGetField('financeName'),
+                    financeAddress: pbGetField('financeAddress'),
+                    financeCity: pbGetField('financeCity'),
+                    financeProv: pbGetField('financeProv'),
+                    financePostal: pbGetField('financePostal'),
+                    secondAutoVisible: secondAutoVisible,
+                    secondAutoWinterTires: pbGetField('secondAutoWinterTires'),
+                    deductible: pbGetField('deductible'),
+                    telematics: telematicsYes ? 'yes' : 'no',
+                    telematicsName: pbGetField('telematicsName'),
+                    telematicsEmail: pbGetField('telematicsEmail'),
+                    telematicsPhone: pbGetField('telematicsPhone'),
+                    notes: pbGetField('notesField')
+                },
+                home: {
+                    prevHomeInsurerName: pbGetField('prevHomeInsurerName'),
+                    prevHomeInsurerCode: pbGetField('prevHomeInsurerCode'),
+                    priorHomeStatusName: pbGetField('priorHomeStatusName'),
+                    priorHomeStatusCode: pbGetField('priorHomeStatusCode'),
+                    prevHomePolicyNumber: pbGetField('prevHomePolicyNumber'),
+                    prevHomeExpiryDate: pbGetField('prevHomeExpiryDate'),
+                    continuouslyInsuredFrom: pbGetField('continuouslyInsuredFrom'),
+                    continuouslyInsuredSince: pbGetField('continuouslyInsuredSince'),
+                    mortgageName: pbGetField('mortgageName'),
+                    mortgageAddress: pbGetField('mortgageAddress'),
+                    mortgageCity: pbGetField('mortgageCity'),
+                    mortgageProv: pbGetField('mortgageProv'),
+                    mortgagePostal: pbGetField('mortgagePostal'),
+                    applicant1Name: pbGetField('applicant1Name'),
+                    applicant1Occup: pbGetField('applicant1Occup'),
+                    applicant1OccupCode: pbGetField('applicant1OccupCode'),
+                    applicant1YrsEmp: pbGetField('applicant1YrsEmp'),
+                    applicant1DOB: pbGetField('applicant1DOB'),
+                    applicant1Sex: pbGetField('applicant1Sex'),
+                    applicant1Marital: pbGetField('applicant1Marital'),
+                    applicant2Name: pbGetField('applicant2Name'),
+                    applicant2Occup: pbGetField('applicant2Occup'),
+                    applicant2OccupCode: pbGetField('applicant2OccupCode'),
+                    applicant2YrsEmp: pbGetField('applicant2YrsEmp'),
+                    applicant2DOB: pbGetField('applicant2DOB'),
+                    applicant2Sex: pbGetField('applicant2Sex'),
+                    applicant2Marital: pbGetField('applicant2Marital'),
+                    homeDeductible: pbGetField('homeDeductible'),
+                    waterDeductible: pbGetField('waterDeductible'),
+                    homeNotes: pbGetField('homeNotesField'),
+                    secondHomeVisible: secondHomeVisible,
+                    secondHomeMortgageName: pbGetField('secondHomeMortgageName'),
+                    secondHomeMortgageAddress: pbGetField('secondHomeMortgageAddress'),
+                    secondHomeMortgageCity: pbGetField('secondHomeMortgageCity'),
+                    secondHomeMortgageProv: pbGetField('secondHomeMortgageProv'),
+                    secondHomeMortgagePostal: pbGetField('secondHomeMortgagePostal')
+                }
+            };
+        }
+
+        function pbPopulateData(d) {
+            if (!d) return;
+            const a = d.auto || {};
+            const h = d.home || {};
+            // Auto
+            pbSetField('prevInsurerName', a.prevInsurerName);
+            pbSetField('prevInsurerCode', a.prevInsurerCode);
+            pbSetField('priorStatusName', a.priorStatusName);
+            pbSetField('priorStatusCode', a.priorStatusCode);
+            pbSetField('prevAutoPolicyNumber', a.prevAutoPolicyNumber);
+            pbSetField('prevAutoExpiryDate', a.prevAutoExpiryDate);
+            pbSetField('prevAutoContinuouslyInsuredSince', a.prevAutoContinuouslyInsuredSince);
+            pbSetField('winterTires', a.winterTires);
+            pbSetField('noOfCarsInHousehold', a.noOfCarsInHousehold);
+            pbSetField('financeName', a.financeName);
+            pbSetField('financeAddress', a.financeAddress);
+            pbSetField('financeCity', a.financeCity);
+            pbSetField('financeProv', a.financeProv);
+            pbSetField('financePostal', a.financePostal);
+            pbSetField('deductible', a.deductible);
+            pbSetField('telematicsName', a.telematicsName);
+            pbSetField('telematicsEmail', a.telematicsEmail);
+            pbSetField('telematicsPhone', a.telematicsPhone);
+            if (a.telematics === 'yes') {
+                const tEl = document.getElementById('telematicsYes');
+                if (tEl) { tEl.checked = true; toggleTelematicsFields(); }
+            }
+            if (a.secondAutoVisible) {
+                const s = document.getElementById('secondAutoSection');
+                const b = document.getElementById('addSecondAutoBtn');
+                if (s) s.classList.remove('hidden');
+                if (b) b.classList.add('hidden');
+                pbSetField('secondAutoWinterTires', a.secondAutoWinterTires);
+            }
+            if (a.notes) pbSetField('notesField', a.notes);
+            // Home
+            pbSetField('prevHomeInsurerName', h.prevHomeInsurerName);
+            pbSetField('prevHomeInsurerCode', h.prevHomeInsurerCode);
+            pbSetField('priorHomeStatusName', h.priorHomeStatusName);
+            pbSetField('priorHomeStatusCode', h.priorHomeStatusCode);
+            pbSetField('prevHomePolicyNumber', h.prevHomePolicyNumber);
+            pbSetField('prevHomeExpiryDate', h.prevHomeExpiryDate);
+            pbSetField('continuouslyInsuredFrom', h.continuouslyInsuredFrom);
+            pbSetField('continuouslyInsuredSince', h.continuouslyInsuredSince);
+            pbSetField('mortgageName', h.mortgageName);
+            pbSetField('mortgageAddress', h.mortgageAddress);
+            pbSetField('mortgageCity', h.mortgageCity);
+            pbSetField('mortgageProv', h.mortgageProv);
+            pbSetField('mortgagePostal', h.mortgagePostal);
+            pbSetField('applicant1Name', h.applicant1Name);
+            pbSetField('applicant1Occup', h.applicant1Occup);
+            pbSetField('applicant1OccupCode', h.applicant1OccupCode);
+            pbSetField('applicant1YrsEmp', h.applicant1YrsEmp);
+            pbSetField('applicant1DOB', h.applicant1DOB);
+            pbSetField('applicant1Sex', h.applicant1Sex);
+            pbSetField('applicant1Marital', h.applicant1Marital);
+            pbSetField('applicant2Name', h.applicant2Name);
+            pbSetField('applicant2Occup', h.applicant2Occup);
+            pbSetField('applicant2OccupCode', h.applicant2OccupCode);
+            pbSetField('applicant2YrsEmp', h.applicant2YrsEmp);
+            pbSetField('applicant2DOB', h.applicant2DOB);
+            pbSetField('applicant2Sex', h.applicant2Sex);
+            pbSetField('applicant2Marital', h.applicant2Marital);
+            pbSetField('homeDeductible', h.homeDeductible);
+            pbSetField('waterDeductible', h.waterDeductible);
+            if (h.homeNotes) pbSetField('homeNotesField', h.homeNotes);
+            if (h.secondHomeVisible) {
+                const s = document.getElementById('secondHomeSection');
+                const b = document.getElementById('addSecondHomeBtn');
+                if (s) s.classList.remove('hidden');
+                if (b) b.classList.add('hidden');
+                pbSetField('secondHomeMortgageName', h.secondHomeMortgageName);
+                pbSetField('secondHomeMortgageAddress', h.secondHomeMortgageAddress);
+                pbSetField('secondHomeMortgageCity', h.secondHomeMortgageCity);
+                pbSetField('secondHomeMortgageProv', h.secondHomeMortgageProv);
+                pbSetField('secondHomeMortgagePostal', h.secondHomeMortgagePostal);
+            }
+        }
+
+        function pbSetSaveStatus(status) {
+            const el = document.getElementById('pb-save-indicator');
+            if (!el) return;
+            if (status === 'saving') {
+                el.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-500 mr-1"></i><span class="text-amber-600">Saving...</span>';
+                el.classList.remove('hidden');
+            } else if (status === 'saved') {
+                el.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 mr-1"></i><span class="text-green-600">Saved</span>';
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 3000);
+            } else if (status === 'error') {
+                el.innerHTML = '<i class="fa-solid fa-exclamation-circle text-red-500 mr-1"></i><span class="text-red-600">Save failed</span>';
+                el.classList.remove('hidden');
+            } else if (status === 'no-lead') {
+                el.innerHTML = '<i class="fa-solid fa-unlink text-slate-400 mr-1"></i><span class="text-slate-400">No lead</span>';
+                el.classList.remove('hidden');
+            }
+        }
+
+        async function pbSaveToBackend() {
+            if (!pbCurrentEmail) { pbSetSaveStatus('no-lead'); return; }
+            pbSetSaveStatus('saving');
+            try {
+                const resp = await fetch('/api/save-powerbroker', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email: pbCurrentEmail, powerbroker_data: pbCollectData() })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    pbSetSaveStatus('saved');
+                } else {
+                    console.error('PowerBroker save failed:', result.error);
+                    pbSetSaveStatus('error');
+                }
+            } catch (e) {
+                console.error('PowerBroker save error:', e);
+                pbSetSaveStatus('error');
+            }
+        }
+
+        function pbTriggerAutoSave() {
+            if (pbSaveTimeout) clearTimeout(pbSaveTimeout);
+            pbSaveTimeout = setTimeout(pbSaveToBackend, 1200);
+        }
+
+        async function pbLoadFromBackend(email) {
+            try {
+                const resp = await fetch('/api/get-powerbroker/' + encodeURIComponent(email), {
+                    credentials: 'include'
+                });
+                const result = await resp.json();
+                if (result.success && result.data) {
+                    pbPopulateData(result.data);
+                    console.log('✅ [PowerBroker] Loaded saved data');
+                }
+            } catch (e) {
+                console.error('PowerBroker load error:', e);
+            }
+        }
+
+        // Init: connect to lead, load data, attach auto-save
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get lead email
+            try {
+                const stored = localStorage.getItem('autoDashboardOriginalLead');
+                if (stored) {
+                    const lead = JSON.parse(stored);
+                    pbCurrentEmail = (lead.email || '').trim().toLowerCase();
+                }
+            } catch (e) { console.warn('PB: localStorage read error', e); }
+
+            // Show lead badge
+            const badge = document.getElementById('pb-lead-badge');
+            if (badge && pbCurrentEmail) {
+                badge.textContent = pbCurrentEmail;
+                badge.classList.remove('hidden');
+            }
+
+            // Load or show no-lead status
+            if (pbCurrentEmail) {
+                pbLoadFromBackend(pbCurrentEmail);
+            } else {
+                pbSetSaveStatus('no-lead');
+            }
+
+            // Attach auto-save to all relevant inputs
+            document.querySelectorAll('input[id], select[id], textarea[id]').forEach(el => {
+                if (!el.id.startsWith('new') && el.type !== 'button') {
+                    el.addEventListener('input', pbTriggerAutoSave);
+                    el.addEventListener('change', pbTriggerAutoSave);
+                }
+            });
+        });
 
         window.exportPowerBrokerJSON = function() {
             try {
