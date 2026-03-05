@@ -940,28 +940,6 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                             <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Construction Details</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Construction Type</label>
-                                    <select data-rental-id="${rental.id}" data-key="construction" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
-                                        <option value="">Select</option>
-                                        <option value="Frame">Frame</option>
-                                        <option value="Masonry">Masonry</option>
-                                        <option value="Log">Log</option>
-                                        <option value="Solid Brick">Solid Brick</option>
-                                    </select>
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Exterior Finish</label>
-                                    <select data-rental-id="${rental.id}" data-key="exteriorFinish" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
-                                        <option value="">Select</option>
-                                        <option value="Aluminum">Aluminum</option>
-                                        <option value="Brick">Brick</option>
-                                        <option value="Stone">Stone</option>
-                                        <option value="Vinyl">Vinyl</option>
-                                        <option value="Wood">Wood</option>
-                                        <option value="Stucco">Stucco</option>
-                                    </select>
-                                </div>
-                                <div class="flex flex-col gap-1">
                                     <label class="text-xs font-medium text-slate-500">Structure Type</label>
                                     <select data-rental-id="${rental.id}" data-key="structureType" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                         <option value="">Select</option>
