@@ -121,7 +121,7 @@ except Exception as e:
     print("⚠️ Set VITE_SUPABASE_URL and VITE_SUPABASE_SERVICE_ROLE_KEY environment variables")
 
 # Meta API Base URL
-META_API_VERSION = 'v18.0'
+META_API_VERSION = 'v21.0'
 META_BASE_URL = f'https://graph.facebook.com/{META_API_VERSION}'
 
 # ========== FILE UPLOAD LIMITS ==========
@@ -1216,6 +1216,68 @@ def check_lead_forms():
         }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meta-diagnostics', methods=['GET'])
+def meta_diagnostics():
+    """Diagnostic endpoint to test Meta API connectivity and configuration"""
+    results = {
+        'api_version': META_API_VERSION,
+        'base_url': META_BASE_URL,
+        'config': {
+            'META_PAGE_ACCESS_TOKEN': 'SET' if META_PAGE_ACCESS_TOKEN else 'MISSING',
+            'META_PAGE_ACCESS_TOKEN_length': len(META_PAGE_ACCESS_TOKEN) if META_PAGE_ACCESS_TOKEN else 0,
+            'META_LEAD_FORM_ID': META_LEAD_FORM_ID or 'MISSING',
+            'META_PAGE_ID': META_PAGE_ID or 'MISSING',
+            'META_APP_ID': META_APP_ID or 'MISSING',
+            'META_APP_SECRET': 'SET' if META_APP_SECRET else 'MISSING',
+            'META_WEBHOOK_VERIFY_TOKEN': 'SET' if META_WEBHOOK_VERIFY_TOKEN else 'MISSING',
+        },
+        'tests': {}
+    }
+
+    # Test 1: Token validation via /me endpoint
+    try:
+        me_url = f'{META_BASE_URL}/me'
+        me_params = {'access_token': META_PAGE_ACCESS_TOKEN, 'fields': 'id,name'}
+        me_resp = requests.get(me_url, params=me_params, timeout=10)
+        results['tests']['token_validation'] = {
+            'status': me_resp.status_code,
+            'response': me_resp.json() if me_resp.status_code == 200 else me_resp.text[:500]
+        }
+    except Exception as e:
+        results['tests']['token_validation'] = {'error': str(e)}
+
+    # Test 2: Check lead forms
+    if META_PAGE_ID:
+        try:
+            forms_url = f'{META_BASE_URL}/{META_PAGE_ID}/leadgen_forms'
+            forms_params = {'fields': 'id,name,status,leads_count', 'access_token': META_PAGE_ACCESS_TOKEN}
+            forms_resp = requests.get(forms_url, params=forms_params, timeout=10)
+            results['tests']['lead_forms'] = {
+                'status': forms_resp.status_code,
+                'response': forms_resp.json() if forms_resp.status_code == 200 else forms_resp.text[:500]
+            }
+        except Exception as e:
+            results['tests']['lead_forms'] = {'error': str(e)}
+
+    # Test 3: Fetch leads from configured form
+    if META_LEAD_FORM_ID:
+        try:
+            leads_url = f'{META_BASE_URL}/{META_LEAD_FORM_ID}/leads'
+            leads_params = {'fields': 'id,created_time,field_data', 'access_token': META_PAGE_ACCESS_TOKEN, 'limit': 5}
+            leads_resp = requests.get(leads_url, params=leads_params, timeout=10)
+            resp_data = leads_resp.json() if leads_resp.status_code == 200 else leads_resp.text[:500]
+            lead_count = len(resp_data.get('data', [])) if isinstance(resp_data, dict) else 0
+            results['tests']['fetch_leads'] = {
+                'status': leads_resp.status_code,
+                'lead_count': lead_count,
+                'response': resp_data
+            }
+        except Exception as e:
+            results['tests']['fetch_leads'] = {'error': str(e)}
+
+    return jsonify(results), 200
 
 
 @app.route('/api/leads/<lead_id>/sync-event', methods=['POST'])
