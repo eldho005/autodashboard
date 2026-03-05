@@ -239,54 +239,92 @@ def _verify_signwell_webhook(req):
 
 
 
-def get_leads_from_meta():
-    """Fetch all leads from Meta Lead Form API with pagination (up to 500 leads)"""
-    try:
-        all_leads = []
-        url = f'{META_BASE_URL}/{META_LEAD_FORM_ID}/leads'
-        
-        params = {
-            'fields': 'id,created_time,field_data,ad_id,form_id,adset_id,campaign_id',
-            'access_token': META_PAGE_ACCESS_TOKEN,
-            'limit': 500  # Request max leads per page
-        }
-        
-        print(f"📞 Fetching leads from Meta API: {url}")
-        print(f"🔑 Using Lead Form ID: {META_LEAD_FORM_ID}")
-        
-        # Fetch first page
-        response = requests.get(url, params=params, timeout=30)
-        print(f"📡 Meta API Response Status: {response.status_code}")
-        
+def _fetch_leads_from_form(form_id, access_token):
+    """Fetch up to 500 leads from a single Meta form ID"""
+    all_leads = []
+    url = f'{META_BASE_URL}/{form_id}/leads'
+    params = {
+        'fields': 'id,created_time,field_data,ad_id,form_id,adset_id,campaign_id',
+        'access_token': access_token,
+        'limit': 500
+    }
+    response = requests.get(url, params=params, timeout=30)
+    print(f"📡 Form {form_id} response: {response.status_code}")
+    if response.status_code != 200:
+        print(f"❌ Form {form_id} error: {response.text[:300]}")
+        return []
+    data = response.json()
+    all_leads.extend(data.get('data', []))
+    # Paginate
+    page_count = 1
+    while 'paging' in data and 'next' in data['paging'] and len(all_leads) < 500 and page_count < 10:
+        page_count += 1
+        response = requests.get(data['paging']['next'], timeout=30)
         if response.status_code != 200:
-            print(f"❌ Meta API Error: {response.text}")
-            response.raise_for_status()
-        
+            break
         data = response.json()
         all_leads.extend(data.get('data', []))
-        print(f"📄 Page 1: {len(data.get('data', []))} leads")
-        
-        # Continue fetching all pages (max 500 total to avoid overwhelming)
-        page_count = 1
-        while 'paging' in data and 'next' in data['paging'] and len(all_leads) < 500:
-            page_count += 1
-            next_url = data['paging']['next']
-            print(f"📄 Fetching page {page_count}... (Total so far: {len(all_leads)})")
-            response = requests.get(next_url, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            page_leads = data.get('data', [])
-            all_leads.extend(page_leads)
-            print(f"   + {len(page_leads)} leads")
-            
-            # Safety limit
-            if page_count > 10:
-                print(f"⚠️ Reached page limit (10 pages)")
-                break
-        
-        print(f"✅ Found {len(all_leads)} total leads from Meta")
+    print(f"✅ Form {form_id}: {len(all_leads)} leads")
+    return all_leads
+
+
+def get_leads_from_meta():
+    """Fetch all leads from Meta Lead Form API.
+    1. Tries META_LEAD_FORM_ID first (if configured)
+    2. Falls back to ALL forms on the Meta Page (uses META_PAGE_ID)
+    """
+    try:
+        token = META_PAGE_ACCESS_TOKEN
+        if not token:
+            print("❌ META_PAGE_ACCESS_TOKEN not set")
+            return []
+
+        # --- Try the specific configured form first ---
+        if META_LEAD_FORM_ID:
+            print(f"📞 Fetching leads from configured form: {META_LEAD_FORM_ID}")
+            leads = _fetch_leads_from_form(META_LEAD_FORM_ID, token)
+            if leads:
+                print(f"✅ Got {len(leads)} leads from configured form")
+                return leads
+            print("⚠️ Configured form returned 0 leads — trying all page forms")
+        else:
+            print("⚠️ META_LEAD_FORM_ID not set — fetching all forms from page")
+
+        # --- Fallback: fetch from ALL forms on the page ---
+        if not META_PAGE_ID:
+            print("❌ META_PAGE_ID not set, cannot discover forms")
+            return []
+
+        forms_url = f'{META_BASE_URL}/{META_PAGE_ID}/leadgen_forms'
+        forms_resp = requests.get(forms_url, params={
+            'fields': 'id,name,status,leads_count',
+            'access_token': token,
+            'limit': 50
+        }, timeout=15)
+        print(f"📋 Page forms response: {forms_resp.status_code}")
+        if forms_resp.status_code != 200:
+            print(f"❌ Could not list page forms: {forms_resp.text[:300]}")
+            return []
+
+        forms = forms_resp.json().get('data', [])
+        print(f"📋 Found {len(forms)} forms on page: {[(f['id'], f.get('name', 'N/A'), f.get('leads_count', 0)) for f in forms]}")
+
+        all_leads = []
+        seen_ids = set()
+        for form in forms:
+            fid = form.get('id')
+            leads = _fetch_leads_from_form(fid, token)
+            for lead in leads:
+                lid = lead.get('id')
+                if lid not in seen_ids:
+                    seen_ids.add(lid)
+                    all_leads.append(lead)
+
+        # Sort by created_time newest first
+        all_leads.sort(key=lambda x: x.get('created_time', ''), reverse=True)
+        print(f"✅ Total {len(all_leads)} unique leads from all page forms")
         return all_leads
-    
+
     except Exception as e:
         print(f"❌ Error fetching leads from Meta: {str(e)}")
         if hasattr(e, 'response') and e.response:
@@ -952,29 +990,22 @@ def get_leads_from_facebook():
     try:
         print("📱 Fetching leads from Facebook Leads Center...")
         
-        if not META_LEAD_FORM_ID:
-            print("⚠️ Lead form ID not configured, falling back to Supabase")
+        if not META_PAGE_ACCESS_TOKEN:
+            print("⚠️ META_PAGE_ACCESS_TOKEN not set, falling back to Supabase")
             return get_leads_from_supabase()
         
-        # Fetch leads from Facebook Leads API for this form
-        url = f'{META_BASE_URL}/{META_LEAD_FORM_ID}/leads'
-        params = {
-            'fields': 'id,created_time,field_data,ad_id,form_id',
-            'access_token': META_PAGE_ACCESS_TOKEN,
-            'limit': 1000
-        }
+        # Use the robust get_leads_from_meta() which now has form-fallback logic
+        facebook_leads_raw = get_leads_from_meta()
         
-        print(f"📞 Calling Facebook API: {url}")
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
+        if not facebook_leads_raw:
+            print("⚠️ No leads returned from Meta API, falling back to Supabase")
+            return get_leads_from_supabase()
         
-        facebook_leads = response.json().get('data', [])
-        print(f"📋 Facebook API returned {len(facebook_leads)} raw leads")
+        print(f"📋 Facebook API returned {len(facebook_leads_raw)} raw leads")
         
         # Parse all leads from Facebook format
         parsed_leads = []
-        for i, fb_lead in enumerate(facebook_leads):
-            print(f"🔄 Parsing lead {i+1}/{len(facebook_leads)}")
+        for i, fb_lead in enumerate(facebook_leads_raw):
             parsed = parse_meta_lead(fb_lead)
             print(f"   ✅ Parsed: {parsed.get('name')} | {parsed.get('email')} | {parsed.get('phone')}")
             parsed_leads.append(parsed)
