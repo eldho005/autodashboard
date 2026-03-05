@@ -838,9 +838,9 @@
                     } catch (e) {
                         console.warn('⚠️ Auto-refresh failed:', e.message);
                     }
-                }, 30000); // Every 30 seconds
+                }, 300000); // Every 5 minutes (real-time leads come via webhook; cache is 5 min)
                 
-                console.log('✅ Auto-refresh polling active');
+                console.log('✅ Auto-refresh polling active (5 min interval - use Sync button for immediate refresh)');
             }
 
 

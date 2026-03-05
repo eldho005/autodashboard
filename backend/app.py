@@ -238,6 +238,29 @@ def _verify_signwell_webhook(req):
 
 
 
+# ========== FACEBOOK API CACHE ==========
+# Cache Facebook lead results for 5 minutes to avoid hammering Meta API
+# The auto-refresh polls every 5 min; real-time leads come via webhook
+import time as _time
+_fb_leads_cache = {'data': None, 'expires': 0}
+_FB_CACHE_TTL = 300  # 5 minutes
+
+def _get_cached_fb_leads():
+    if _fb_leads_cache['data'] is not None and _time.time() < _fb_leads_cache['expires']:
+        print(f"📦 Serving leads from cache ({int(_fb_leads_cache['expires'] - _time.time())}s remaining)")
+        return _fb_leads_cache['data']
+    return None
+
+def _set_fb_leads_cache(leads):
+    _fb_leads_cache['data'] = leads
+    _fb_leads_cache['expires'] = _time.time() + _FB_CACHE_TTL
+    print(f"📦 Cached {len(leads)} leads for {_FB_CACHE_TTL}s")
+
+def _bust_fb_cache():
+    _fb_leads_cache['data'] = None
+    _fb_leads_cache['expires'] = 0
+    print("📦 Facebook leads cache cleared")
+
 
 def _fetch_leads_from_form(form_id, access_token):
     """Fetch up to 500 leads from a single Meta form ID"""
@@ -986,13 +1009,25 @@ def supabase_info():
 
 @app.route('/api/leads/from-facebook', methods=['GET'])
 def get_leads_from_facebook():
-    """Get ALL leads from Facebook Leads Center (with Supabase fallback)"""
+    """Get ALL leads from Facebook Leads Center (with Supabase fallback).
+    Results are cached for 5 minutes to avoid rate-limit creep from auto-refresh polling.
+    Use /api/leads/sync (manual Sync button) to force a fresh fetch."""
     try:
         print("📱 Fetching leads from Facebook Leads Center...")
         
         if not META_PAGE_ACCESS_TOKEN:
             print("⚠️ META_PAGE_ACCESS_TOKEN not set, falling back to Supabase")
             return get_leads_from_supabase()
+
+        # Serve from cache if fresh (avoids Meta rate-limit on 30s auto-refresh)
+        cached = _get_cached_fb_leads()
+        if cached is not None:
+            return jsonify({
+                'success': True,
+                'data': cached,
+                'count': len(cached),
+                'source': 'facebook_leads_center_cached'
+            }), 200
         
         # Use the robust get_leads_from_meta() which now has form-fallback logic
         facebook_leads_raw = get_leads_from_meta()
@@ -1012,6 +1047,9 @@ def get_leads_from_facebook():
         
         # Sort by date (newest first)
         parsed_leads.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        # Cache for next 5 minutes to protect rate limits
+        _set_fb_leads_cache(parsed_leads)
         
         print(f"✅ Returning {len(parsed_leads)} parsed leads to frontend")
         
@@ -1095,9 +1133,11 @@ def get_leads():
 
 @app.route('/api/leads/sync', methods=['POST', 'GET'])
 def sync_leads():
-    """Fetch fresh leads from Facebook and save to database"""
+    """Fetch fresh leads from Facebook and save to database.
+    Always busts the cache to force a fresh fetch from Meta API."""
     try:
-        print("📞 Fetching fresh leads from Facebook API...")
+        print("📞 Fetching fresh leads from Facebook API (manual sync - busting cache)...")
+        _bust_fb_cache()  # Force fresh fetch, bypass 5-min cache
         
         # Fetch from Facebook
         meta_leads = get_leads_from_meta()
