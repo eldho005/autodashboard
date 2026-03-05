@@ -904,6 +904,37 @@
             });
             return issues;
         };
+
+        const validateProperty = (customer, isTenant) => {
+            const issues = [];
+            if (isEmptyVal(customer['Insured DOB']))       issues.push('Insured DOB missing');
+            if (isEmptyVal(customer['Insured Gender']))    issues.push('Insured Gender missing');
+            if (isEmptyVal(customer['Insured Since']))     issues.push('Insured Since missing');
+            if (isEmptyVal(customer['Structure']))         issues.push('Structure Type missing');
+            if (isEmptyVal(customer['Stories']))           issues.push('Stories missing');
+            if (isEmptyVal(customer['Full Bath']))         issues.push('Full Bath missing');
+            if (isEmptyVal(customer['Property Address'])) issues.push('Property Address missing');
+            if (!isTenant) {
+                if (isEmptyVal(customer['Heat Year']))     issues.push('Heat Year missing');
+                if (isEmptyVal(customer['Elec Year']))     issues.push('Elec Year missing');
+                if (isEmptyVal(customer['Plumb Year']))    issues.push('Plumb Year missing');
+                if (isEmptyVal(customer['Roof Year']))     issues.push('Roof Year missing');
+            }
+            return issues;
+        };
+
+        const validateRentalProperty = (property) => {
+            const issues = [];
+            const addr = property['Rental Address'] || property['Customer Address'] || property['address'] || '';
+            if (isEmptyVal(addr))                          issues.push('Address missing');
+            if (isEmptyVal(property['structureType'] || property['Structure'] || '')) issues.push('Structure Type missing');
+            if (isEmptyVal(property['Stories'] || property['storeys'] || ''))     issues.push('Stories missing');
+            if (isEmptyVal(property['Total Living Area'] || property['livingArea'] || '')) issues.push('Living Area missing');
+            if (isEmptyVal(property['Heating Year'] || property['heatYear'] || '')) issues.push('Heat Year missing');
+            if (isEmptyVal(property['Electrical Year'] || property['elecYear'] || '')) issues.push('Elec Year missing');
+            if (isEmptyVal(property['Roofing Year'] || property['roofYear'] || '')) issues.push('Roof Year missing');
+            return issues;
+        };
         // ─────────────────────────────────────────────────────────────────────
 
         const renderPanel = (title, iconName, content, issues = []) => {
@@ -1252,6 +1283,8 @@
                     propertyType = "Condominium";
                 }
                 
+                const propertyIssues = validateProperty(customer, isTenant);
+
                 const combinedPropertyContent = `
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                         <!-- Section 1: Property Type -->
@@ -1260,7 +1293,7 @@
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
-                        <!-- Section 2: Customer Information (from customer object not property) -->
+                        <!-- Section 2: Customer Information -->
                         ${renderField("Insured DOB", customer["Insured DOB"])}
                         ${renderField("Insured Gender", customer["Insured Gender"])}
                         ${renderField("Co-Insured DOB", customer["Co-Insured DOB"])}
@@ -1269,7 +1302,7 @@
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
-                        <!-- Section 3: Insured Since -->
+                        <!-- Section 3: Insurance History -->
                         ${renderField("Insured Since", customer["Insured Since"])}
                         ${renderField("Insured with Brokerage Since", customer["Insured with Brokerage Since"])}
 
@@ -1282,6 +1315,10 @@
                         ${renderField("Number of Cars", customer["Number of Cars"])}
                         ${!isTenant ? renderField("Basement Area", customer["Basement Area"]) : ''}
                         ${!isTenant ? renderField("% Finished", customer["Basement % Finished"]) : ''}
+                        ${!isTenant ? renderField("Garage", customer["Garage"]) : ''}
+                        ${!isTenant ? renderField("Mortgages", customer["Mortgages"]) : ''}
+                        ${!isTenant ? renderField("First Time Buyer", customer["First Time Buyer"]) : ''}
+                        ${!isTenant ? renderField("Inlaw Suite", customer["Inlaw Suite"]) : ''}
 
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
@@ -1300,6 +1337,8 @@
                         ${renderField("Plumb Year", customer["Plumb Year"])}
                         ${renderField("Roof Year", customer["Roof Year"])}
                         ${renderField("Water Heater Year", customer["Water Heater Year"])}
+                        ${renderField("Roof Type", customer["Roof Type"])}
+                        ${renderField("Roof Slope", customer["Roof Slope"])}
                         ` : ''}
 
                         <!-- Separator -->
@@ -1311,13 +1350,14 @@
                         ${renderField("Postal", customer["Postal Code"])}
                     </div>
                 `;
-                html += renderPanel("Property Details", "home", combinedPropertyContent);
+                html += renderPanel("Property Details", "home", combinedPropertyContent, propertyIssues);
 
                 // 5. Secondary Property Details (Rental Properties if any)
                 if (customer.properties && customer.properties.length > 1) {
                     customer.properties.slice(1).forEach((property, secIdx) => {
                         const secondaryIndex = secIdx + 1; // Rental #1, #2, etc.
-                        const secPropertyType = property["Property Type"] || property["Structure"] || "Rental Dwelling";
+                        const secPropertyType = property["Property Type"] || "Rental Dwelling";
+                        const rentalIssues = validateRentalProperty(property);
                         
                         const secondaryPropertyContent = `
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
@@ -1336,16 +1376,14 @@
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 3: Construction Details -->
-                                ${renderField("Construction", property["Construction"] || property["construction"] || "")}
-                                ${renderField("Exterior Finish", property["Exterior Finish"] || property["exteriorFinish"] || "")}
-                                ${renderField("Structure", property["structureType"] || "")}
+                                ${renderField("Structure", property["structureType"] || property["Structure"] || "")}
                                 ${renderField("Stories", property["Stories"] || property["storeys"] || "")}
 
                                 <!-- Separator -->
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 4: Property Details -->
-                                ${renderField("Total Living Area", property["Total Living Area"] || property["livingArea"] || "")}
+                                ${renderField("Living Area", property["Total Living Area"] || property["livingArea"] || "")}
                                 ${renderField("Full Bath", property["Full Bath"] || property["fullBaths"] || "")}
                                 ${renderField("Half Bath", property["Half Bath"] || property["halfBaths"] || "")}
                                 ${renderField("Number of Cars", property["Number of Cars"] || property["numberOfCars"] || "")}
@@ -1361,7 +1399,7 @@
                                 ${renderField("Water Heater Year", property["Tank Year"] || property["tankYear"] || "")}
                             </div>
                         `;
-                        html += renderPanel(`Rental Property ${secondaryIndex}`, "building", secondaryPropertyContent);
+                        html += renderPanel(`Rental Property ${secondaryIndex}`, "building", secondaryPropertyContent, rentalIssues);
                     });
                 }
 
