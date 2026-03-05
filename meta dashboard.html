@@ -816,12 +816,11 @@
             }
 
             startAutoRefresh() {
-                // AUTO-REFRESH ARCHITECTURE
-                // Polls backend every 30 seconds for new leads from webhook/database
-                // Simple, reliable, no WebSocket complexity
+                // AUTO-REFRESH: polls Supabase every 2 minutes to pick up webhook-delivered leads
+                // NO Facebook API calls here — webhooks save to Supabase, we just read from there
+                // Use the Sync button to manually pull from Facebook API
                 
-                console.log('🔄 Starting auto-refresh polling (every 30 seconds)...');
-                this._lastLeadCount = this.state.leads.length;
+                console.log('🔄 Starting auto-refresh (Supabase poll every 2 min)...');
                 
                 this._refreshInterval = setInterval(async () => {
                     try {
@@ -838,9 +837,9 @@
                     } catch (e) {
                         console.warn('⚠️ Auto-refresh failed:', e.message);
                     }
-                }, 300000); // Every 5 minutes (real-time leads come via webhook; cache is 5 min)
+                }, 120000); // Every 2 minutes — just reads Supabase, no cost
                 
-                console.log('✅ Auto-refresh polling active (5 min interval - use Sync button for immediate refresh)');
+                console.log('✅ Auto-refresh active (2 min Supabase poll — Sync button for Facebook backfill)');
             }
 
 
@@ -881,74 +880,41 @@
             }
 
             async loadExistingLeadsFromDatabase() {
-                // Load Facebook leads from Leads Center API + Manual leads from database
-                // New leads after this come ONLY from WebSocket webhook push
-                console.log('📱 Loading leads on startup...');
+                // Load ALL leads from Supabase (populated by webhook + manual entry)
+                // Real-time new leads arrive via webhook → saved to Supabase → appear on next refresh
+                // Facebook API is NEVER called here — use the Sync button for manual backfill only
+                console.log('📦 Loading leads from Supabase database...');
                 
                 try {
-                    const [facebookResponse, manualResponse] = await Promise.all([
-                        fetch(`${BACKEND_URL}/api/leads/from-facebook`, {
-                            method: 'GET',
-                            headers: { 'Content-Type': 'application/json' }
-                        }),
-                        fetch(`${BACKEND_URL}/api/leads/manual`, {
-                            method: 'GET',
-                            headers: { 'Content-Type': 'application/json' }
-                        })
-                    ]);
-                    
-                    if (!facebookResponse.ok) {
-                        throw new Error(`HTTP ${facebookResponse.status}: ${facebookResponse.statusText}`);
-                    }
-                    
-                    const facebookResult = await facebookResponse.json();
-                    const manualResult = manualResponse.ok ? await manualResponse.json() : { success: false, data: [] };
-                    
-                    const facebookLeads = facebookResult.success ? (facebookResult.data || []) : [];
-                    
-                    // Get manual leads from database, fall back to localStorage if database fails
-                    let manualLeads = manualResult.success ? (manualResult.data || []) : [];
-                    if (!manualLeads.length) {
-                        console.log('⚠️ No manual leads from database, checking localStorage...');
-                        manualLeads = this.getStoredManualLeads();
-                    }
-                    
-                    console.log('📋 Loaded from Facebook Leads Center:', facebookLeads.length, 'leads');
-                    console.log('✍️ Loaded manual leads from database:', manualLeads.length, 'leads');
-                    
-                    // Normalize all leads (construct name from first_name/last_name if missing)
-                    facebookLeads.forEach(l => this.normalizeLead(l));
-                    manualLeads.forEach(l => this.normalizeLead(l));
-
-                    // Merge and deduplicate leads (prefer Facebook leads over manual for same meta_lead_id/email)
-                    const allLeads = [...manualLeads, ...facebookLeads];
-                    const seen = new Set();
-                    const deduped = allLeads.filter(lead => {
-                        // Use meta_lead_id, email, or id as unique identifier (in order of preference)
-                        const uniqueKey = lead.meta_lead_id || lead.email || lead.id;
-                        if (!uniqueKey || seen.has(uniqueKey)) {
-                            return false;
-                        }
-                        seen.add(uniqueKey);
-                        return true;
+                    const response = await fetch(`${BACKEND_URL}/api/leads`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
                     });
                     
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const leads = await response.json();
+                    const allLeads = Array.isArray(leads) ? leads : (leads.data || []);
+                    
+                    console.log('📋 Loaded from Supabase:', allLeads.length, 'leads');
+                    
+                    // Normalize all leads
+                    allLeads.forEach(l => this.normalizeLead(l));
+
                     // Sort by date (newest first)
-                    this.state.leads = deduped.sort((a, b) => 
+                    this.state.leads = allLeads.sort((a, b) => 
                         new Date(b.created_at || 0) - new Date(a.created_at || 0)
                     );
                     
                     // Persist to session for navigation
                     this.savePersistedLeads(this.state.leads);
                     
-                    // Sync manual leads to localStorage for backup
-                    manualLeads.forEach(lead => this.upsertStoredManualLead(lead));
-                    
-                    const dupeCount = allLeads.length - deduped.length;
-                    console.log(`✅ Total leads: ${this.state.leads.length} (${manualLeads.length} manual + ${facebookLeads.length} Facebook, ${dupeCount} duplicates removed)`);
+                    console.log(`✅ Total leads loaded: ${this.state.leads.length}`);
                     this.state.loading = false;
                 } catch (error) {
-                    console.error('❌ Error loading leads on startup:', error);
+                    console.error('❌ Error loading leads from Supabase:', error);
                     this.state.loading = false;
                     // Fall back to localStorage manual leads
                     const manualLeads = this.getStoredManualLeads();
