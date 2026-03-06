@@ -651,32 +651,47 @@
             const telematicsPhone = document.getElementById('telematicsPhone').value;
             
             const baseNotes = `Producer: Eldho George
+
 By accepting this contract client agrees to the following conditions.
+
 Client confirmed home address as the primary address. Client confirms the home address is located in Ontario.
+
 Client understands the policy has the basic statutory Accident Benefits, declined increasing limits on Accident Benefits for now. Client confirms that optional Accident Benefit limits were explained and offered prior to binding the policy and client has chosen to decline increased limits at this time.
+
 Client confirmed no use of Ride Sharing or Deliveries. (Uber)
+
 Client confirmed to purchase of $2 Million Liability. Client confirms that higher liability limits were discussed and offered prior to binding and client has chosen $2 Million Liability at this time.
+
 Client confirmed no commercial or business use of vehicles.
+
 Client confirmed no other drivers in household. Client confirms there are no other licensed drivers residing in the household.
+
 Client confirmed garaging address is same as home address.
+
 Client confirmed broker has explained full coverage and 3rd party coverage.
+
 Client agrees to notify us promptly in writing of any significant change of which he is aware in his status as a driver, owner of a described automobile. Client agrees let us know of any change that might increase the risk of an incident or affect our willingness to insure him at current rates. Client agrees to promptly inform of any change in information supplied in his original application for insurance, such as additional drivers, or a change in the way a described automobile is used. Client agrees to inform us of any sale or transfer of your interest in a described automobile. Client agrees not to drive or operate the automobile or allow anyone else to drive or operate the automobile, when not authorized by law.
+
 Clients confirmed that all the information including License dates, usage kms, vehicle information, payment structure and garaging address regarding the policy was confirmed by the broker before Binding.
+
 Client confirms that there are no modifications done to the vehicle and no plans of doing any modifications in the future. If client wants to get any modifications done, then he will inform the broker at the first priority and proceed if broker approves it by getting approval from the insurance company.
+
 Winter tire equipped and client understand that proof maybe required at any time and failure to do so may result in removal of the discount and/or adjustment of coverage as per insurer underwriting guidelines.
+
 Insured confirms all the information is accurate for the rating. Insured confirms all the information including license dates, policy deductible, usage kms, vehicle information, payment structure and garaging address regarding the policy was confirmed by the broker before binding the policy.
+
 Payment plan is monthly.`;
 
             let fullNotes = baseNotes;
 
             // Add Deductible info if selected
             if (deductible) {
-                fullNotes += `\nDeductible Selected: $${deductible}`;
+                fullNotes += `\n\nDeductible Selected: $${deductible}`;
             }
 
             // Add Telematics info if enabled
             if (telematicsYes && telematicsName && telematicsEmail && telematicsPhone) {
-                fullNotes += `\nTelematics Info\n${telematicsName} - ${telematicsEmail} - ${telematicsPhone}`;
+                fullNotes += `\n\nTelematics Info\n${telematicsName} - ${telematicsEmail} - ${telematicsPhone}`;
             }
 
             document.getElementById('notesField').value = fullNotes;
@@ -707,18 +722,31 @@ Payment plan is monthly.`;
             const waterDeductible = document.getElementById('waterDeductible').value || '2000';
             
             const baseHomeNotes = `Producer: Eldho george
+
 Client gave approval for soft credit check.
+
 Client confirmed no part of home rented to Airbnb and no business or commercial use on property.
+
 Client confirmed home address as primary address. Client confirms the dwelling is owner-occupied and not used as a secondary, seasonal, rental, or income-generating property.
+
 Client declined cyber coverage. Client confirms cyber coverage was explained and offered prior to binding and client has chosen to decline this coverage at this time.
+
 Advised client they must not have been previously cancelled for insurance fraud, material misrepresentation, or non-disclosure. Client confirms they have not been previously cancelled, declined, or non-renewed for insurance fraud, material misrepresentation, or non-disclosure.
+
 The dwelling cannot be vacant, under construction, have an unfinished exterior, have an open claim or have unrepaired damage as a result of a claim. Client confirms the dwelling is currently occupied as a principal residence, is not vacant, not under construction or renovation, does not have an unfinished exterior, has no open claims, and has no unrepaired damage.
+
 Client understands there are limitations to the amount paid on unscheduled items on the policy regarding jewelry, furs, artwork, collections, bike, etc and did not pursue to purchase higher limits from that stated on the policy. Client confirms optional higher limits and/or scheduling options were explained and declined at this time.
+
 Clients confirmed that all the information (Incl. dates) regarding the policy was confirmed by the broker before Binding.
+
 Client is aware to inform any change in material risk to the broker, failed to do so may result in claim denial.
+
 Client has been informed that only sewer backup and overland water coverage was offered on this policy with $${waterDeductible} deductible. Client confirms water coverage options and applicable deductibles were explained and client has chosen the coverage limits stated on the policy.
+
 Client is aware that there is a $${homeDeductible || 'TBD'} deductible on this policy.
+
 Client confirmed that all the information is accurate for the rating.
+
 Payment plan is monthly.`;
 
             document.getElementById('homeNotesField').value = baseHomeNotes;
