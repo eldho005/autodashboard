@@ -1141,6 +1141,8 @@
                                     city: this.drivers[0].personalCity || '',
                                     postal: this.drivers[0].personalPostalCode || ''
                                 };
+                                // Persist so Powerbroker/Final Review can read it without going through a save
+                                localStorage.setItem('autoDashboardOriginalLead', JSON.stringify(this.originalLead));
                                 
                                 console.log('✅ Restored drivers from database');
                                 this.renderSelectors();

@@ -52,9 +52,9 @@
                         </button>
                         <div id="pagesMenu" class="hidden absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
                             <a href="meta dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Leads</a>
-                            <a href="Auto dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Dashboard</a>
+                            <a href="Auto dashboard.html" onclick="sessionStorage.setItem('navigatedFromPage', 'powerbroker'); var lead=null; try{lead=JSON.parse(localStorage.getItem('autoDashboardOriginalLead'))||{};}catch(e){} var p=new URLSearchParams(); if(lead.email)p.set('email',lead.email); if(lead.name)p.set('name',lead.name); if(lead.phone)p.set('phone',lead.phone); if(lead.leadId)p.set('leadId',lead.leadId); window.location.href='Auto dashboard.html'+(p.toString()?'?'+p.toString():''); return false;" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Dashboard</a>
                             <a href="property_redesigned.html" onclick="sessionStorage.setItem('navigatedFromPage', 'powerbroker'); sessionStorage.setItem('propertySessionActive', 'true'); return true;" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Property</a>
-                            <a href="final review page.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Review</a>
+                            <a href="final review page.html" onclick="sessionStorage.setItem('navigatedFromPage', 'powerbroker'); return true;" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Review</a>
                             <a href="Powerbroker.html" class="block px-4 py-2 text-xs text-slate-900 bg-slate-100 font-semibold">PowerBroker</a>
                             <div class="border-t border-slate-200 my-1"></div>
                             <a href="property-coverpage-temp.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Cover</a>
