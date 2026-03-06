@@ -1210,6 +1210,8 @@
                     email: email || ''
                 };
                 console.log('💾 Stored original lead:', this.originalLead);
+                // Immediately persist to localStorage so Powerbroker/other pages can read it
+                localStorage.setItem('autoDashboardOriginalLead', JSON.stringify(this.originalLead));
                 
                 // Populate driver object with URL params BEFORE refreshUI
                 const drv = this.drivers[0];
