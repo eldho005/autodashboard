@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS powerbroker_data (
     id          BIGSERIAL PRIMARY KEY,
     email       TEXT,
-    lead_id     BIGINT REFERENCES leads(id),
+    lead_id     UUID REFERENCES leads(id),
     powerbroker_data JSONB,
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );

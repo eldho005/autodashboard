@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerBroker Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        function togglePagesMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('pagesMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('pagesMenu');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen p-0 font-sans text-gray-800">
+
+    <!-- Authentication Guard (server-side JWT verification) -->
+    <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
+
+    <!-- Sticky Header with Breadcrumb Navigation -->
+    <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-600 text-white rounded-lg shadow-sm">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span class="text-sm font-bold">PowerBroker</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Previous Page Button -->
+                    <a href="final review page.html" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                        <span>Review</span>
+                    </a>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Pages Menu Dropdown -->
+                    <div class="relative">
+                        <button onclick="togglePagesMenu(event)" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                            <i class="fa-solid fa-bars text-slate-500"></i>
+                            <span>Pages</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+                        <div id="pagesMenu" class="hidden absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                            <a href="meta dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Leads</a>
+                            <a href="Auto dashboard.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Dashboard</a>
+                            <a href="property_redesigned.html" onclick="sessionStorage.setItem('navigatedFromPage', 'powerbroker'); sessionStorage.setItem('propertySessionActive', 'true'); return true;" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Property</a>
+                            <a href="final review page.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Review</a>
+                            <a href="Powerborker.html" class="block px-4 py-2 text-xs text-slate-900 bg-slate-100 font-semibold">PowerBroker</a>
+                            <div class="border-t border-slate-200 my-1"></div>
+                            <a href="property-coverpage-temp.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Auto Cover</a>
+                            <a href="home-tenant-coverpage.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Home Cover</a>
+                            <a href="PAC form.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">PAC</a>
+                            <a href="/document-upload-dashboard" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Doc Processing</a>
+                            <a href="/signwell-ui" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">eSign</a>
+                            <a href="/signed-documents" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Signed Docs</a>
+                        </div>
+                    </div>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Current Page -->
+                    <span class="text-xs font-semibold text-slate-800">PowerBroker</span>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Next Page Button -->
+                    <a href="property-coverpage-temp.html" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
+                        <span>Auto Cover</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Container -->
+    <div class="max-w-5xl mx-auto p-6 flex flex-col gap-6">
+        
+        <!-- AUTO POLICY SECTION -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-blue-50 border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-blue-800">Auto Policy Details</h2>
+                <button onclick="exportPowerBrokerJSON()" class="flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all shadow-sm bg-slate-600 text-white hover:bg-slate-700">
+                    <i class="fa-solid fa-download"></i> Export JSON
+                </button>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-5">
+                
+                <!-- Prior Auto Policy Information Section -->
+                <div class="bg-blue-50/30 rounded-lg p-5 border border-blue-100">
+                    <h3 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-4">Prior Policy Information</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Previous Insurer -->
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Previous Insurer</label>
+                            <input type="text" id="prevInsurerName" list="insurerList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Type to search..." />
+                            <datalist id="insurerList"></datalist>
+                            <datalist id="occupationList"></datalist>
+                            <input type="text" id="prevInsurerCode" class="border border-gray-300 rounded-md px-2 py-2 w-16 bg-gray-100 text-center text-sm font-medium" value="" readonly placeholder="Code" />
+                        </div>
+
+                        <!-- Policy Status -->
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Policy Status</label>
+                            <input type="text" id="priorStatusName" list="statusList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Type to search..." />
+                            <datalist id="statusList"></datalist>
+                            <input type="text" id="priorStatusCode" class="border border-gray-300 rounded-md px-2 py-2 w-16 bg-gray-100 text-center text-sm font-medium" value="" readonly placeholder="#" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Policy Number</label>
+                            <input type="text" id="prevAutoPolicyNumber" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Enter number" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Expiry Date</label>
+                            <input type="text" id="prevAutoExpiryDate" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="MM/DD/YYYY" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Continuously Insured</label>
+                            <input type="text" id="prevAutoContinuouslyInsuredSince" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="MM/DD/YYYY" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Winter Tires</label>
+                            <select id="winterTires" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                <option value="" disabled selected>Select...</option>
+                                <option value="Y">Y</option>
+                                <option value="N">N</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">No of Cars in Household</label>
+                            <input type="text" id="noOfCarsInHousehold" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Enter number" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Finance Company Section -->
+                <div class="bg-blue-50/30 rounded-lg p-5 border border-blue-100">
+                    <h3 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-4">Finance Company</h3>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Company Name</label>
+                            <input type="text" id="financeName" list="financeList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Type to search..." />
+                            <datalist id="financeList"></datalist>
+                            <button id="openModalBtn" class="bg-blue-600 text-white border border-blue-700 px-4 py-2 rounded-md hover:bg-blue-700 font-medium text-xs transition-colors shrink-0" title="Add New Finance Company">+ Add</button>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Address</label>
+                            <input type="text" id="financeAddress" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" />
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">City</label>
+                                <input type="text" id="financeCity" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" />
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Province</label>
+                                <select id="financeProv" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                    <option value="AB">AB</option>
+                                    <option value="BC">BC</option>
+                                    <option value="MB">MB</option>
+                                    <option value="NB">NB</option>
+                                    <option value="NL">NL</option>
+                                    <option value="NS">NS</option>
+                                    <option value="NT">NT</option>
+                                    <option value="NU">NU</option>
+                                    <option value="ON" selected>ON</option>
+                                    <option value="PE">PE</option>
+                                    <option value="QC">QC</option>
+                                    <option value="SK">SK</option>
+                                    <option value="YT">YT</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Postal Code</label>
+                                <input type="text" id="financePostal" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Second Automobile Section -->
+                <div id="secondAutoSection" class="hidden bg-blue-50/30 rounded-lg p-5 border border-blue-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-semibold text-blue-800 uppercase tracking-wide">Second Automobile</h3>
+                        <button onclick="removeSecondAuto()" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors">&times; Remove</button>
+                    </div>
+                    <div class="flex flex-col gap-1.5 w-48">
+                        <label class="text-xs font-medium text-gray-600">Winter Tires</label>
+                        <select id="secondAutoWinterTires" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                            <option value="" disabled selected>Select...</option>
+                            <option value="Y">Y</option>
+                            <option value="N">N</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Add Second Automobile Button -->
+                <div id="addSecondAutoBtn" class="flex">
+                    <button onclick="addSecondAuto()" class="flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fa-solid fa-plus"></i> Add Second Automobile
+                    </button>
+                </div>
+
+                <!-- Coverage Details Section -->
+                <div class="bg-blue-50/30 rounded-lg p-5 border border-blue-100">
+                    <h3 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-4">Coverage Details</h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Deductible</label>
+                            <select id="deductible" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                                <option value="" disabled>Select...</option>
+                                <option value="500">$500</option>
+                                <option value="750">$750</option>
+                                <option value="1000" selected>$1,000</option>
+                                <option value="1500">$1,500</option>
+                                <option value="2500">$2,500</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-medium text-gray-600">Telematics</label>
+                            <div class="flex gap-6">
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer">
+                                    <input type="radio" name="telematics" value="yes" id="telematicsYes" class="w-4 h-4 cursor-pointer" onchange="toggleTelematicsFields()" />
+                                    Yes
+                                </label>
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer">
+                                    <input type="radio" name="telematics" value="no" id="telematicsNo" class="w-4 h-4 cursor-pointer" onchange="toggleTelematicsFields()" checked />
+                                    No
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Telematics Fields (Hidden by default) -->
+                    <div id="telematicsFields" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-blue-200">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Name</label>
+                            <input type="text" id="telematicsName" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Full name" onchange="updateNotes()" />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Email</label>
+                            <input type="email" id="telematicsEmail" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Email address" onchange="updateNotes()" />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Phone</label>
+                            <input type="tel" id="telematicsPhone" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="" placeholder="Phone number" onchange="updateNotes()" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes Field -->
+                <div class="flex flex-col w-full gap-2">
+                    <label class="text-sm font-medium text-gray-600">Broker Confirmation & Client Declarations :</label>
+                    <textarea id="notesField" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs leading-relaxed font-mono resize-vertical min-h-[300px]" placeholder="Notes will appear here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOME POLICY SECTION -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-purple-50 border-b border-gray-200 px-6 py-3">
+                <h2 class="text-lg font-bold text-purple-800">Home Policy Details</h2>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-5">
+                
+                <!-- 1. PRIOR HOME POLICY SUB-SECTION -->
+                <div class="bg-purple-50/30 rounded-lg p-5 border border-purple-100">
+                    <h3 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-4">Prior Policy Information</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Previous Insurer -->
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Previous Insurer</label>
+                            <input type="text" id="prevHomeInsurerName" list="insurerList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Type to search..." />
+                            <input type="text" id="prevHomeInsurerCode" class="border border-gray-300 rounded-md px-2 py-2 w-16 bg-gray-100 text-center text-sm font-medium" value="" readonly placeholder="Code" />
+                        </div>
+
+                        <!-- Policy Status -->
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Policy Status</label>
+                            <input type="text" id="priorHomeStatusName" list="statusList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Type to search..." />
+                            <input type="text" id="priorHomeStatusCode" class="border border-gray-300 rounded-md px-2 py-2 w-16 bg-gray-100 text-center text-sm font-medium" value="" readonly placeholder="#" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Policy Number</label>
+                            <input type="text" id="prevHomePolicyNumber" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Enter number" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Expiry Date</label>
+                            <input type="text" id="prevHomeExpiryDate" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="MM/DD/YYYY" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Insured From</label>
+                            <input type="text" id="continuouslyInsuredFrom" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="MM/DD/YYYY" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Insured Since</label>
+                            <input type="text" id="continuouslyInsuredSince" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="MM/DD/YYYY" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MORTGAGE INFORMATION SUB-SECTION -->
+                <div class="bg-purple-50/30 rounded-lg p-5 border border-purple-100">
+                    <h3 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-4">Mortgage Information</h3>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Company Name</label>
+                            <input type="text" id="mortgageName" list="mortgageList" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Type to search..." />
+                            <datalist id="mortgageList"></datalist>
+                            <button id="openMortgageModalBtn" class="bg-purple-600 text-white border border-purple-700 px-4 py-2 rounded-md hover:bg-purple-700 font-medium text-xs transition-colors shrink-0" title="Add New Mortgage Company">+ Add</button>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Address</label>
+                            <input type="text" id="mortgageAddress" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">City</label>
+                                <input type="text" id="mortgageCity" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Province</label>
+                                <select id="mortgageProv" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-sm">
+                                    <option value="AB">AB</option>
+                                    <option value="BC">BC</option>
+                                    <option value="MB">MB</option>
+                                    <option value="NB">NB</option>
+                                    <option value="NL">NL</option>
+                                    <option value="NS">NS</option>
+                                    <option value="NT">NT</option>
+                                    <option value="NU">NU</option>
+                                    <option value="ON" selected>ON</option>
+                                    <option value="PE">PE</option>
+                                    <option value="QC">QC</option>
+                                    <option value="SK">SK</option>
+                                    <option value="YT">YT</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Postal Code</label>
+                                <input type="text" id="mortgagePostal" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. APPLICANT DATA SUB-SECTION -->
+                <div class="bg-purple-50/30 rounded-lg p-5 border border-purple-100">
+                    <h3 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-4">Applicant Data</h3>
+                    
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                        <!-- Applicant 1 -->
+                        <div class="bg-white rounded-lg p-4 border border-purple-200">
+                            <h4 class="text-xs font-semibold text-purple-700 mb-3">Applicant 1</h4>
+                            
+                            <div class="flex flex-col gap-3">
+                                <div>
+                                    <input type="text" id="applicant1Name" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Full Name" />
+                                </div>
+                                
+                                <div class="grid grid-cols-[1fr_5rem] gap-2">
+                                    <input type="text" id="applicant1Occup" list="occupationList" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Occupation" />
+                                    <input type="text" id="applicant1OccupCode" class="border border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs bg-gray-50" value="" placeholder="Code" readonly />
+                                </div>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <input type="text" id="applicant1YrsEmp" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs" value="" placeholder="Yrs Emp" />
+                                    <input type="text" id="applicant1DOB" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs" value="" placeholder="DOB" />
+                                    <input type="text" id="applicant1Sex" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs uppercase" maxlength="1" value="" placeholder="M/F" />
+                                    <input type="text" id="applicant1Marital" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs text-center" value="" placeholder="Marital" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Applicant 2 -->
+                        <div class="bg-white rounded-lg p-4 border border-purple-200">
+                            <h4 class="text-xs font-semibold text-purple-700 mb-3">Applicant 2</h4>
+                            
+                            <div class="flex flex-col gap-3">
+                                <div>
+                                    <input type="text" id="applicant2Name" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Full Name" />
+                                </div>
+                                
+                                <div class="grid grid-cols-[1fr_5rem] gap-2">
+                                    <input type="text" id="applicant2Occup" list="occupationList" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Occupation" />
+                                    <input type="text" id="applicant2OccupCode" class="border border-gray-300 rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs bg-gray-50" value="" placeholder="Code" readonly />
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <input type="text" id="applicant2YrsEmp" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs" value="" placeholder="Yrs Emp" />
+                                    <input type="text" id="applicant2DOB" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs" value="" placeholder="DOB" />
+                                    <input type="text" id="applicant2Sex" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xs uppercase" maxlength="1" value="" placeholder="M/F" />
+                                    <input type="text" id="applicant2Marital" class="border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs text-center" value="" placeholder="Marital" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Second Home Button -->
+                <div id="addSecondHomeBtn" class="flex">
+                    <button onclick="addSecondHome()" class="flex items-center gap-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fa-solid fa-plus"></i> Add Second Home
+                    </button>
+                </div>
+
+                <!-- Second Home Section (Hidden by default) -->
+                <div id="secondHomeSection" class="bg-purple-50/30 rounded-lg p-5 border border-purple-100 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-semibold text-purple-800 uppercase tracking-wide">Second Home - Mortgage Information</h3>
+                        <button onclick="removeSecondHome()" class="text-purple-600 hover:text-purple-800 font-bold text-xl leading-none">&times;</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Company Name</label>
+                            <input type="text" id="secondHomeMortgageName" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" placeholder="Type to search..." />
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-medium text-gray-600 w-32 shrink-0">Address</label>
+                            <input type="text" id="secondHomeMortgageAddress" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">City</label>
+                                <input type="text" id="secondHomeMortgageCity" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Province</label>
+                                <select id="secondHomeMortgageProv" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-sm">
+                                    <option value="AB">AB</option>
+                                    <option value="BC">BC</option>
+                                    <option value="MB">MB</option>
+                                    <option value="NB">NB</option>
+                                    <option value="NL">NL</option>
+                                    <option value="NS">NS</option>
+                                    <option value="NT">NT</option>
+                                    <option value="NU">NU</option>
+                                    <option value="ON" selected>ON</option>
+                                    <option value="PE">PE</option>
+                                    <option value="QC">QC</option>
+                                    <option value="SK">SK</option>
+                                    <option value="YT">YT</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-gray-600">Postal Code</label>
+                                <input type="text" id="secondHomeMortgagePostal" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value="" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coverage Deductibles -->
+                <div class="bg-purple-50/30 rounded-lg p-5 border border-purple-100">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-purple-700 mb-1.5">Deductible</label>
+                            <select id="homeDeductible" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-sm">
+                                <option value="" disabled selected>Select...</option>
+                                <option value="500">$500</option>
+                                <option value="1000">$1,000</option>
+                                <option value="2500">$2,500</option>
+                                <option value="5000">$5,000</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-purple-700 mb-1.5">Water Coverage Deductible</label>
+                            <select id="waterDeductible" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-sm">
+                                <option value="" disabled>Select...</option>
+                                <option value="1000">$1,000</option>
+                                <option value="2000" selected>$2,000</option>
+                                <option value="5000">$5,000</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Home Policy Conditions Notes -->
+                <div class="bg-purple-50/30 rounded-lg p-5 border border-purple-100">
+                    <label class="block text-xs font-medium text-purple-700 mb-2">Home Policy Conditions</label>
+                    <textarea id="homeNotesField" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs leading-relaxed font-mono resize-vertical min-h-[250px] bg-white" placeholder="Notes will appear here..."></textarea>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div id="financeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
+            <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-700">Add Finance Company</h2>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700 font-bold text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div id="modalError" class="bg-red-50 border border-red-200 text-red-600 text-sm px-3 py-2 rounded-md hidden">Please enter a company name.</div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Company Name</label>
+                    <input type="text" id="newFinName" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Address</label>
+                    <input type="text" id="newFinAddress" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">City</label>
+                        <input type="text" id="newFinCity" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div class="w-24 shrink-0">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Prov</label>
+                        <input type="text" id="newFinProv" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" maxlength="2" value="ON" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Postal Code</label>
+                    <input type="text" id="newFinPostal" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" />
+                </div>
+            </div>
+            <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                <button id="cancelModalBtn" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">Cancel</button>
+                <button id="saveFinBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">Save Company</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mortgageModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
+            <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-700">Add Mortgage Company</h2>
+                <button id="closeMortModalBtn" class="text-gray-500 hover:text-gray-700 font-bold text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div id="mortModalError" class="bg-red-50 border border-red-200 text-red-600 text-sm px-3 py-2 rounded-md hidden">Please enter a company name.</div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Company Name</label>
+                    <input type="text" id="newMortName" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Address</label>
+                    <input type="text" id="newMortAddress" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">City</label>
+                        <input type="text" id="newMortCity" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div class="w-24 shrink-0">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Prov</label>
+                        <input type="text" id="newMortProv" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" maxlength="2" value="ON" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Postal Code</label>
+                    <input type="text" id="newMortPostal" class="w-full border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" />
+                </div>
+            </div>
+            <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                <button id="cancelMortModalBtn" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">Cancel</button>
+                <button id="saveMortBtn" class="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700 transition-colors">Save Company</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle Telematics Fields Visibility
+        function toggleTelematicsFields() {
+            const telematicsYes = document.getElementById('telematicsYes').checked;
+            const telematicsFields = document.getElementById('telematicsFields');
+            
+            if (telematicsYes) {
+                telematicsFields.classList.remove('hidden');
+            } else {
+                telematicsFields.classList.add('hidden');
+            }
+            updateNotes();
+        }
+
+        // Update Notes Field dynamically
+        function updateNotes() {
+            const deductible = document.getElementById('deductible').value;
+            const telematicsYes = document.getElementById('telematicsYes').checked;
+            const telematicsName = document.getElementById('telematicsName').value;
+            const telematicsEmail = document.getElementById('telematicsEmail').value;
+            const telematicsPhone = document.getElementById('telematicsPhone').value;
+            
+            const baseNotes = `Producer: Eldho George
+
+By accepting this contract client agrees to the following conditions.
+
+Client confirmed home address as the primary address. Client confirms the home address is located in Ontario.
+
+Client understands the policy has the basic statutory Accident Benefits, declined increasing limits on Accident Benefits for now. Client confirms that optional Accident Benefit limits were explained and offered prior to binding the policy and client has chosen to decline increased limits at this time.
+
+Client confirmed no use of Ride Sharing or Deliveries. (Uber)
+
+Client confirmed to purchase of $2 Million Liability. Client confirms that higher liability limits were discussed and offered prior to binding and client has chosen $2 Million Liability at this time.
+
+Client confirmed no commercial or business use of vehicles.
+
+Client confirmed no other drivers in household. Client confirms there are no other licensed drivers residing in the household.
+
+Client confirmed garaging address is same as home address.
+
+Client confirmed broker has explained full coverage and 3rd party coverage.
+
+Client agrees to notify us promptly in writing of any significant change of which he is aware in his status as a driver, owner of a described automobile. Client agrees let us know of any change that might increase the risk of an incident or affect our willingness to insure him at current rates. Client agrees to promptly inform of any change in information supplied in his original application for insurance, such as additional drivers, or a change in the way a described automobile is used. Client agrees to inform us of any sale or transfer of your interest in a described automobile. Client agrees not to drive or operate the automobile or allow anyone else to drive or operate the automobile, when not authorized by law.
+
+Clients confirmed that all the information including License dates, usage kms, vehicle information, payment structure and garaging address regarding the policy was confirmed by the broker before Binding.
+
+Client confirms that there are no modifications done to the vehicle and no plans of doing any modifications in the future. If client wants to get any modifications done, then he will inform the broker at the first priority and proceed if broker approves it by getting approval from the insurance company.
+
+Winter tire equipped and client understand that proof maybe required at any time and failure to do so may result in removal of the discount and/or adjustment of coverage as per insurer underwriting guidelines.
+
+Insured confirms all the information is accurate for the rating. Insured confirms all the information including license dates, policy deductible, usage kms, vehicle information, payment structure and garaging address regarding the policy was confirmed by the broker before binding the policy.
+
+Payment plan is monthly.`;
+
+            let fullNotes = baseNotes;
+
+            // Add Deductible info if selected
+            if (deductible) {
+                fullNotes += `\n\nDeductible Selected: $${deductible}`;
+            }
+
+            // Add Telematics info if enabled
+            if (telematicsYes && telematicsName && telematicsEmail && telematicsPhone) {
+                fullNotes += `\n\nTelematics Info\n${telematicsName} - ${telematicsEmail} - ${telematicsPhone}`;
+            }
+
+            document.getElementById('notesField').value = fullNotes;
+        }
+
+        // Add event listeners to deductible and telematics fields
+        document.addEventListener('DOMContentLoaded', function() {
+            const deductibleSelect = document.getElementById('deductible');
+            if (deductibleSelect) {
+                deductibleSelect.addEventListener('change', updateNotes);
+            }
+            const homeDeductibleSelect = document.getElementById('homeDeductible');
+            if (homeDeductibleSelect) {
+                homeDeductibleSelect.addEventListener('change', updateHomeNotes);
+            }
+            const waterDeductibleSelect = document.getElementById('waterDeductible');
+            if (waterDeductibleSelect) {
+                waterDeductibleSelect.addEventListener('change', updateHomeNotes);
+            }
+            // Initialize notes on load
+            updateNotes();
+            updateHomeNotes();
+        });
+
+        // Update Home Policy Notes Field dynamically
+        function updateHomeNotes() {
+            const homeDeductible = document.getElementById('homeDeductible').value;
+            const waterDeductible = document.getElementById('waterDeductible').value || '2000';
+            
+            const baseHomeNotes = `Producer: Eldho george
+
+Client gave approval for soft credit check.
+
+Client confirmed no part of home rented to Airbnb and no business or commercial use on property.
+
+Client confirmed home address as primary address. Client confirms the dwelling is owner-occupied and not used as a secondary, seasonal, rental, or income-generating property.
+
+Client declined cyber coverage. Client confirms cyber coverage was explained and offered prior to binding and client has chosen to decline this coverage at this time.
+
+Advised client they must not have been previously cancelled for insurance fraud, material misrepresentation, or non-disclosure. Client confirms they have not been previously cancelled, declined, or non-renewed for insurance fraud, material misrepresentation, or non-disclosure.
+
+The dwelling cannot be vacant, under construction, have an unfinished exterior, have an open claim or have unrepaired damage as a result of a claim. Client confirms the dwelling is currently occupied as a principal residence, is not vacant, not under construction or renovation, does not have an unfinished exterior, has no open claims, and has no unrepaired damage.
+
+Client understands there are limitations to the amount paid on unscheduled items on the policy regarding jewelry, furs, artwork, collections, bike, etc and did not pursue to purchase higher limits from that stated on the policy. Client confirms optional higher limits and/or scheduling options were explained and declined at this time.
+
+Clients confirmed that all the information (Incl. dates) regarding the policy was confirmed by the broker before Binding.
+
+Client is aware to inform any change in material risk to the broker, failed to do so may result in claim denial.
+
+Client has been informed that only sewer backup and overland water coverage was offered on this policy with $${waterDeductible} deductible. Client confirms water coverage options and applicable deductibles were explained and client has chosen the coverage limits stated on the policy.
+
+Client is aware that there is a $${homeDeductible || 'TBD'} deductible on this policy.
+
+Client confirmed that all the information is accurate for the rating.
+
+Payment plan is monthly.`;
+
+            document.getElementById('homeNotesField').value = baseHomeNotes;
+        }
+
+        // Data and Logic
+        const insurerRawData = `ABI,Promutuel L'Abitibienne
+ABS,Abstainers
+ABX,Abex Affiliated Brokers
+ACAS,Aetna Canadian C & S
+ACEIN,ACE INA Insurance
+AEG,Aegon (UK)
+AET,Aetna Casualty (Laurentian)
+AETN,Aetna Ins. (CIGNA)
+AFA,Accident Fund Insurance Company of America
+AFF,Affiliated FM Insurance Company
+AFM,Antigonish Farmers' Mutual
+AG,Advocate General
+AGR,Allianz Global Risks US Insurance Company
+AIM,Amherst Island Mutual
+ALB,Albion
+ALG,Algoma Mutual
+ALH,L'Alpha
+ALL,Allstate
+ALP,Alpina
+ALZ,Allianz
+AMA,Alberta Motor
+AMBR,Ambris LLP
+AMF,A.M. Fredericks Underwriting
+AMG,Ambridge Europe Ltd
+AMH,American Home
+AMM,American Mutual
+AMR,American Road
+ANAT,Assurnat
+ANG,Anglo-Gibraltar
+APP,Promutuel Appalaches St-Francois
+APR,APRIL Canada Inc
+ARC,Arch Insurance Company Ltd.
+ARGO,Argonaut Insurance Company
+ASC,Ascentus
+ASCOT,Ascot Group
+ASN,Ass. Nationale (National Ins.)
+ASP,Aspen Insurance UK Limited
+ATL,Atlantic
+ATR,Atradius
+AUTO,Auto-Owners Insurance
+AWSIC,Allied World Specialty Insurance Company
+AXA,AXA
+AXIS,AXIS Reinsurance Company
+AXL,AXA XL
+AYR,Ayr Mutual
+BAG,Promutuel Bagot
+BAHA,Bahamas First General Insurance Company Ltd.
+BCAA,BCAA
+BCIC,British Columbia
+BCM,Bertie & Clinton Mutual
+BEA,Promutuel du Saint-Laurent aux Appalaches
+BEAZ,Promutuel du Saint-Laurent aux Appalaches
+BEH,Promutuel Haut St-Laurent
+BEL,BELAIRdirect / Belair
+BEM,Promutuel Côte-Sud
+BEN,Beneva Insurance
+BEO,Beothic General
+BIC,Promutuel de l'Est
+BII,Boiler Inspection & Insurance
+BKF,American Bankers of Florida
+BLAN,Blanchard Mutual
+BOI,Promutuel Les Bâtisseurs
+BOR,Boreal
+BOREA,Promutuel Boréale
+BOUC,Bouclier Laurentian
+BOXX,BOXX Insurance Inc.
+BRANT,Brant Mutual
+BRKH,Berkshire Hathaway Inc.
+BRKL,Berkley Canada Inc
+CAA,CAA
+CAAP,The Canadian Aboriginal Association Plan
+CAB,Cabot
+CALF,Calvert Fire
+CAMIM,Canadian Millers Mutual
+CAN,Canassurance
+CANA,Canada A & F
+CANL,Primmum
+CANN,Canners Exchange
+CANW,Canada West
+CAP,La Capitale
+CARL,Carleton Mutual
+CAS,Casualty
+CAY,Cayuga Mutual
+CC,Canadian Commerce
+CCICO,Continental Insurance Company
+CCINC,Continental Insurance Company of Canada Inc.
+CCLTD,Continental Insurance Ltd.
+CDES,Caisses Desjardins
+CDI,Canadian Direct
+CENT,Century
+CG,Canadian General
+CGUI,Aviva
+CHAPP,Promutuel du Saint-Laurent aux Appalaches
+CHAT,Chateau
+CHES,Ches Special Risk Inc.
+CHL,Promutuel Charlevois-Montmorency
+CHM,Canadian Home
+CHR,Daimler Chrysler
+CHUB,Chubb
+CI,Canadian Indemnity
+CIBC,Certas Direct
+CIC,Travelers Essential
+CIGN,Cigna
+CIR,Canadian Industrial Risk
+CIT,Citadel
+CLAW,Canadian Lawyers' Liability
+CM,Chartis Insurance
+CMF,Clare Mutual Fire
+CNA,Continental Casualty (CNA)
+CNAV,Canadian Aviation Insurance
+CNPIE,Community Newspapers Reciprocal
+CNS,Canadian Northern Shield
+CNSU,Can-Sure Underwriting
+CNT,Centennial
+CNU,Canadian Universal
+CNVX,Convex Insurance
+COA,Coachman
+COAT,Promutuel Coaticook-Sherbrooke
+COFC,Co-operative F & C
+COG,COGECO
+COL,RSA
+COMGR,The Commonwell Mutual
+COMM,Northbridge Indemnity
+COMS,Promutuel Coaticook
+CON,Contingency Insurance
+CONC,La Concorde
+CONS,Constitution
+CONT,Continental Canada
+COOP,Cooperators
+COOS,Les Cooperants
+CORN,Cornhill
+CORO,Coronation Insurance
+COSE,Coseco
+CP,Canadian Provincial
+CRUM,Crum & Forster
+CSTU,Coast Underwriters
+CTD,CT Direct
+CTHL,Catholic Mutual Group
+CTIS,Canadian Tire Insurance
+CTSUD,Promutuel Centre-Sud
+CU,Commercial Union
+CUL,Culross Mutual
+CUM,Cumis
+DAS,DAS Legal Protection
+DESJ,Groupe Desjardins
+DEUX,Promutuel Deux-Montagnes
+DIC,Dominion Insurance Corp.
+DIRP,Direct Protect
+DMI,Halwell Dumfries Mutual
+DOC,Dominion of Canada
+DOR,Promutuel Dorchester
+DOW,Downie Mutual
+DRA,Dave Rochon Assurances
+DRUM,Promutuel Drummond
+DUF,Dufferin Mutual
+EAG,Eagle Star
+EAST,East Mutual
+ECC,Ecclesiastical Insurance
+ECHE,Echelon
+ECON,Economical
+EDC,Export Development Canada
+EGI,Echelon
+EKF,Ekfrid Mutual
+ELEC,Electric Company
+ELM,Elma Mutual
+ELT,Elite
+ENAM,English & American
+ENCON,ENCON Group
+ENG,English & American
+EQ,Equitable General
+ERI,Erie Mutual
+EST,Promutuel de l'Est
+ESTR,Estrie-Richelieu
+ESTU,Promutuel de l'Estuaire
+ETN,Eaton
+EUHM,Euler Hermes Canada
+EVER,Everest
+FA,Facility Association
+FAAL,Facility - Allstate
+FAALZ,Facility - Allianz
+FACG,Facility - Canadian General
+FACP,Facility - Cooperators
+FACS,Facility - Canadian Surety
+FACT,Factory Ins. Associates
+FACU,Facility - Commercial Union
+FACW,Facility - Canada West
+FADOC,Facility - Dominion of Canada
+FAGU,Facility - Guardian
+FAHAL,Facility - Nordic
+FALLD,Facility - Lloyd's
+FALM,Facility - Liberty Mutual
+FAM,Factory Mutual
+FANFL,Facility - Ins Corp of Newfoundland
+FANS,Facility - Nova Scotia General
+FAPRU,Facility - Prudential
+FAR,Farm Mutual Reinsurance
+FARM,Farmers Mutual
+FARO,Facility - RSA
+FASA,Facility - Sun Alliance
+FASE,Facility - Simcoe & Erie
+FASF,Facility - State Farm
+FAUN,Facility - Unifund
+FAWL,Facility - Nordic
+FAWU,Facility - Nordic
+FED,Federal
+FEDC,Federation
+FEDM,Federated
+FF,Fireman's Fund
+FIC,Family Insurance Corp.
+FIRE,The Fire
+FIRST,First North American
+FM,Trillium Mutual
+FMG,F M Global
+FNAT,First National
+FOR,Foresters Indemnity
+FPI,Four Points Insurance
+FRO,Promutuel Monts et Rives
+FROY,Royal Facility
+FSCA,Groupement des Assureurs
+FUND,Fundy Mutual
+GA,General Accident
+GAN,GAN Incendie
+GAR,Garnate
+GAS,Promutuel Gaspesie
+GAUM,Global Aerospace
+GBM,Grey & Bruce Mutual
+GC,Intact Insurance
+GCA,General Ins. America
+GECC,GE Capital Casualty
+GEN,General
+GENK,Genmark Insurance
+GER,Gerling Global
+GERM,Germania
+GIB,Gibraltar
+GIS,Gisco
+GLEN,Glengarry Farmers Mutual
+GMI,Grenville Mutual
+GNA,Guarantee Company
+GNB,General Insurance NB
+GOLD,Gold Circle
+GORE,Gore
+GRAN,Grain
+GRE,Great Eastern
+GRP,Novex Group Insurance
+GRT,Great American
+GUA,Guardian Ins.
+HAGR,Hagerty Canada
+HAL,Intact Insurance
+HALW,Halwell Dumfries Mutual
+HAM,Hamilton Township
+HAN,Hanover
+HAUT,Promutuel Haut St-Laurent
+HAY,Hay Mutual
+HDI,HDI-Global SE
+HELV,Helvetia Swiss
+HIGH,Highlands
+HIROC,Healthcare Insurance Reciprocal
+HMI,Salus Mutual
+HOME,Home
+HOML,Homeland
+HOW,Howick Mutual
+HRT,Hartford
+HSB,Hartford Steam Boiler
+HSCX,Hiscox
+HWD,Howden Specialty
+IAC,Promutuel Côte-Sud
+ICBC,Insurance Corp. of B.C.
+ICI,Ins. Corp. of Ireland
+ICNA,Ins. Co. of North America
+ICNW,Ins. Corp. of Newfoundland
+ICPEI,Insurance Company of PEI
+IHI,Indian Harbor Insurance
+IIM,Independent Insurance Managers
+IN,Industrial General
+INA,Industrial Alliance
+ING,Industrial General
+INGNB,North Brook
+INNOV,Innovassur
+INS,Promutuel L'Islet
+JEI,Intact - Jevco
+JEV,Jevco
+JWL,Jewelers Mutual
+KAM,Promutuel Kamouraska
+KAN,Kansa
+KE,Kent & Essex Mutual
+KEM,Kemper
+KENT,Kent General
+KEY,United General
+KING,Kings Mutual
+KNGN,Kingsway General
+LA,L & A Mutual
+LABI,Portage La Biche
+LAC,Laurentian Casualty
+LACFL,Promutuel Du Lac au Fleuve
+LAG,Laurentian General
+LAM,Lambton Mutual
+LAN,Promutuel Lanaudiere
+LANA,Lanark Mutual
+LANG,Langdon
+LAP,Laurentian Pacific
+LAU,Laurentienne Agricole
+LBM,Liberty Mutual
+LEDOR,Groupe Ledor Inc.
+LEG,Legacy
+LEV,Promutuel Levisienne-Orleans
+LEX,L'Exclusive
+LEXI,Lexington
+LEY,L.E. Yingst
+LGI,Northbridge Insurance
+LITTO,Promutuel Du Littoral
+LLD,Lloyds
+LLU,Lloyd's Underwriters
+LNX,Lennox & Addington
+LOB,Lobo Mutual
+LOC,London - Canada
+LOM,London & Midland
+LOMB,Northbridge Personal
+LOMG,Promutuel Monts et Rives
+LON,The London Assurance
+LOT,Promutuel Lotbiniere
+LOY,Loyalist
+LSJ,Promutuel Lac au Fjord
+LSP,Promutuel Lac St-Pierre
+LTM,MutualONE
+LUM,Lumbermans Mutual
+MAA,Marine Office of America
+MAPL,Maplex General
+MAR,Northbridge Commercial
+MARK,Markham General
+MAU,Promutuel Portneuf-Champlain
+MAX,MAX Insurance
+MCG,MutualONE
+MCK,MutualONE
+MEAL,Morin Elliott
+MENN,Mennonite Aid
+MET,Metropolitan
+METG,Metro General
+MILL,Millenium
+MISS,Economical QC
+MITS,Mitsui Sumitomo
+MLNC,Milnco Insurance
+MMA,Mennonite Mutual
+MMFS,Mennonite Mutual Fire
+MON,Promutuel Côte-Sud
+MOT,Motors
+MPIC,Manitoba Public Ins.
+MRKL,Markel
+MUF,Mutual Fire B.C.
+MUN,Municipal Electric
+NAP,Promutuel Les Prairies
+NATE,National Employers
+NATG,National Group
+NATS,Societe Nationale
+NBG,National Bank General
+NBM,North Blenhiem Mutual
+NCC,National Casualty
+NEWH,New Hampshire Ins.
+NIA,Niagara Fire
+NIPP,Nippon
+NKM,Maple Mutual
+NOM,Nova Mutual
+NONE,No Previous Insurer
+NORD,Nordic Insurance
+NORF,Optimum Insurance
+NORG,NorGroupe
+NORM,Norman Ins. Co.
+NORT,Northumberland
+NORW,North Waterloo Farmer
+NS,Nova Scotia General
+NWES,Nationwide E&S
+NWIDE,Nationwide
+NZ,New Zealand
+OASI,Oasis Insurance
+OC,Outside Canada
+OCEAN,Oceanic Underwriters
+OGA,Omega
+OM,Ontario Municipal Insurance
+ONT,Ontario Mutual
+OPA,Optimum Societe's Assurance
+SOC,Society Mutual Reinsurance
+SOMP,Sompo International
+SONNE,Sonnet Insurance
+SOU,Promutuel Horizon Ouest
+SOV,Sovereign
+SPFT,Sports & Fitness
+SQI,Square One Insurance
+SRIM,Special Risk Insurance
+SSQ,SSQ
+SSRU,Stewart Specialty
+STAN,Stanley Mutual
+STARR,Starr Insurance
+STF,State Farm F&C
+STFM,State Farm Mutual
+STM,La St-Maurice
+STOM,Promutuel Coaticook
+STP,St. Paul
+STSH,Stanstead & Sherbrooke
+SUA,Stratford Underwriting
+SUMI,Refer to MITS
+SUN,Sun Alliance
+SURE,Canadian Surety
+SWEST,South Western
+SWI,Switzerland
+SWS,Swiss Reinsurance
+SYI,S&Y Insurance
+SYM,Symons General
+TDG,TD General
+TEM,Promutuel Temiscouata
+TEMP,Temple
+TMIC,Tradition Mutual
+TOG,Toronto General
+TOK,Tokio
+TOTT,Totten Insurance
+TOWC,Town and Country
+TOWN,Caradoc Townsend
+TRAC,Trans Canada Risk
+TRAF,Trafalgar
+TRAM,Trans-America
+TRAN,Transit
+TRAV,Travelers
+TRCK,Truck Insurance
+TRCM,Trans Canada Risk Mgmt
+TRG,Traders General
+TRIN,Trinity Underwriting
+TRIS,Trisura Guarantee
+TRP,Transport Insurance
+TRUH,TruShield
+TWIG,The Wholesale Insurance
+TWO,Two Mountains Mutual
+UC,United Canada Insurance
+UHM,Usborne and Hibbert
+UNCN,RSA
+UNI,Universal Protection
+UNIF,Unifund
+UNIQ,L'Unique
+UNK,Unknown
+UQ,Union Quebecoise
+USA,U.S. Company
+USFG,USF & G
+USFI,United States Fire
+USLI,USLI Insurance
+USLIC,United States Liability
+UTIC,Utica
+VAU,Promutuel Vaudreuil
+VER,Promutuel Vercheres
+VFORG,Promutuel Verchères
+VIC,Victoria
+VLM,Promutuel La Vallee
+VMM,Promutuel Saint-Laurent
+VSF,Promutuel Appalaches
+VSL,Promutuel Vallée St-Laurent
+WAB,Nova Mutual
+WAT,Economical Select
+WAU,Wausau
+WAUS,Employers Ins.
+WAWA,Wawanesa
+WELL,Intact Insurance
+WEM,West Elgin Mutual
+WEP,Westpar
+WEST,Western Assurance
+WESW,West Wawanosh
+WFIEL,Westfield
+WGMI,Western General
+WM,Westminster Mutual
+WRF,Wright Flood
+WSC,Western Surety
+WSL,Westland
+WSTON,Weston Insurance
+WSTP,Westport Insurance
+WU,Intact Insurance
+WUM,Western Underwriting
+WYN,Wynward Insurance
+XL,XL
+XLS,XL Speciality
+YAM,Yamaska Mutual
+YAR,Yarmouth Mutual
+YAS,Yasuda
+YORK,Unica Insurance
+ZEN,Northbridge Insurance
+ZUR,Zurich`;
+
+        const insurerMap = {};
+        const insurerDataList = document.getElementById('insurerList');
+        const autoInsurerName = document.getElementById('prevInsurerName');
+        const autoInsurerCode = document.getElementById('prevInsurerCode');
+        const homeInsurerName = document.getElementById('prevHomeInsurerName');
+        const homeInsurerCode = document.getElementById('prevHomeInsurerCode');
+
+        insurerRawData.split('\n').forEach(line => {
+            const [code, ...nameParts] = line.split(',');
+            if (code && nameParts.length > 0) {
+                let name = nameParts.join(',').trim();
+                if (name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1);
+                insurerMap[name] = code.trim();
+                const option = document.createElement('option');
+                option.value = name;
+                insurerDataList.appendChild(option);
+            }
+        });
+        
+        const updateCode = (input, codeField) => {
+            codeField.value = insurerMap[input.value] || '';
+        };
+
+        autoInsurerName.addEventListener('input', () => updateCode(autoInsurerName, autoInsurerCode));
+        homeInsurerName.addEventListener('input', () => updateCode(homeInsurerName, homeInsurerCode));
+
+        // Policy Status
+        const statusRawData = `1,Declined by Insurer\n2,Non-renewed by Insurer\n3,Cancelled by Insurer\n4,Non-renewed by Insured\n5,Cancelled by Insured\n6,Insurer Restricted Coverage\n9,Other`;
+        const statusMap = {};
+        const statusDataList = document.getElementById('statusList');
+        const autoStatusName = document.getElementById('priorStatusName');
+        const autoStatusCode = document.getElementById('priorStatusCode');
+        const homeStatusName = document.getElementById('priorHomeStatusName');
+        const homeStatusCode = document.getElementById('priorHomeStatusCode');
+
+        statusRawData.split('\n').forEach(line => {
+            const [code, name] = line.split(',');
+            statusMap[name] = code;
+            const option = document.createElement('option');
+            option.value = name;
+            statusDataList.appendChild(option);
+        });
+
+        const updateStatusCode = (input, codeField) => {
+            codeField.value = statusMap[input.value] || '';
+        };
+
+        autoStatusName.addEventListener('input', () => updateStatusCode(autoStatusName, autoStatusCode));
+        homeStatusName.addEventListener('input', () => updateStatusCode(homeStatusName, homeStatusCode));
+
+        // Occupation Codes
+        const occupationRawData = `A01,Accountant
+A02,Actuary
+A03,Administrator / Director
+A04,Agronomist
+A05,Airline Personnel
+A06,"Architect, Surveyor"
+A07,Armed Forces
+A08,Artist (Without Other Profession)
+A09,Athlete - Professional
+A10,Automobile Mechanic
+A11,Automobile Sales/Dealer
+B01,Banking/Financial Institution - Administration
+B02,Banking/Financial Institution - Clerical
+B03,Banking/Financial Institution - Management
+B04,"Barber, Hairdresser"
+C01,Carpenter
+C02,Cashier
+C03,Chartered Accountant
+C04,Civil Service
+C05,Clergy
+C06,"Computer - Analyst, Consultant, Programmer, etc."
+C07,Consultant - Human Resources
+C08,Consultant - Other (Use 5RMK - Remarks to Describe)
+C09,Consultant - Training
+C10,"Courts e.g. Bailiff, Clerk, Reporter, Stenographer, etc."
+C11,Craftsman
+C12,Crown Corporation Employee
+C50,Coach
+D01,"Daycare Worker, Provider"
+D02,Dental Hygenist
+D03,"Dentist, Orthodontist, Denturologist"
+D04,"Dietician, Nutritionist"
+D05,Doctor - General Practioner
+D06,Driver - Local Delivery
+D07,"Driver - Long Haul, Mover"
+D08,Driver - Public Transportation
+D09,"Driver - Taxi, Chauffeur, Instructor"
+E01,Electrician
+E02,Engineer - Professional
+E03,"Entertainment Field e.g. Actor, Musician, etc."
+E04,Executive
+F01,"Factory Worker, Machine Operator, Tool & Die Worker, etc."
+F02,Farmer
+F03,"Financial Advisor, Broker, Economist"
+F04,Firefighter
+F05,Fisherman
+F06,"Fitness, Health Employee"
+F07,Flight Attendant
+F08,"Food Industry - Other e.g. Butcher, Slaughterer"
+F09,Forest Employee
+G01,General Contractor
+G02,"Graphic Designer, Printer"
+H01,"Homemaker (not Spouse at Home), Caregiver"
+H02,Horticulture
+H03,"Hotel, Motel Worker"
+L01,Insurance - Adjuster
+L02,"Insurance - Agent, Broker"
+L03,Insurance - Underwriter
+L30,Labourer - Unskilled
+L31,Lawyer
+M01,"Maintenance, Janitor, Cleaner"
+M02,Manager
+M03,Marketing Employee
+M04,"Medical Specialist e.g. Anaesthetist, Chiropractor, Podiatrist, etc."
+M05,Miner
+N01,Notary
+N02,Nurse
+P01,Office Worker
+P02,Optician
+P03,"Optometrist, Opthamologist"
+P04,Other (Use 5RMK - Remarks to Describe)
+P30,"Painter, Plasterer"
+P31,Pharmacist
+P32,"Photographer, Photographic Studio"
+P33,Pilot
+P34,Police Officer
+P35,Postal Worker
+P36,Public Transportation Worker - Other Than Airline
+P40,Property Manager
+R01,Real Estate Agent
+R02,"Restaurant, Bar - Chef, Cook, Caterer"
+R03,"Restaurant, Bar - Owner, Employee e.g. Waier, Bartender, etc."
+R04,Retail Sales Person
+R05,Retired
+S01,Salesperson - Commercial
+S02,"Scientist, Researcher e.g. Biochemist, Biologist, Chemist, etc."
+S03,Seamstress
+S04,"Security Officer, Worker"
+S05,Self-Employed - Other (Use 5RMK - Remarks to Describe)
+S06,"Self-Employed - Services e.g. Chimney Sweep, Lawncare, Window Cleaner"
+S07,Spouse at Home
+S08,Student
+S09,"Supervisor, Foreman"
+T01,"Teacher, Principal, Professor, Lecturer"
+T02,"Technicians - Research, Medical"
+T03,Therapist
+T04,Tradesman
+U01,Unemployed
+V01,Veterinarian
+W01,"Writer, Publisher"`;
+        const occupationMap = {};
+        const occupationDataList = document.getElementById('occupationList');
+        const applicant1Occup = document.getElementById('applicant1Occup');
+        const applicant1OccupCode = document.getElementById('applicant1OccupCode');
+        const applicant2Occup = document.getElementById('applicant2Occup');
+        const applicant2OccupCode = document.getElementById('applicant2OccupCode');
+
+        occupationRawData.split('\n').forEach(line => {
+            const [code, ...nameParts] = line.split(',');
+            if (code && nameParts.length > 0) {
+                let name = nameParts.join(',').trim();
+                if (name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1);
+                occupationMap[name] = code.trim();
+                const option = document.createElement('option');
+                option.value = name;
+                occupationDataList.appendChild(option);
+            }
+        });
+        
+        const updateOccupationCode = (input, codeField) => {
+            codeField.value = occupationMap[input.value] || '';
+        };
+
+        applicant1Occup.addEventListener('input', () => updateOccupationCode(applicant1Occup, applicant1OccupCode));
+        applicant2Occup.addEventListener('input', () => updateOccupationCode(applicant2Occup, applicant2OccupCode));
+
+        // Utility function to clean company names (remove special characters)
+        const cleanCompanyName = (name) => {
+            return name.replace(/[()[\]{}-]/g, '').trim().replace(/\s+/g, ' ');
+        };
+
+        // Finance Company
+        let financeCompanies = [
+            { name: "TD Auto Finance", address: "2001 Sheppard Avenue East", city: "Toronto", prov: "ON", postal: "M2J4Z8" },
+            { name: "Scotiabank", address: "44 King St W", city: "Toronto", prov: "ON", postal: "M5H1H1" },
+            { name: "RBC Royal Bank", address: "200 Bay Street", city: "Toronto", prov: "ON", postal: "M5J2J5" },
+            { name: "BMO Bank of Montreal", address: "100 King Street West", city: "Toronto", prov: "ON", postal: "M5X1A1" },
+            { name: "CIBC Auto Finance", address: "81 Bay Street", city: "Toronto", prov: "ON", postal: "M5J0E7" },
+            { name: "Ford Motor Credit Company of Canada", address: "1 The Canadian Road", city: "Oakville", prov: "ON", postal: "L6J5E4" },
+            { name: "Honda Canada Finance", address: "180 Honda Boulevard", city: "Markham", prov: "ON", postal: "L6C0H9" },
+            { name: "Toyota Financial Services", address: "1 Toyota Place", city: "Toronto", prov: "ON", postal: "M1H1H9" },
+            { name: "Hyundai Capital Canada", address: "123 Front Street West", city: "Toronto", prov: "ON", postal: "M5J2M2" },
+            { name: "Nissan Canada Finance", address: "5290 Orbitor Drive", city: "Mississauga", prov: "ON", postal: "L4W4Z5" },
+            { name: "General Motors Financial", address: "2001 Sheppard Ave E", city: "Toronto", prov: "ON", postal: "M2J4Z8" },
+            { name: "Desjardins Group", address: "95 St. Clair Avenue West", city: "Toronto", prov: "ON", postal: "M4V1N6" },
+            { name: "National Bank of Canada", address: "130 King Street West", city: "Toronto", prov: "ON", postal: "M5X1J9" },
+            { name: "Mitsubishi Motors Financial Services", address: "2090 Matheson Blvd E", city: "Mississauga", prov: "ON", postal: "L4W5P8" },
+            { name: "Kia Finance", address: "180 Foster Crescent", city: "Mississauga", prov: "ON", postal: "L5R4J5" },
+            { name: "Mazda Financial Services", address: "55 Vogell Road", city: "Richmond Hill", prov: "ON", postal: "L4B3K5" },
+            { name: "Subaru Financial Services", address: "560 Suffolk Court", city: "Mississauga", prov: "ON", postal: "L5R4J7" },
+            { name: "Volkswagen Finance", address: "777 Bayly Street West", city: "Ajax", prov: "ON", postal: "L1S7G7" },
+            { name: "Stellantis Financial Services", address: "1 Riverside Drive West", city: "Windsor", prov: "ON", postal: "N9A5K3" },
+            { name: "Volvo Car Financial Services", address: "91 Front Street East", city: "Richmond Hill", prov: "ON", postal: "L4B1G1" }
+        ];
+
+        const renderFinanceList = () => {
+            const list = document.getElementById('financeList');
+            list.innerHTML = '';
+            financeCompanies.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = cleanCompanyName(c.name);
+                list.appendChild(opt);
+            });
+        };
+
+        document.getElementById('financeName').addEventListener('input', (e) => {
+            const cleanedInput = cleanCompanyName(e.target.value);
+            const comp = financeCompanies.find(c => cleanCompanyName(c.name) === cleanedInput);
+            if (comp) {
+                document.getElementById('financeAddress').value = comp.address;
+                document.getElementById('financeCity').value = comp.city;
+                document.getElementById('financeProv').value = comp.prov;
+                document.getElementById('financePostal').value = comp.postal;
+            }
+        });
+
+        // Mortgage Company
+        let mortgageCompanies = [
+            { name: "Scotiabank", address: "44 King St W", city: "Toronto", prov: "ON", postal: "M5H1H1" },
+            { name: "RBC Royal Bank", address: "200 Bay Street", city: "Toronto", prov: "ON", postal: "M5J2J5" },
+            { name: "TD Canada Trust", address: "PO Box 1", city: "Toronto", prov: "ON", postal: "M5K1A2" },
+            { name: "BMO Bank of Montreal", address: "100 King Street West", city: "Toronto", prov: "ON", postal: "M5X1A1" },
+            { name: "CIBC Mortgages", address: "81 Bay Street", city: "Toronto", prov: "ON", postal: "M5J0E7" },
+            { name: "First National Financial LP", address: "16 York Street, Suite 1900", city: "Toronto", prov: "ON", postal: "M5J0E6" },
+            { name: "MCAP", address: "200 King Street West, Suite 400", city: "Toronto", prov: "ON", postal: "M5H3T4" },
+            { name: "RMG Mortgages", address: "200 King Street West, Suite 400", city: "Toronto", prov: "ON", postal: "M5H3T4" },
+            { name: "Equitable Bank", address: "30 St. Clair Avenue West, Suite 700", city: "Toronto", prov: "ON", postal: "M4V3A1" },
+            { name: "Home Trust Company", address: "145 King St W, Suite 2300", city: "Toronto", prov: "ON", postal: "M5H1J8" },
+            { name: "Meridian Credit Union", address: "8 Corporate Park Drive", city: "St. Catharines", prov: "ON", postal: "L2S3W3" }
+        ];
+
+        const renderMortgageList = () => {
+            const list = document.getElementById('mortgageList');
+            list.innerHTML = '';
+            mortgageCompanies.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                list.appendChild(opt);
+            });
+        };
+
+        document.getElementById('mortgageName').addEventListener('input', (e) => {
+            const comp = mortgageCompanies.find(c => c.name === e.target.value);
+            if (comp) {
+                document.getElementById('mortgageAddress').value = comp.address;
+                document.getElementById('mortgageCity').value = comp.city;
+                document.getElementById('mortgageProv').value = comp.prov;
+                document.getElementById('mortgagePostal').value = comp.postal;
+            }
+        });
+
+        // Modals Logic
+        const handleModal = (modalId, openBtnId, closeBtnId, cancelBtnId, saveBtnId, array, renderFn, nameId, addrId, cityId, provId, postId) => {
+            const modal = document.getElementById(modalId);
+            document.getElementById(openBtnId).onclick = () => modal.classList.replace('hidden', 'flex');
+            const close = () => modal.classList.replace('flex', 'hidden');
+            document.getElementById(closeBtnId).onclick = close;
+            document.getElementById(cancelBtnId).onclick = close;
+            document.getElementById(saveBtnId).onclick = () => {
+                const name = document.getElementById(nameId).value;
+                if (!name) return;
+                const entry = {
+                    name,
+                    address: document.getElementById(addrId).value,
+                    city: document.getElementById(cityId).value,
+                    prov: document.getElementById(provId).value.toUpperCase(),
+                    postal: document.getElementById(postId).value.toUpperCase().replace(/\s/g, '')
+                };
+                array.push(entry);
+                renderFn();
+                close();
+            };
+        };
+
+        handleModal('financeModal', 'openModalBtn', 'closeModalBtn', 'cancelModalBtn', 'saveFinBtn', financeCompanies, renderFinanceList, 'newFinName', 'newFinAddress', 'newFinCity', 'newFinProv', 'newFinPostal');
+        handleModal('mortgageModal', 'openMortgageModalBtn', 'closeMortModalBtn', 'cancelMortModalBtn', 'saveMortBtn', mortgageCompanies, renderMortgageList, 'newMortName', 'newMortAddress', 'newMortCity', 'newMortProv', 'newMortPostal');
+
+        renderFinanceList();
+        renderMortgageList();
+
+        // Export PowerBroker Data to JSON
+        window.addSecondAuto = function() {
+            document.getElementById('secondAutoSection').classList.remove('hidden');
+            document.getElementById('addSecondAutoBtn').classList.add('hidden');
+        };
+
+        window.removeSecondAuto = function() {
+            document.getElementById('secondAutoSection').classList.add('hidden');
+            document.getElementById('addSecondAutoBtn').classList.remove('hidden');
+            document.getElementById('secondAutoWinterTires').value = '';
+        };
+
+        window.addSecondHome = function() {
+            document.getElementById('secondHomeSection').classList.remove('hidden');
+            document.getElementById('addSecondHomeBtn').classList.add('hidden');
+        };
+
+        window.removeSecondHome = function() {
+            document.getElementById('secondHomeSection').classList.add('hidden');
+            document.getElementById('addSecondHomeBtn').classList.remove('hidden');
+            document.getElementById('secondHomeMortgageName').value = '';
+            document.getElementById('secondHomeMortgageAddress').value = '';
+            document.getElementById('secondHomeMortgageCity').value = '';
+            document.getElementById('secondHomeMortgageProv').value = 'ON';
+            document.getElementById('secondHomeMortgagePostal').value = '';
+        };
+
+        window.exportPowerBrokerJSON = function() {
+            try {
+                const getFieldValue = (id) => {
+                    const el = document.getElementById(id);
+                    return el ? el.value : '';
+                };
+
+                const autoArray = [{
+                    "previousInsurerName": getFieldValue('prevInsurerName'),
+                    "previousInsurerCode": getFieldValue('prevInsurerCode'),
+                    "priorPolicyStatusName": getFieldValue('priorStatusName'),
+                    "priorPolicyStatusCode": getFieldValue('priorStatusCode'),
+                    "previousAutoPolicyNumber": getFieldValue('prevAutoPolicyNumber'),
+                    "expiryDate": getFieldValue('prevAutoExpiryDate'),
+                    "continuouslyInsuredSince": getFieldValue('prevAutoContinuouslyInsuredSince'),
+                    "winterTires": getFieldValue('winterTires'),
+                    "noOfCarsInHousehold": getFieldValue('noOfCarsInHousehold'),
+                    "financeCompanyName": getFieldValue('financeName'),
+                    "financeCompanyAddress": getFieldValue('financeAddress'),
+                    "financeCompanyCity": getFieldValue('financeCity'),
+                    "financeCompanyProvince": getFieldValue('financeProv'),
+                    "financeCompanyPostalCode": getFieldValue('financePostal')
+                }];
+
+                // Add second automobile if visible
+                if (document.getElementById('secondAutoSection') && !document.getElementById('secondAutoSection').classList.contains('hidden')) {
+                    autoArray.push({
+                        "winterTires": getFieldValue('secondAutoWinterTires')
+                    });
+                }
+
+                const homeArray = [{
+                    "previousInsurerName": getFieldValue('prevHomeInsurerName'),
+                    "previousInsurerCode": getFieldValue('prevHomeInsurerCode'),
+                    "priorPolicyStatusName": getFieldValue('priorHomeStatusName'),
+                    "priorPolicyStatusCode": getFieldValue('priorHomeStatusCode'),
+                    "previousHomePolicyNumber": getFieldValue('prevHomePolicyNumber'),
+                    "expiryDate": getFieldValue('prevHomeExpiryDate'),
+                    "continuouslyInsuredFrom": getFieldValue('continuouslyInsuredFrom'),
+                    "continuouslyInsuredSince": getFieldValue('continuouslyInsuredSince'),
+                    "mortgageCompanyName": getFieldValue('mortgageName'),
+                    "mortgageCompanyAddress": getFieldValue('mortgageAddress'),
+                    "mortgageCompanyCity": getFieldValue('mortgageCity'),
+                    "mortgageCompanyProvince": getFieldValue('mortgageProv'),
+                    "mortgageCompanyPostalCode": getFieldValue('mortgagePostal'),
+                    "applicant1Name": getFieldValue('applicant1Name'),
+                    "applicant1Occupation": getFieldValue('applicant1Occup'),
+                    "applicant1OccupationCode": getFieldValue('applicant1OccupCode'),
+                    "applicant1YearsEmployed": getFieldValue('applicant1YrsEmp'),
+                    "applicant1DateOfBirth": getFieldValue('applicant1DOB'),
+                    "applicant1Sex": getFieldValue('applicant1Sex'),
+                    "applicant1MaritalStatus": getFieldValue('applicant1Marital'),
+                    "applicant2Name": getFieldValue('applicant2Name'),
+                    "applicant2Occupation": getFieldValue('applicant2Occup'),
+                    "applicant2OccupationCode": getFieldValue('applicant2OccupCode'),
+                    "applicant2YearsEmployed": getFieldValue('applicant2YrsEmp'),
+                    "applicant2DateOfBirth": getFieldValue('applicant2DOB'),
+                    "applicant2Sex": getFieldValue('applicant2Sex'),
+                    "applicant2MaritalStatus": getFieldValue('applicant2Marital'),
+                    "homeDeductible": getFieldValue('homeDeductible'),
+                    "waterCoverageDeductible": getFieldValue('waterDeductible'),
+                    "notes": getFieldValue('homeNotesField'),
+                    "brokerCell": "4374228353",
+                    "brokerEmail": "eldho.george@kmibrokers.com"
+                }];
+
+                // Add second home if visible
+                if (document.getElementById('secondHomeSection') && !document.getElementById('secondHomeSection').classList.contains('hidden')) {
+                    homeArray.push({
+                        "mortgageCompanyName": getFieldValue('secondHomeMortgageName'),
+                        "mortgageCompanyAddress": getFieldValue('secondHomeMortgageAddress'),
+                        "mortgageCompanyCity": getFieldValue('secondHomeMortgageCity'),
+                        "mortgageCompanyProvince": getFieldValue('secondHomeMortgageProv'),
+                        "mortgageCompanyPostalCode": getFieldValue('secondHomeMortgagePostal')
+                    });
+                }
+
+                const powerBrokerData = {
+                    "auto": autoArray,
+                    "home": homeArray
+                };
+
+                // Generate filename with timestamp
+                const now = new Date();
+                const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `powerbroker-data-${timestamp}.json`;
+
+                // Convert to pretty JSON string
+                const jsonString = JSON.stringify(powerBrokerData, null, 2).replace(/\n/g, '\r\n');
+
+                // Create blob and download
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+
+                // Cleanup
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                console.log('✅ PowerBroker JSON Exported:', filename);
+            } catch (err) {
+                console.error('Export Error:', err);
+                alert('Failed to export PowerBroker data. Please try again.');
+            }
+        };
+    </script>
+</body>
+</html>

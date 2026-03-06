@@ -279,67 +279,122 @@
 
                 <div id="tab-content-auto" class="px-8 py-6 space-y-8 max-w-5xl mx-auto pb-20 fade-in pr-16 hud__content">
                     
-                    <!-- CARD A: HEADER -->
+                    <!-- CARD 1: PERSONAL INFORMATION -->
                     <section id="section-personal" class="hud__section scroll-mt-24" data-scope="driver">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6">
-                            <div class="flex items-center gap-5">
-                                <!-- Avatar -->
-                                <div id="avatar-circle" class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-lg font-bold shrink-0 select-none">
-                                    --
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-blue-700">1.</span>
+                                    <h3 class="text-sm font-bold text-blue-800">Personal Information</h3>
                                 </div>
-                                <!-- Name + Status + Address -->
-                                <div class="flex-1 min-w-0">
-                                    <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">First Name</label>
-                                            <input type="text" data-key="personalFirstName" class="hud__input hud__input--light hud__input--required w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-base font-semibold text-slate-800 pb-1" placeholder="First Name">
+                            </div>
+                            <div class="p-5 space-y-4">
+                                
+                                <!-- Name Fields -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Name</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">First</label>
+                                            <input type="text" data-key="personalFirstName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="First Name">
                                         </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Middle Name</label>
-                                            <input type="text" data-key="personalMiddleName" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-base font-semibold text-slate-800 pb-1" placeholder="Middle">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Middle</label>
+                                            <input type="text" data-key="personalMiddleName" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Middle">
                                         </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Last Name</label>
-                                            <input type="text" data-key="personalLastName" class="hud__input hud__input--light hud__input--required w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-base font-semibold text-slate-800 pb-1" placeholder="Last Name">
-                                        </div>
-                                        <div class="text-right">
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Policy Status</label>
-                                            <span id="policy-status-badge" class="inline-block text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">Active Profile</span>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Last</label>
+                                            <input type="text" data-key="personalLastName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Last Name">
                                         </div>
                                     </div>
-                                    <!-- Address Row + Co-Insured -->
-                                    <div class="flex items-end gap-4 mt-4">
-                                        <div class="flex-1 grid grid-cols-3 gap-4">
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Street Address</label>
-                                                <div class="flex items-center gap-2">
-                                                    <i class="fa-solid fa-location-dot text-slate-300 text-xs"></i>
-                                                    <input type="text" data-key="personalAddress" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="Enter Address">
-                                                </div>
+                                </div>
+
+                                <!-- Address Fields -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Address</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Street Address</label>
+                                            <input type="text" data-key="personalAddress" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Enter Address">
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div class="flex flex-col gap-1">
+                                                <label class="text-xs font-medium text-slate-500">City</label>
+                                                <input type="text" data-key="personalCity" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="City">
                                             </div>
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">City</label>
-                                                <input type="text" data-key="personalCity" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="City">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Postal Code</label>
-                                                <input type="text" data-key="personalPostalCode" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="Postal Code">
+                                            <div class="flex flex-col gap-1">
+                                                <label class="text-xs font-medium text-slate-500">Postal Code</label>
+                                                <input type="text" data-key="personalPostalCode" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Postal Code">
                                             </div>
                                         </div>
-                                        <button onclick="document.getElementById('co-insured-container').classList.toggle('hidden')" class="shrink-0 text-xs font-semibold text-slate-600 bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors">
-                                            <i class="fa-solid fa-user-plus text-[10px]"></i> Add Co-Insured
-                                        </button>
                                     </div>
-                                    <!-- Co-Insured field (hidden by default) -->
-                                    <div id="co-insured-container" class="hidden mt-3">
-                                        <div class="flex items-end gap-3">
-                                            <div class="flex-1">
-                                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Co-Insured Name</label>
-                                                <input type="text" data-key="coInsuredName" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="Co-Insured Full Name">
-                                            </div>
-                                            <button onclick="document.getElementById('co-insured-container').classList.add('hidden')" class="text-slate-400 hover:text-rose-500 transition-colors text-xs pb-1">
-                                                <i class="fa-solid fa-xmark"></i>
-                                            </button>
+                                </div>
+
+                                <!-- Personal Details -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Personal Details</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Date of Birth</label>
+                                            <input type="text" data-key="personalDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Marital Status</label>
+                                            <input type="text" data-key="personalMaritalStatus" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Status">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Gender</label>
+                                            <select data-key="personalGender" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors cursor-pointer">
+                                                <option value="">Select</option>
+                                                <option value="M">M</option>
+                                                <option value="F">F</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Information -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Contact Information</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Mobile</label>
+                                            <input type="text" data-key="personalMobile" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="(---) --- ----">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Home Phone</label>
+                                            <input type="text" data-key="personalHomePhone" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="(---) --- ----">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Email</label>
+                                            <input type="email" data-key="personalEmail" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="email@example.com">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- CARD 2: DRIVER & LICENSING -->
+                    <section id="section-licensing" class="hud__section scroll-mt-24" data-scope="driver">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-blue-700">2.</span>
+                                    <h3 class="text-sm font-bold text-blue-800">Driver & Licensing</h3>
+                                </div>
+                            </div>
+                            <div class="p-5">
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Renewal Date</label>
+                                            <input type="text" data-key="licRenewal" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Licence #</label>
+                                            <input type="text" data-key="licNumber" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="L#######">
                                         </div>
                                     </div>
                                 </div>
@@ -347,130 +402,77 @@
                         </div>
                     </section>
 
-                    <!-- CARD B: PERSONAL & CONTACT | LICENCE & MVR -->
-                    <section id="section-licensing" class="hud__section scroll-mt-24" data-scope="driver">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- Left: Personal & Contact -->
-                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div class="px-5 py-4 border-b border-slate-100">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fa-solid fa-user text-slate-400 text-sm"></i>
-                                        <h3 class="text-sm font-bold text-slate-700">Personal & Contact</h3>
-                                    </div>
-                                </div>
-                                <div class="p-5 space-y-5">
-                                    <!-- Row 1: DOB, Gender, Marital Status -->
-                                    <div class="grid grid-cols-3 gap-4">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Date of Birth</label>
-                                            <input type="text" data-key="personalDob" data-mask="date" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-mono text-slate-700 pb-1" placeholder="MM/DD/YYYY">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Gender</label>
-                                            <select data-key="personalGender" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1 cursor-pointer">
-                                                <option value="">Select</option>
-                                                <option value="M">Male</option>
-                                                <option value="F">Female</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Marital Status</label>
-                                            <select data-key="personalMaritalStatus" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1 cursor-pointer">
-                                                <option value="">Select</option>
-                                                <option value="Single">Single</option>
-                                                <option value="Married">Married</option>
-                                                <option value="Common-Law">Common-Law</option>
-                                                <option value="Divorced">Divorced</option>
-                                                <option value="Widowed">Widowed</option>
-                                                <option value="Separated">Separated</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="border-t border-dashed border-slate-100"></div>
-                                    <!-- Row 2: Mobile, Home, Email -->
-                                    <div class="grid grid-cols-3 gap-4">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Mobile Phone</label>
-                                            <input type="text" data-key="personalMobile" data-mask="phone" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-mono text-slate-700 pb-1" placeholder="(---) --- ----">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Home Phone</label>
-                                            <input type="text" data-key="personalHomePhone" data-mask="phone" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-mono text-slate-700 pb-1" placeholder="(---) --- ----">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Email Address</label>
-                                            <input type="email" data-key="personalEmail" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="email@example.com">
-                                        </div>
-                                    </div>
-                                    <div class="border-t border-dashed border-slate-100"></div>
-                                    <!-- Row 3: Renewal Date -->
-                                    <div>
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Current Policy Renewal Date</label>
-                                        <input type="text" data-key="licRenewal" data-mask="date" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-mono text-slate-700 pb-1 max-w-[200px]" placeholder="MM/DD/YYYY">
-                                    </div>
+                    <!-- CARD 3: MVR INFO -->
+                    <section id="section-mvr" class="hud__section scroll-mt-24" data-scope="driver">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-blue-700">3.</span>
+                                    <h3 class="text-sm font-bold text-blue-800">MVR Info</h3>
                                 </div>
                             </div>
+                            <div class="p-5 space-y-4">
+                                
+                                <!-- Dates Section -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Dates</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Expiry Date</label>
+                                            <input type="text" data-key="mvrExpiry" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Birthdate</label>
+                                            <input type="text" data-key="mvrDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Issue Date</label>
+                                            <input type="text" data-key="mvrIssue" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <!-- Right: Licence & MVR -->
-                            <div id="section-mvr" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fa-solid fa-id-card text-slate-400 text-sm"></i>
-                                        <h3 class="text-sm font-bold text-slate-700">Licence & MVR</h3>
+                                <!-- Licence Details Section -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Licence Details</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Status</label>
+                                            <input type="text" data-key="mvrStatus" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Valid">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Demerit Points</label>
+                                            <input type="number" data-key="mvrDemerits" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="0">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Class</label>
+                                            <input type="text" data-key="mvrClass" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="G">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Conditions</label>
+                                            <input type="text" data-key="mvrConditions" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="None">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Speed Over</label>
+                                            <input type="text" data-key="mvrSpeed" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Enter">
+                                        </div>
                                     </div>
-                                    <span id="mvr-status-badge" class="text-[10px] font-bold px-2.5 py-1 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase">Valid</span>
                                 </div>
-                                <div class="p-5 space-y-5">
-                                    <!-- Row 1: Licence Number + Expiry -->
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Licence Number</label>
-                                            <input type="text" data-key="licNumber" class="hud__input hud__input--light w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none text-sm font-mono text-slate-700" placeholder="L#######">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Expiry Date</label>
-                                            <input type="text" data-key="mvrExpiry" data-mask="date" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-mono text-slate-700 pb-1" placeholder="MM/DD/YYYY">
-                                        </div>
+                            
+                                <!-- Convictions Section -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Convictions</h4>
+                                    <div class="flex flex-col gap-1 mb-4" style="max-width: 150px;">
+                                        <label class="text-xs font-medium text-slate-500"># Convictions</label>
+                                        <input type="number" data-key="mvrConvictionsCount" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-slate-50" placeholder="0" readonly>
                                     </div>
-                                    <div class="border-t border-dashed border-slate-100"></div>
-                                    <!-- Row 2: Class, Conditions, Demerits, Speed -->
-                                    <div class="grid grid-cols-4 gap-4">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Class</label>
-                                            <input type="text" data-key="mvrClass" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm font-semibold text-slate-700 pb-1" placeholder="G">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Conditions</label>
-                                            <input type="text" data-key="mvrConditions" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="None">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Demerit Points</label>
-                                            <input type="number" data-key="mvrDemerits" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1" placeholder="0">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Speed Over</label>
-                                            <input type="text" data-key="mvrSpeed" class="hud__input hud__input--light w-full bg-transparent border-b border-slate-200 hover:border-slate-300 focus:border-slate-500 focus:outline-none transition-colors text-sm text-slate-700 pb-1 italic" placeholder="Enter">
-                                        </div>
+                                    
+                                    <!-- Convictions List Container -->
+                                    <div id="mvr-convictions-container" class="space-y-2">
+                                        <!-- Convictions will be populated here dynamically -->
                                     </div>
-                                    <div class="border-t border-dashed border-slate-100"></div>
-                                    <!-- Row 3: Convictions -->
-                                    <div>
-                                        <div class="flex items-center justify-between mb-2">
-                                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Convictions (#: <span id="conviction-count-display">0</span>)</label>
-                                        </div>
-                                        <input type="number" data-key="mvrConvictionsCount" class="hud__input hidden" placeholder="0" readonly>
-                                        <div id="mvr-convictions-container" class="space-y-2">
-                                            <!-- Convictions will be populated here dynamically -->
-                                        </div>
-                                        <div id="no-convictions-badge" class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg mt-1">
-                                            <i class="fa-solid fa-circle-check"></i> No convictions found
-                                        </div>
-                                    </div>
-                                    <!-- Hidden inputs for preserved data -->
-                                    <input type="hidden" data-key="mvrDob" class="hud__input">
-                                    <input type="hidden" data-key="mvrIssue" class="hud__input">
-                                    <input type="hidden" data-key="mvrStatus" class="hud__input">
                                 </div>
+
                             </div>
                         </div>
                     </section>
@@ -658,9 +660,13 @@
                     <i class="fa-solid fa-user"></i>
                     <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Personal Info</span>
                 </a>
-                <a href="#section-licensing" class="hud__nav-item group relative" aria-label="Details">
+                <a href="#section-licensing" class="hud__nav-item group relative" aria-label="Licensing">
                     <i class="fa-solid fa-id-card"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Details</span>
+                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Licensing</span>
+                </a>
+                <a href="#section-mvr" class="hud__nav-item group relative" aria-label="MVR Info">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">MVR Info</span>
                 </a>
                 <a href="#section-vehicles" class="hud__nav-item group relative" aria-label="Vehicles">
                     <i class="fa-solid fa-car"></i>
@@ -977,7 +983,7 @@
                     id: id,
                     mainName: '', mainRel: 'Spouse',
                     personalFirstName: '', personalMiddleName: '', personalLastName: '',
-                    personalName: '', personalAddress: '', personalCity: '', personalPostalCode: '', personalDob: '', personalMaritalStatus: '', personalGender: '', personalMobile: '', personalHomePhone: '', personalEmail: '', coInsuredName: '',
+                    personalName: '', personalAddress: '', personalCity: '', personalPostalCode: '', personalDob: '', personalMaritalStatus: '', personalGender: '', personalMobile: '', personalHomePhone: '', personalEmail: '',
                     licRenewal: '', licNumber: '',
                     mvrExpiry: '', mvrDob: '', mvrIssue: '', mvrStatus: '', mvrDemerits: '', mvrClass: '', mvrConditions: '', mvrConvictions: '', mvrSpeed: '',
                     drvName: '', drvDob: '', drvContIns: '', drvInsSince: '',
@@ -1361,11 +1367,6 @@
                 if (target.closest('.hud__section[data-scope="driver"]')) {
                     Binder.syncFromDom('driver', currentDriver, target);
                     
-                    // Live-update avatar when name changes
-                    if (target.dataset.key === 'personalFirstName' || target.dataset.key === 'personalLastName') {
-                        this.updateAvatarInitials();
-                    }
-
                     // ✅ Sync city and postal to originalLead for first driver (used by Final Review)
                     if (target.dataset.key === 'personalCity') {
                         console.log(`📍 City entered: "${target.value}"`);
@@ -1524,54 +1525,6 @@
                 this.renderSelectors(); 
                 this.refreshUI(); 
             },
-
-            // ─── Card A/B UI Helpers ───────────────────────────────
-            updateAvatarInitials: function() {
-                const el = document.getElementById('avatar-circle');
-                if (!el) return;
-                const f = (document.querySelector('[data-key="personalFirstName"]')?.value || '').trim();
-                const l = (document.querySelector('[data-key="personalLastName"]')?.value || '').trim();
-                el.textContent = (f && l) ? (f[0] + l[0]).toUpperCase() : (f ? f[0].toUpperCase() : '--');
-            },
-
-            updatePolicyStatusBadge: function() {
-                const el = document.getElementById('policy-status-badge');
-                if (!el) return;
-                const drv = this.drivers[this.currDrvIdx];
-                const status = drv?.allPolicies?.[0]?.status || '';
-                const label = status || 'Active Profile';
-                const isActive = !status || status.toLowerCase().includes('activ') || status.toLowerCase().includes('in-force');
-                el.textContent = label;
-                el.className = 'inline-block text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap ' +
-                    (isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200');
-            },
-
-            updateMvrStatusBadge: function() {
-                const el = document.getElementById('mvr-status-badge');
-                if (!el) return;
-                const val = (document.querySelector('[data-key="mvrStatus"]')?.value || '').trim();
-                const label = val || 'Valid';
-                const isValid = !val || val.toLowerCase().includes('valid') || val.toLowerCase().includes('uncancel');
-                el.textContent = label;
-                el.className = 'text-[10px] font-bold px-2.5 py-1 rounded border uppercase ' +
-                    (isValid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200');
-            },
-
-            updateConvictionCountDisplay: function() {
-                const el = document.getElementById('conviction-count-display');
-                const noBadge = document.getElementById('no-convictions-badge');
-                const count = parseInt(document.querySelector('[data-key="mvrConvictionsCount"]')?.value) || 0;
-                if (el) el.textContent = count;
-                if (noBadge) noBadge.style.display = count > 0 ? 'none' : 'inline-flex';
-            },
-
-            updateCardABDisplays: function() {
-                this.updateAvatarInitials();
-                this.updatePolicyStatusBadge();
-                this.updateMvrStatusBadge();
-                this.updateConvictionCountDisplay();
-            },
-            // ─── End Card A/B UI Helpers ───────────────────────────
 
             switchDriver: function(idx) {
                 // Save current driver's data before switching
@@ -1775,7 +1728,6 @@
 
                 this.updateLicenceGaps();
                 this.updateLicenceTimelineForClass();
-                this.updateCardABDisplays();
                 // Old single gap calculation is deprecated - using renderGapSections instead
                 setTimeout(() => {
                     console.log('[DEPRECATED] Old calcInsuranceGap logic removed - using renderGapSections instead');
@@ -2972,9 +2924,8 @@
                 
                 // Handle no convictions case
                 if (!convictions || convictions.length === 0) {
-                    container.innerHTML = '';
+                    container.innerHTML = '<div class="text-xs text-green-600 font-medium py-2 px-3 bg-green-50 rounded border border-green-200">✓ No convictions found</div>';
                     console.log('No convictions to render');
-                    this.updateConvictionCountDisplay();
                     return;
                 }
                 
@@ -3128,7 +3079,6 @@
                 }, 100);
                 
                 console.log(`✓ Rendered ${convictions.length} conviction(s) with full descriptions`);
-                this.updateConvictionCountDisplay();
             },
 
             // Licence Calculation Logic
