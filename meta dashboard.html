@@ -2245,13 +2245,45 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_type: eventType })
                 })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        // HTTP error - parse error message
+                        return res.json().then(err => {
+                            throw new Error(err.error || `HTTP ${res.status}: ${res.statusText}`);
+                        });
+                    }
+                    return res.json();
+                })
                 .then(result => {
+                    // Check if backend returned success: false
+                    if (!result.success) {
+                        throw new Error(result.error || 'Unknown error from backend');
+                    }
+                    
                     console.log('✅ FACEBOOK SYNC CONFIRMED');
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.log(`✨ Lead successfully sent to Meta Event Manager`);
                     console.log(`🔗 API Response:`, result);
                     console.log(`📊 Meta Response Details:`, result.meta_response);
+                    
+                    // Check if Meta actually received the events
+                    const eventsReceived = result.meta_response?.events_received || 0;
+                    const fbTraceId = result.meta_response?.fbtrace_id || 'N/A';
+                    
+                    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                    console.log(`📈 META API STATUS:`);
+                    console.log(`   Events Received: ${eventsReceived}`);
+                    console.log(`   FB Trace ID: ${fbTraceId}`);
+                    console.log(`   Messages:`, result.meta_response?.messages || []);
+                    
+                    if (eventsReceived === 0) {
+                        console.warn(`⚠️ WARNING: Meta returned events_received = 0`);
+                        console.warn(`   This means Meta did NOT accept the event`);
+                        console.warn(`   Check the messages above for validation errors`);
+                    } else {
+                        console.log(`   ✅ Meta confirmed receiving ${eventsReceived} event(s)`);
+                    }
+                    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
                     
                     // Show all the data that was sent to Meta
                     if (result.data_sent_to_meta) {
@@ -2282,6 +2314,15 @@
                     timestampEl.textContent = `Sent: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
                     timestampEl.style.opacity = '1';
                     
+                    // Show warning if Meta didn't receive the event
+                    if (eventsReceived === 0) {
+                        btn.className = "action-sync w-full h-7 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded text-[9px] font-bold flex items-center justify-center gap-1";
+                        btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle pointer-events-none"></i> Sent (0 received)';
+                        this.showToast(`⚠️ Sent to Meta but validation failed (events_received=0). Check console for details.`, 'warning');
+                        btn.disabled = false;
+                        return; // Don't show success toast
+                    }
+                    
                     // Show comprehensive confirmation toast
                     this.showToast(`✅ "${name}" synced to Meta Event Manager`, 'success');
                     
@@ -2295,8 +2336,17 @@
                         <div>Phone: <span class="text-blue-300">${phone}</span></div>
                         <div>Status: <span class="text-emerald-400">Sent to Event Manager</span></div>
                         <div class="text-slate-400 mt-2">${new Date().toLocaleString()}</div>
-                        <a href="https://business.facebook.com/events_manager2" target="_blank" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white text-center py-1.5 rounded text-[9px] font-bold transition-colors">
-                            🔍 Verify in Events Manager →
+                        <div class="bg-yellow-900 border border-yellow-600 rounded px-2 py-1.5 mt-2">
+                            <div class="text-yellow-300 font-bold text-[9px] mb-1">📍 Where to check:</div>
+                            <div class="text-yellow-100 text-[8px]">
+                                1. Events Manager → Events<br>
+                                2. NOT in "Test Events"<br>
+                                3. Filter by "Lead" event type<br>
+                                4. May take 5-10 min to appear
+                            </div>
+                        </div>
+                        <a href="https://business.facebook.com/events_manager2/list/pixel/${result.meta_response?.pixel_id || ''}/overview" target="_blank" class="block mt-2 bg-blue-600 hover:bg-blue-700 text-white text-center py-1.5 rounded text-[9px] font-bold transition-colors">
+                            🔍 Open Events Manager →
                         </a>
                     `;
                     document.body.appendChild(detailToast);
@@ -2304,20 +2354,26 @@
                         detailToast.style.opacity = '0';
                         detailToast.style.transition = 'opacity 0.3s';
                         setTimeout(() => detailToast.remove(), 300);
-                    }, 5000);
+                    }, 8000);
                 })
                 .catch(error => {
                     console.error('❌ FACEBOOK SYNC FAILED');
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.error(`Error syncing lead ${leadId}:`, error);
+                    console.error(`Error syncing lead ${leadId}:`, error.message || error);
                     console.log(`Lead: ${name}`);
                     console.log(`Email: ${email}`);
                     console.log(`Phone: ${phone}`);
+                    console.log(`Status: ${status}`);
+                    console.log(`Event Type: ${eventType}`);
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     btn.className = "action-sync w-full h-7 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[9px] font-bold flex items-center justify-center gap-1";
                     btn.innerHTML = '<i class="fa-solid fa-exclamation"></i> Failed';
-                    this.showToast('❌ Failed to sync to Meta', 'error');
+                    
+                    // Show detailed error message
+                    const errorMsg = error.message || error.toString();
+                    this.showToast(`❌ Meta Sync Failed: ${errorMsg}`, 'error');
+                    
                     btn.disabled = false;
                 });
             }
@@ -2449,12 +2505,47 @@
 
             showToast(msg, type) {
                 const el = document.createElement('div');
-                el.className = "bg-slate-800 text-white px-4 py-3 rounded-lg shadow-2xl text-xs font-bold flex items-center gap-3 toast-enter pointer-events-auto border border-slate-700";
-                const isGoogle = msg.includes('Google');
-                const icon = isGoogle ? 'fa-brands fa-google' : 'fa-brands fa-meta';
-                el.innerHTML = `<i class="${icon} text-blue-400"></i> ${msg}`;
+                
+                // Define toast styles based on type
+                const styles = {
+                    success: {
+                        bg: 'bg-emerald-800',
+                        border: 'border-emerald-600',
+                        icon: 'fa-solid fa-check-circle',
+                        iconColor: 'text-emerald-400'
+                    },
+                    error: {
+                        bg: 'bg-rose-800',
+                        border: 'border-rose-600',
+                        icon: 'fa-solid fa-exclamation-circle',
+                        iconColor: 'text-rose-400'
+                    },
+                    warning: {
+                        bg: 'bg-yellow-800',
+                        border: 'border-yellow-600',
+                        icon: 'fa-solid fa-exclamation-triangle',
+                        iconColor: 'text-yellow-400'
+                    }
+                };
+                
+                // Default to success if type not specified
+                const style = styles[type] || styles.success;
+                
+                // Special icon for Google-related messages
+                let icon = style.icon;
+                let iconColor = style.iconColor;
+                if (msg.includes('Google')) {
+                    icon = 'fa-brands fa-google';
+                    iconColor = 'text-blue-400';
+                } else if (msg.includes('Meta') || msg.includes('Facebook')) {
+                    icon = 'fa-brands fa-meta';
+                    iconColor = 'text-blue-400';
+                }
+                
+                el.className = `${style.bg} text-white px-4 py-3 rounded-lg shadow-2xl text-xs font-bold flex items-center gap-3 toast-enter pointer-events-auto border ${style.border}`;
+                el.innerHTML = `<i class="${icon} ${iconColor}"></i> ${msg}`;
                 this.dom.toastContainer.appendChild(el);
-                setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+                setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, type === 'warning' ? 5000 : 3000);
             }
         }
 
