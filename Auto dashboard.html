@@ -1141,8 +1141,6 @@
                                     city: this.drivers[0].personalCity || '',
                                     postal: this.drivers[0].personalPostalCode || ''
                                 };
-                                // Persist so Powerbroker/Final Review can read it without going through a save
-                                localStorage.setItem('autoDashboardOriginalLead', JSON.stringify(this.originalLead));
                                 
                                 console.log('✅ Restored drivers from database');
                                 this.renderSelectors();
@@ -1212,8 +1210,6 @@
                     email: email || ''
                 };
                 console.log('💾 Stored original lead:', this.originalLead);
-                // Immediately persist to localStorage so Powerbroker/other pages can read it
-                localStorage.setItem('autoDashboardOriginalLead', JSON.stringify(this.originalLead));
                 
                 // Populate driver object with URL params BEFORE refreshUI
                 const drv = this.drivers[0];
