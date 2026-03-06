@@ -1768,12 +1768,24 @@ W01,"Writer, Publisher"`;
 
         // Init: connect to lead, load data, attach auto-save
         document.addEventListener('DOMContentLoaded', function() {
-            // Get lead email
+            // Get lead email — check autoDashboardOriginalLead first, fallback to autoDashboardLeadFromMeta
             try {
                 const stored = localStorage.getItem('autoDashboardOriginalLead');
                 if (stored) {
                     const lead = JSON.parse(stored);
                     pbCurrentEmail = (lead.email || '').trim().toLowerCase();
+                }
+                // Fallback: use lead set by Meta Dashboard if Auto Dashboard hasn't been visited yet
+                if (!pbCurrentEmail) {
+                    const metaStored = localStorage.getItem('autoDashboardLeadFromMeta');
+                    if (metaStored) {
+                        const metaLead = JSON.parse(metaStored);
+                        pbCurrentEmail = (metaLead.email || '').trim().toLowerCase();
+                        // Also persist it as autoDashboardOriginalLead for consistency
+                        if (pbCurrentEmail) {
+                            localStorage.setItem('autoDashboardOriginalLead', JSON.stringify(metaLead));
+                        }
+                    }
                 }
             } catch (e) { console.warn('PB: localStorage read error', e); }
 
