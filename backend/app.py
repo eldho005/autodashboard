@@ -774,8 +774,8 @@ def send_event_to_meta(lead_id, event_type, event_data):
         }
         
         # Add event-specific context
-        if event_type == 'QualifiedLead':
-            custom_data['lead_status'] = 'qualified'
+        if event_type == 'Lead':
+            custom_data['lead_status'] = 'qualified'  # Only qualified leads are synced
             license_year = event_data.get('license_year', '')
             if license_year:
                 custom_data['license_years'] = 2026 - int(license_year) if license_year.isdigit() else None
@@ -1396,9 +1396,9 @@ def sync_lead_event(lead_id):
         # Auto-detect event type based on lead status if not provided
         if not event_type:
             if lead.get('is_auto_qualified'):
-                event_type = 'QualifiedLead'  # Qualified = 5+ years experience
+                event_type = 'Lead'  # Standard Meta event (qualified lead, 5+ years experience)
             else:
-                # Don't send events for unqualified leads - user feedback: only send QualifiedLead and Purchase
+                # Don't send events for unqualified leads
                 return jsonify({
                     'success': False, 
                     'error': 'Lead is not qualified (< 5 years driving experience). Only qualified leads and purchases are synced to Meta.',
