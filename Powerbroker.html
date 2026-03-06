@@ -69,6 +69,18 @@
                     <!-- Current Page -->
                     <span class="text-xs font-semibold text-slate-800">PowerBroker</span>
                     <div class="h-4 w-px bg-slate-300"></div>
+                    <!-- Lead Search -->
+                    <div class="relative">
+                        <div class="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-300 rounded-md hover:border-slate-400 transition-colors">
+                            <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
+                            <input type="text" id="pb-lead-search" placeholder="Select lead..."
+                                class="text-xs text-slate-700 bg-transparent outline-none w-36"
+                                oninput="pbHandleSearch(this.value)"
+                                onkeydown="pbHandleSearchKey(event)"
+                                onblur="pbHandleSearchBlur()" />
+                        </div>
+                        <div id="pb-search-results" class="hidden absolute top-full right-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"></div>
+                    </div>
                     <!-- Save Indicator + Lead Badge -->
                     <span id="pb-save-indicator" class="hidden text-xs font-medium flex items-center gap-1"></span>
                     <span id="pb-lead-badge" class="hidden text-xs text-slate-400 font-mono max-w-[130px] truncate" title="Connected lead"></span>
@@ -1542,6 +1554,115 @@ W01,"Writer, Publisher"`;
         let pbSaveTimeout = null;
         let pbCurrentEmail = null;
 
+        function pbEscape(str) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        async function pbHandleSearch(val) {
+            const resultsDiv = document.getElementById('pb-search-results');
+            if (!val || val.trim().length === 0) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+            try {
+                const response = await fetch(`${window.location.origin}/api/leads`);
+                if (!response.ok) return;
+                const result = await response.json();
+                if (result.data && Array.isArray(result.data)) {
+                    const searchTerm = val.toLowerCase().trim();
+                    const matches = result.data.filter(lead =>
+                        (lead.name || '').toLowerCase().includes(searchTerm) ||
+                        (lead.email || '').toLowerCase().includes(searchTerm) ||
+                        (lead.phone || '').toLowerCase().includes(searchTerm)
+                    );
+                    if (matches.length > 0) {
+                        resultsDiv.innerHTML = matches.map(lead => `
+                            <div class="pb-search-item px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
+                                 data-name="${pbEscape(lead.name || '')}"
+                                 data-email="${pbEscape(lead.email || '')}"
+                                 data-phone="${pbEscape(lead.phone || '')}"
+                                 data-id="${pbEscape(lead.id || '')}">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-800">${pbEscape(lead.name || 'No Name')}</div>
+                                        <div class="text-xs text-slate-500">${pbEscape(lead.email || 'No email')}</div>
+                                    </div>
+                                    <div class="text-xs font-mono text-slate-600">${pbEscape(lead.phone || '')}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                        setTimeout(() => {
+                            document.querySelectorAll('.pb-search-item').forEach(item => {
+                                item.addEventListener('click', () => {
+                                    pbSelectLead(item.dataset.name, item.dataset.email, item.dataset.phone, item.dataset.id);
+                                });
+                            });
+                        }, 0);
+                        resultsDiv.classList.remove('hidden');
+                    } else {
+                        resultsDiv.innerHTML = '<div class="px-4 py-3 text-xs text-slate-500 text-center">No matching leads found</div>';
+                        resultsDiv.classList.remove('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error('PB search error:', e);
+                resultsDiv.innerHTML = '<div class="px-4 py-3 text-xs text-rose-500 text-center">Error loading leads</div>';
+                resultsDiv.classList.remove('hidden');
+            }
+        }
+
+        function pbHandleSearchKey(event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const resultsDiv = document.getElementById('pb-search-results');
+            const first = resultsDiv ? resultsDiv.querySelector('.pb-search-item') : null;
+            if (first) pbSelectLead(first.dataset.name, first.dataset.email, first.dataset.phone, first.dataset.id);
+        }
+
+        function pbHandleSearchBlur() {
+            setTimeout(() => {
+                const r = document.getElementById('pb-search-results');
+                if (r) r.classList.add('hidden');
+            }, 200);
+        }
+
+        async function pbSelectLead(name, email, phone, leadId) {
+            // Update search input
+            const searchInput = document.getElementById('pb-lead-search');
+            if (searchInput) searchInput.value = name;
+
+            // Set current email
+            pbCurrentEmail = (email || '').trim().toLowerCase();
+
+            // Persist to localStorage so other pages stay in sync
+            localStorage.setItem('autoDashboardOriginalLead', JSON.stringify({ name, email, phone, leadId }));
+
+            // Update lead badge
+            const badge = document.getElementById('pb-lead-badge');
+            if (badge) {
+                badge.textContent = email || name;
+                badge.classList.remove('hidden');
+            }
+
+            // Populate Applicant 1 Name if not already filled
+            const app1 = document.getElementById('applicant1Name');
+            if (app1 && !app1.value.trim()) {
+                app1.value = name;
+                app1.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            // Hide dropdown
+            const resultsDiv = document.getElementById('pb-search-results');
+            if (resultsDiv) resultsDiv.classList.add('hidden');
+
+            // Load saved PowerBroker data for this lead
+            await pbLoadFromBackend(pbCurrentEmail);
+
+            console.log('✅ [PB] Lead selected:', name, email);
+        }
+
         function pbGetField(id) {
             const el = document.getElementById(id);
             if (!el) return '';
@@ -1776,6 +1897,16 @@ W01,"Writer, Publisher"`;
                     pbCurrentEmail = (lead.email || '').trim().toLowerCase();
                 }
             } catch (e) { console.warn('PB: localStorage read error', e); }
+
+            // Populate search box with lead name (if available)
+            try {
+                const storedLead = localStorage.getItem('autoDashboardOriginalLead');
+                if (storedLead) {
+                    const parsedLead = JSON.parse(storedLead);
+                    const searchInput = document.getElementById('pb-lead-search');
+                    if (searchInput && parsedLead.name) searchInput.value = parsedLead.name;
+                }
+            } catch (e) { /* ignore */ }
 
             // Show lead badge
             const badge = document.getElementById('pb-lead-badge');
