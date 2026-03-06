@@ -84,6 +84,11 @@
                     <!-- Save Indicator + Lead Badge -->
                     <span id="pb-save-indicator" class="hidden text-xs font-medium flex items-center gap-1"></span>
                     <span id="pb-lead-badge" class="hidden text-xs text-slate-400 font-mono max-w-[130px] truncate" title="Connected lead"></span>
+                    <!-- Save Button -->
+                    <button id="pb-save-btn" onclick="pbSaveToBackend()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors shadow-sm">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save</span>
+                    </button>
                     <div class="h-4 w-px bg-slate-300"></div>
                     <!-- Next Page Button -->
                     <a href="property-coverpage-temp.html" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors">
@@ -1551,8 +1556,8 @@ W01,"Writer, Publisher"`;
         // POWERBROKER SAVE / LOAD  (Lead-connected)
         // ==========================================
 
-        let pbSaveTimeout = null;
         let pbCurrentEmail = null;
+        let pbHasUnsavedChanges = false;
 
         function pbEscape(str) {
             const div = document.createElement('div');
@@ -1570,9 +1575,11 @@ W01,"Writer, Publisher"`;
                 const response = await fetch(`${window.location.origin}/api/leads`);
                 if (!response.ok) return;
                 const result = await response.json();
-                if (result.data && Array.isArray(result.data)) {
+                // Backend returns plain array OR {data: [...]} — handle both
+                const leadsArr = Array.isArray(result) ? result : (Array.isArray(result.data) ? result.data : []);
+                if (leadsArr.length > 0) {
                     const searchTerm = val.toLowerCase().trim();
-                    const matches = result.data.filter(lead =>
+                    const matches = leadsArr.filter(lead =>
                         (lead.name || '').toLowerCase().includes(searchTerm) ||
                         (lead.email || '').toLowerCase().includes(searchTerm) ||
                         (lead.phone || '').toLowerCase().includes(searchTerm)
@@ -1657,8 +1664,9 @@ W01,"Writer, Publisher"`;
             const resultsDiv = document.getElementById('pb-search-results');
             if (resultsDiv) resultsDiv.classList.add('hidden');
 
-            // Load saved PowerBroker data for this lead
+            // Load saved PowerBroker data for this lead (resets dirty flag inside)
             await pbLoadFromBackend(pbCurrentEmail);
+            pbHasUnsavedChanges = false;
 
             console.log('✅ [PB] Lead selected:', name, email);
         }
@@ -1825,22 +1833,43 @@ W01,"Writer, Publisher"`;
             }
         }
 
+        function pbMarkDirty() {
+            pbHasUnsavedChanges = true;
+            const el = document.getElementById('pb-save-indicator');
+            if (el) {
+                el.innerHTML = '<i class="fa-solid fa-circle-dot text-amber-500 mr-1"></i><span class="text-amber-600">Unsaved changes</span>';
+                el.classList.remove('hidden');
+            }
+            const btn = document.getElementById('pb-save-btn');
+            if (btn) btn.classList.replace('bg-emerald-600', 'bg-amber-500'), btn.classList.replace('hover:bg-emerald-700', 'hover:bg-amber-600');
+        }
+
         function pbSetSaveStatus(status) {
             const el = document.getElementById('pb-save-indicator');
+            const btn = document.getElementById('pb-save-btn');
             if (!el) return;
             if (status === 'saving') {
                 el.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-500 mr-1"></i><span class="text-amber-600">Saving...</span>';
                 el.classList.remove('hidden');
+                if (btn) btn.disabled = true;
             } else if (status === 'saved') {
+                pbHasUnsavedChanges = false;
                 el.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 mr-1"></i><span class="text-green-600">Saved</span>';
                 el.classList.remove('hidden');
                 setTimeout(() => el.classList.add('hidden'), 3000);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.replace('bg-amber-500', 'bg-emerald-600');
+                    btn.classList.replace('hover:bg-amber-600', 'hover:bg-emerald-700');
+                }
             } else if (status === 'error') {
                 el.innerHTML = '<i class="fa-solid fa-exclamation-circle text-red-500 mr-1"></i><span class="text-red-600">Save failed</span>';
                 el.classList.remove('hidden');
+                if (btn) btn.disabled = false;
             } else if (status === 'no-lead') {
-                el.innerHTML = '<i class="fa-solid fa-unlink text-slate-400 mr-1"></i><span class="text-slate-400">No lead</span>';
+                el.innerHTML = '<i class="fa-solid fa-unlink text-slate-400 mr-1"></i><span class="text-slate-400">Select a lead to save</span>';
                 el.classList.remove('hidden');
+                if (btn) btn.disabled = false;
             }
         }
 
@@ -1867,11 +1896,6 @@ W01,"Writer, Publisher"`;
             }
         }
 
-        function pbTriggerAutoSave() {
-            if (pbSaveTimeout) clearTimeout(pbSaveTimeout);
-            pbSaveTimeout = setTimeout(pbSaveToBackend, 1200);
-        }
-
         async function pbLoadFromBackend(email) {
             try {
                 const resp = await fetch('/api/get-powerbroker/' + encodeURIComponent(email), {
@@ -1880,6 +1904,17 @@ W01,"Writer, Publisher"`;
                 const result = await resp.json();
                 if (result.success && result.data) {
                     pbPopulateData(result.data);
+                    pbHasUnsavedChanges = false;
+                    // Reset indicator after loading
+                    const el = document.getElementById('pb-save-indicator');
+                    if (el) el.classList.add('hidden');
+                    const btn = document.getElementById('pb-save-btn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+                        if (!btn.classList.contains('bg-emerald-600')) btn.classList.add('bg-emerald-600');
+                        if (!btn.classList.contains('hover:bg-emerald-700')) btn.classList.add('hover:bg-emerald-700');
+                    }
                     console.log('✅ [PowerBroker] Loaded saved data');
                 }
             } catch (e) {
@@ -1887,7 +1922,16 @@ W01,"Writer, Publisher"`;
             }
         }
 
-        // Init: connect to lead, load data, attach auto-save
+        // Warn before leaving with unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (pbHasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        // Init: connect to lead, load data, attach dirty tracking
         document.addEventListener('DOMContentLoaded', function() {
             // Get lead email
             try {
@@ -1922,11 +1966,11 @@ W01,"Writer, Publisher"`;
                 pbSetSaveStatus('no-lead');
             }
 
-            // Attach auto-save to all relevant inputs
+            // Attach dirty tracking to all relevant inputs
             document.querySelectorAll('input[id], select[id], textarea[id]').forEach(el => {
                 if (!el.id.startsWith('new') && el.type !== 'button') {
-                    el.addEventListener('input', pbTriggerAutoSave);
-                    el.addEventListener('change', pbTriggerAutoSave);
+                    el.addEventListener('input', pbMarkDirty);
+                    el.addEventListener('change', pbMarkDirty);
                 }
             });
         });
