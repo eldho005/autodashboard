@@ -298,7 +298,7 @@ def get_leads_from_meta():
     3. Falls back to ALL forms on the Meta Page (uses META_PAGE_ID)
     """
     # Known form IDs to always try (hardcoded as guaranteed fallback)
-    KNOWN_FORM_IDS = ['1459691498852435']
+    KNOWN_FORM_IDS = ['1902207150659366', '1459691498852435']
 
     try:
         token = META_PAGE_ACCESS_TOKEN
@@ -774,7 +774,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
         }
         
         # Add event-specific context
-        if event_type == 'Lead':
+        if event_type == 'QualifiedLead':
             custom_data['lead_status'] = 'qualified'  # Only qualified leads are synced
             license_year = event_data.get('license_year', '')
             if license_year:
@@ -782,7 +782,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
         elif event_type == 'Purchase':
             custom_data['policy_type'] = 'auto_insurance'
             custom_data['lead_status'] = 'sold'
-        elif event_type in ['Lead', 'Contact', 'Schedule']:
+        elif event_type in ['Lead', 'QualifiedLead', 'Contact', 'Schedule']:
             # Standard events for lead generation
             custom_data['lead_status'] = 'new'
         
@@ -1396,7 +1396,7 @@ def sync_lead_event(lead_id):
         # Auto-detect event type based on lead status if not provided
         if not event_type:
             if lead.get('is_auto_qualified'):
-                event_type = 'Lead'  # Standard Meta event (qualified lead, 5+ years experience)
+                event_type = 'QualifiedLead'  # Custom Meta event (qualified lead, 5+ years experience)
             else:
                 # Don't send events for unqualified leads
                 return jsonify({
