@@ -19,6 +19,7 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 import json
+import re
 import requests
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -628,7 +629,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
     - AddPaymentInfo: Addition of payment info during checkout
     
     Custom Events:
-    - QualifiedLead: Lead with 5+ years driving experience (insurance-specific)
+    - Qualified: Lead with 5+ years driving experience (maps to QUALIFIED positive stage)
     
     Required Parameters (per Meta's documentation):
     - event_time: Unix timestamp (required)
@@ -636,13 +637,11 @@ def send_event_to_meta(lead_id, event_type, event_data):
     - event_id: Unique ID for deduplication (required)
     - action_source: Where event occurred - 'system_generated' for CRM/offline (required)
     - user_data: Customer information parameters (SHA-256 hashed) (required)
-    - event_source_url: URL where event occurred (required for website, optional for system_generated)
-    - client_user_agent: Browser user agent - do NOT hash (optional, for web events)
     - custom_data: Additional context (value, currency, etc.) (optional)
     
     Args:
         lead_id: Internal lead ID
-        event_type: Event name (e.g., 'QualifiedLead', 'Purchase', 'Contact')
+        event_type: Event name ('Qualified' or 'Purchase')
         event_data: Dict containing:
             - email: Customer email (hashed)
             - phone: Customer phone (hashed)
@@ -650,13 +649,11 @@ def send_event_to_meta(lead_id, event_type, event_data):
             - city: Town/city (hashed)
             - zip: Postcode (hashed)
             - country: Country code (hashed, default: 'ca')
-            - state: Province/county/region (hashed)
-            - date_of_birth: DOB in MM/DD/YYYY or YYYYMMDD format (hashed)
+            - state: Province (hashed, always 'on' for Ontario)
+            - date_of_birth: DOB in YYYYMMDD format (hashed)
             - premium: Transaction value (optional)
             - meta_lead_id: Facebook Lead ID (optional)
             - external_id: External ID for matching (NOT hashed, defaults to lead_id)
-            - event_source_url: Source URL (optional)
-            - client_user_agent: User agent string (NOT hashed)
     
     Returns:
         Meta API response dict with events_received, messages, fbtrace_id
@@ -675,11 +672,39 @@ def send_event_to_meta(lead_id, event_type, event_data):
                 return ''
             # SHA-256 hash
             return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+
+        def hash_city(value):
+            """City: lowercase, remove ALL spaces and punctuation before hashing (Meta requirement)"""
+            if not value:
+                return ''
+            normalized = re.sub(r'[^a-z0-9]', '', str(value).lower().strip())
+            if not normalized:
+                return ''
+            return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+
+        def hash_postal(value):
+            """Postal/zip: lowercase, remove spaces before hashing (Meta requirement)"""
+            if not value:
+                return ''
+            normalized = re.sub(r'\s+', '', str(value).lower().strip())
+            if not normalized:
+                return ''
+            return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
         
         # Extract and hash user data (more fields = better match quality)
         email = event_data.get('email', '')
         phone = event_data.get('phone', '')
         name = event_data.get('name', '')
+
+        # Normalize phone: strip everything except digits, add country code if missing
+        if phone:
+            digits_only = re.sub(r'\D', '', str(phone))
+            if len(digits_only) == 10:  # North American without country code
+                phone = '1' + digits_only
+            elif len(digits_only) == 11 and digits_only.startswith('1'):
+                phone = digits_only
+            else:
+                phone = digits_only  # Use as-is for international
         
         # Parse first and last name
         name_parts = name.split() if name else []
@@ -696,18 +721,18 @@ def send_event_to_meta(lead_id, event_type, event_data):
         # Normalize date of birth to YYYYMMDD format for Meta
         dob_normalized = ''
         if date_of_birth:
-            # Handle MM/DD/YYYY format
-            if '/' in date_of_birth:
+            # Handle YYYY/MM/DD or YYYY-MM-DD (year first)
+            if len(date_of_birth) >= 8 and (date_of_birth[4] in ('/', '-')):
+                dob_normalized = re.sub(r'\D', '', date_of_birth)  # strip separators → YYYYMMDD
+            # Handle MM/DD/YYYY format (month first with slashes)
+            elif '/' in date_of_birth:
                 parts = date_of_birth.split('/')
                 if len(parts) == 3:
                     month, day, year = parts[0], parts[1], parts[2]
                     dob_normalized = f"{year}{month.zfill(2)}{day.zfill(2)}"
-            # Handle YYYY-MM-DD format
-            elif '-' in date_of_birth:
-                dob_normalized = date_of_birth.replace('-', '')
             else:
-                # Already YYYYMMDD format
-                dob_normalized = date_of_birth
+                # Already YYYYMMDD or unknown — use as-is after stripping non-digits
+                dob_normalized = re.sub(r'\D', '', date_of_birth)
         
         meta_lead_id = event_data.get('meta_lead_id', '')
         external_id = event_data.get('external_id', str(lead_id))  # Use lead_id as external_id
@@ -717,10 +742,10 @@ def send_event_to_meta(lead_id, event_type, event_data):
         ph_hash = hash_for_meta(phone)
         fn_hash = hash_for_meta(first_name)
         ln_hash = hash_for_meta(last_name)
-        ct_hash = hash_for_meta(city)
-        zp_hash = hash_for_meta(zip_code)
+        ct_hash = hash_city(city)        # spaces/punctuation removed per Meta spec
+        zp_hash = hash_postal(zip_code)  # spaces removed per Meta spec
         country_hash = hash_for_meta(country)
-        st_hash = hash_for_meta(state)  # State/province/region
+        st_hash = hash_for_meta(state)   # State/province/region
         db_hash = hash_for_meta(dob_normalized)  # Date of birth (YYYYMMDD)
         
         # Build user_data with all available fields
@@ -741,25 +766,12 @@ def send_event_to_meta(lead_id, event_type, event_data):
         if meta_lead_id:
             user_data['lead_id'] = meta_lead_id
         
-        # Add client_user_agent if available (do not hash - per Meta's guidance)
-        client_user_agent = event_data.get('client_user_agent', '')
-        if client_user_agent:
-            user_data['client_user_agent'] = client_user_agent
-        
         # Generate unique event_id for deduplication (Meta uses event_id + event_name for deduplication)
         import time
-        # Event ID prefixes for better tracking
+        # Event ID prefixes
         event_prefix_map = {
-            'QualifiedLead': 'ql',
-            'Purchase': 'sale',
-            'Lead': 'lead',
-            'Contact': 'contact',
-            'Schedule': 'schedule',
-            'InitiateCheckout': 'checkout',
-            'CompleteRegistration': 'register',
-            'ViewContent': 'view',
-            'AddToCart': 'cart',
-            'Subscribe': 'subscribe'
+            'Qualified': 'ql',
+            'Purchase': 'sale'
         }
         event_prefix = event_prefix_map.get(event_type, 'event')
         event_id = f"{event_prefix}-{lead_id}-{int(time.time())}"
@@ -774,32 +786,20 @@ def send_event_to_meta(lead_id, event_type, event_data):
         }
         
         # Add event-specific context
-        if event_type == 'QualifiedLead':
-            custom_data['lead_status'] = 'qualified'  # Only qualified leads are synced
-            license_year = event_data.get('license_year', '')
-            if license_year:
-                custom_data['license_years'] = 2026 - int(license_year) if license_year.isdigit() else None
+        if event_type == 'Qualified':
+            custom_data['lead_status'] = 'qualified'
         elif event_type == 'Purchase':
             custom_data['policy_type'] = 'auto_insurance'
             custom_data['lead_status'] = 'sold'
-        elif event_type in ['Lead', 'QualifiedLead', 'Contact', 'Schedule']:
-            # Standard events for lead generation
-            custom_data['lead_status'] = 'new'
         
-        # Build event data object
         event_obj = {
-            'event_name': event_type,  # Standard or custom event name
-            'event_time': int(time.time()),  # Current Unix timestamp - Meta requires this
-            'event_id': event_id,  # Unique ID for deduplication (event_id + event_name)
-            'action_source': 'system_generated',  # CRM/offline source (not website)
-            'user_data': user_data,  # Customer information parameters (hashed)
-            'custom_data': custom_data  # Additional event context
+            'event_name': event_type,
+            'event_time': int(time.time()),
+            'event_id': event_id,
+            'action_source': 'system_generated',
+            'user_data': user_data,
+            'custom_data': custom_data
         }
-        
-        # Add event_source_url if provided (required for website action_source, optional for system_generated)
-        event_source_url = event_data.get('event_source_url', '')
-        if event_source_url:
-            event_obj['event_source_url'] = event_source_url
         
         payload = {
             'data': [event_obj],
@@ -878,6 +878,11 @@ def signwell_ui():
 def document_upload_dashboard():
     """Serve Dashboard-Style Document Upload UI"""
     return send_from_directory(app.static_folder, 'document-upload-dashboard.html')
+
+@app.route('/callbacks')
+def callbacks_page():
+    """Serve Callbacks / Not Picked Up page"""
+    return send_from_directory(app.static_folder, 'callbacks.html')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -1396,7 +1401,7 @@ def sync_lead_event(lead_id):
         # Auto-detect event type based on lead status if not provided
         if not event_type:
             if lead.get('is_auto_qualified'):
-                event_type = 'QualifiedLead'  # Custom Meta event (qualified lead, 5+ years experience)
+                event_type = 'Qualified'  # Matches Meta sales funnel positive stage
             else:
                 # Don't send events for unqualified leads
                 return jsonify({
@@ -1424,7 +1429,7 @@ def sync_lead_event(lead_id):
         city = ''
         postal_code = ''
         date_of_birth = ''
-        state = 'on'  # Default to Ontario
+        state = 'on'  # Always Ontario
         
         email = lead.get('email', '').strip().lower()
         if email:
@@ -1439,21 +1444,24 @@ def sync_lead_event(lead_id):
                         # Extract DOB
                         date_of_birth = driver.get('personalDob', '')
                         
-                        # Parse address to extract city and postal code
-                        personal_address = driver.get('personalAddress', '')
-                        if personal_address:
-                            addr_parts = personal_address.strip().split()
-                            if len(addr_parts) >= 3:
-                                # Last part is usually postal code (e.g., L6S3S2)
-                                potential_postal = addr_parts[-1]
-                                if len(potential_postal) == 6 and potential_postal[0].isalpha():
-                                    postal_code = potential_postal
-                                # Third from last is usually city
+                        # Use direct fields first (most reliable)
+                        if driver.get('personalCity'):
+                            city = driver.get('personalCity', '')
+                        if driver.get('personalPostalCode'):
+                            postal_code = driver.get('personalPostalCode', '')
+
+                        # Fall back to parsing address string if direct fields missing
+                        if not city or not postal_code:
+                            personal_address = driver.get('personalAddress', '')
+                            if personal_address:
+                                addr_parts = personal_address.strip().split()
                                 if len(addr_parts) >= 3:
-                                    city = addr_parts[-3]
-                                # Second from last is province
-                                if len(addr_parts) >= 2:
-                                    state = addr_parts[-2].lower()
+                                    potential_postal = addr_parts[-1]
+                                    if not postal_code and len(potential_postal) == 6 and potential_postal[0].isalpha():
+                                        postal_code = potential_postal
+                                    if not city and len(addr_parts) >= 3:
+                                        city = addr_parts[-3]
+                                    # state always Ontario — do not parse from address
                         
                         print(f"📋 Enriched from auto_data: City={city}, Postal={postal_code}, DOB={date_of_birth}, State={state}")
             except Exception as e:
@@ -1471,14 +1479,8 @@ def sync_lead_event(lead_id):
             'zip': postal_code,
             'state': state,
             'date_of_birth': date_of_birth,
-            'country': 'ca',  # Canada
-            'external_id': str(lead_id),  # Lead ID as external ID
-            # Ad attribution for optimization
-            'ad_id': lead.get('ad_id', ''),
-            'form_id': lead.get('form_id', ''),
-            'adset_id': lead.get('adset_id', ''),
-            'campaign_id': lead.get('campaign_id', ''),
-            # Test mode
+            'country': 'ca',
+            'external_id': str(lead_id),
             'test_event_code': data.get('test_event_code', '')
         }
         
@@ -1684,6 +1686,12 @@ def get_lead_full_data(lead_id):
                                 # Third from last is usually city
                                 if len(addr_parts) >= 3:
                                     parsed_data['city'] = addr_parts[-3]
+
+                    # Override with direct fields if available (more reliable)
+                    if driver.get('personalCity'):
+                        parsed_data['city'] = driver.get('personalCity', '')
+                    if driver.get('personalPostalCode'):
+                        parsed_data['postal_code'] = driver.get('personalPostalCode', '')
                     
                     # Other fields
                     parsed_data['date_of_birth'] = driver.get('personalDob', '')
@@ -1723,7 +1731,8 @@ def update_lead(lead_id):
             'potential_status', 'premium', 'sync_status', 'sync_signal',
             'notes', 'coverage', 'insuranceType', 'visaType',
             'trip_start', 'trip_end', 'is_auto_qualified',
-            'driver_license_received', 'reminder_date', 'reminder_note'
+            'driver_license_received', 'reminder_date', 'reminder_note',
+            'callback_count'
         }
         filtered_data = {k: v for k, v in data.items() if k in ALLOWED_FIELDS}
         
