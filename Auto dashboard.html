@@ -2025,6 +2025,11 @@
             },
 
             parsePDF: async function(file, type) {
+                // Capture driver index NOW, before any awaits.
+                // If the user switches drivers while the PDF is being parsed (slow network),
+                // this.currDrvIdx would already point to the new driver and data would
+                // be written to the wrong driver object.
+                const capturedDrvIdx = this.currDrvIdx;
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -2046,7 +2051,7 @@
                     container.innerHTML = originalHTML;
                     
                     if (result.success && result.data) {
-                        const drv = this.drivers[this.currDrvIdx];
+                        const drv = this.drivers[capturedDrvIdx];
                         const data = result.data;
                         
                         console.log('=== FULL RESPONSE DATA ===');

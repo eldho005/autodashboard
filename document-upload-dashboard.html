@@ -1233,11 +1233,11 @@
                 console.log('Strategy 3 (without extension):', doc ? doc.name : 'no match');
             }
             
-            // 4. Partial match (contains)
-            if (!doc) {
+            // 4. Partial match: only match if the search term appears inside a doc name
+            //    (not the reverse — that direction is too loose and picks wrong files)
+            if (!doc && cleanDocName.length > 5) {
                 doc = allDocs.find(d => 
-                    d.name.toLowerCase().includes(cleanDocName.toLowerCase()) || 
-                    cleanDocName.toLowerCase().includes(d.name.toLowerCase())
+                    d.name.toLowerCase().includes(cleanDocName.toLowerCase())
                 );
                 console.log('Strategy 4 (partial):', doc ? doc.name : 'no match');
             }
@@ -1250,18 +1250,17 @@
             }
             
             // 6. Fuzzy match - remove spaces, underscores, dashes and compare
-            if (!doc) {
+            //    Only one direction: normalized doc name contains normalized search term.
+            //    Require a meaningful search length to avoid false positives on short names.
+            if (!doc && cleanDocName.length > 8) {
                 const normalize = s => s.toLowerCase().replace(/[\s_\-\.]/g, '');
                 const normalizedSearch = normalize(cleanDocName);
-                doc = allDocs.find(d => normalize(d.name).includes(normalizedSearch) || normalizedSearch.includes(normalize(d.name)));
+                doc = allDocs.find(d => normalize(d.name).includes(normalizedSearch));
                 console.log('Strategy 6 (fuzzy):', doc ? doc.name : 'no match');
             }
             
-            // 7. If we only have one document, use it
-            if (!doc && allDocs.length === 1) {
-                doc = allDocs[0];
-                console.log('Strategy 7 (single doc fallback):', doc.name);
-            }
+            // NOTE: Strategy 7 (single-doc fallback) was removed. It caused the wrong file
+            // to open when the AI referenced a document name that didn't match any upload.
             
             if (!doc) {
                 console.error('Document not found. Searched for:', docName);
