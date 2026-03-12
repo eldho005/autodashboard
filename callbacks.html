@@ -1,0 +1,375 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callbacks — Not Picked Up</title>
+    <link rel="stylesheet" href="/tailwind.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background: #f8fafc; font-family: 'Inter', sans-serif; }
+        .day-section { animation: fadeIn .25s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:translateY(0);} }
+        .callback-card:hover { border-color: #e0e7ff; background: #f5f7ff; }
+        select.callback-count { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; background-size: 14px; }
+        .badge-today { background:#fef3c7; color:#d97706; border-color:#fde68a; }
+        .badge-yesterday { background:#ede9fe; color:#7c3aed; border-color:#ddd6fe; }
+        .badge-older { background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-all">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                </a>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-phone-missed text-orange-500"></i>
+                        Callback List
+                    </h1>
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Leads that didn't pick up</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="total-badge" class="h-7 px-3 bg-orange-50 border border-orange-200 rounded-full text-orange-700 text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-exclamation text-[10px]"></i>
+                    <span id="total-count">0</span> pending
+                </div>
+                <button onclick="loadLeads()" class="h-8 w-8 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg flex items-center justify-center text-slate-500 transition-all" title="Refresh">
+                    <i class="fa-solid fa-rotate text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="bg-white border-b border-slate-100">
+        <div class="max-w-5xl mx-auto px-4 py-3 grid grid-cols-3 gap-4 text-center">
+            <div>
+                <div class="text-xl font-bold text-orange-500" id="stat-today">0</div>
+                <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Today</div>
+            </div>
+            <div>
+                <div class="text-xl font-bold text-violet-500" id="stat-yesterday">0</div>
+                <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Yesterday</div>
+            </div>
+            <div>
+                <div class="text-xl font-bold text-slate-500" id="stat-older">0</div>
+                <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Older</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-4 py-6" id="main-content">
+        <div class="flex items-center justify-center py-16 text-slate-400" id="loading-state">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3"></i>
+            <span class="text-sm font-medium">Loading callbacks...</span>
+        </div>
+    </main>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden max-w-5xl mx-auto px-4 py-16 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-50 rounded-full mb-4">
+            <i class="fa-solid fa-phone-check text-2xl text-green-500"></i>
+        </div>
+        <h3 class="text-base font-bold text-slate-700 mb-1">All Caught Up!</h3>
+        <p class="text-sm text-slate-400">No leads marked as "Not Picked Up" right now.</p>
+        <a href="/" class="mt-4 inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:underline">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <script>
+        const BACKEND_URL = window.location.origin;
+        const CALLBACKS_KEY = 'callback_counts'; // localStorage as instant cache
+
+        // ── Helpers ──────────────────────────────────────────
+        function getLocalCounts() {
+            try { return JSON.parse(localStorage.getItem(CALLBACKS_KEY) || '{}'); }
+            catch { return {}; }
+        }
+
+        function setLocalCount(leadId, count) {
+            const counts = getLocalCounts();
+            counts[leadId] = count;
+            localStorage.setItem(CALLBACKS_KEY, JSON.stringify(counts));
+        }
+
+        // Save to Supabase via PUT endpoint
+        async function saveCallbackCountToDb(leadId, count) {
+            try {
+                await fetch(`${BACKEND_URL}/api/leads/${leadId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ callback_count: count })
+                });
+            } catch (err) {
+                console.warn('⚠️ Could not save callback count to DB:', err);
+            }
+        }
+
+        function groupLeadsByDay(leads) {
+            const now = new Date();
+            const todayStr = now.toDateString();
+            const yestDate = new Date(now); yestDate.setDate(now.getDate() - 1);
+            const yestStr = yestDate.toDateString();
+
+            const groups = { today: [], yesterday: [], older: {} };
+
+            leads.forEach(lead => {
+                const d = new Date(lead.created_at || lead.created_time || Date.now());
+                const ds = d.toDateString();
+                if (ds === todayStr) {
+                    groups.today.push(lead);
+                } else if (ds === yestStr) {
+                    groups.yesterday.push(lead);
+                } else {
+                    const label = d.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' });
+                    if (!groups.older[label]) groups.older[label] = [];
+                    groups.older[label].push(lead);
+                }
+            });
+
+            // Sort each group newest first
+            groups.today.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+            groups.yesterday.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+            Object.values(groups.older).forEach(arr => arr.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)));
+
+            return groups;
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatPhone(phone) {
+            if (!phone) return '';
+            const digits = phone.replace(/\D/g, '');
+            if (digits.length === 10) return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+            if (digits.length === 11) return `+${digits[0]} (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
+            return phone;
+        }
+
+        // ── Render a single lead card ─────────────────────────
+        function renderCard(lead) {
+            const id = lead.id;
+            // Prefer DB value, fallback to localStorage cache
+            const localCounts = getLocalCounts();
+            const callCount = (lead.callback_count !== undefined && lead.callback_count !== null)
+                ? String(lead.callback_count)
+                : (localCounts[id] || '0');
+            // Sync localStorage with DB value
+            if (lead.callback_count !== undefined && lead.callback_count !== null) {
+                setLocalCount(id, String(lead.callback_count));
+            }
+            const name = lead.name || 'Unknown';
+            const phone = lead.phone || '';
+            const email = lead.email || '';
+            const time = formatTime(lead.created_at || lead.created_time);
+            const typeLabel = lead.is_manual ? 'Manual' : 'Meta';
+
+            return `
+            <div class="callback-card bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-4 transition-all cursor-default" data-id="${id}">
+                <!-- Avatar -->
+                <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    ${name.charAt(0).toUpperCase()}
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-sm font-bold text-slate-800 truncate">${name}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded border font-medium ${typeLabel === 'Meta' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-amber-50 border-amber-200 text-amber-600'}">${typeLabel}</span>
+                        ${time ? `<span class="text-[10px] text-slate-400 ml-auto">${time}</span>` : ''}
+                    </div>
+                    <div class="mt-1.5 flex flex-wrap gap-3">
+                        ${phone ? `
+                        <a href="tel:${phone}" class="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">
+                            <i class="fa-solid fa-phone text-[10px]"></i>
+                            ${formatPhone(phone)}
+                        </a>` : ''}
+                        ${email ? `
+                        <span class="flex items-center gap-1.5 text-xs text-slate-500 truncate">
+                            <i class="fa-solid fa-envelope text-[10px] text-slate-300"></i>
+                            ${email}
+                        </span>` : ''}
+                    </div>
+                </div>
+
+                <!-- Callbacks Count Dropdown -->
+                <div class="flex flex-col items-center gap-1 flex-shrink-0">
+                    <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Callbacks</label>
+                    <select
+                        class="callback-count h-8 pl-2 pr-6 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none cursor-pointer"
+                        onchange="onCallbackChange('${id}', this.value, this)"
+                    >
+                        <option value="0" ${callCount==='0'?'selected':''}>0 calls</option>
+                        <option value="1" ${callCount==='1'?'selected':''}>1 call</option>
+                        <option value="2" ${callCount==='2'?'selected':''}>2 calls</option>
+                        <option value="3" ${callCount==='3'?'selected':''}>3 calls</option>
+                        <option value="4" ${callCount==='4'?'selected':''}>4 calls</option>
+                        <option value="5+" ${callCount==='5+'?'selected':''}>5+ calls</option>
+                    </select>
+                </div>
+
+                <!-- Mark Reached Button -->
+                <button
+                    class="flex-shrink-0 h-8 px-3 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
+                    onclick="markReached('${id}', '${name}')"
+                    title="Mark as Contacted"
+                >
+                    <i class="fa-solid fa-phone-check text-[10px]"></i>
+                    <span class="hidden sm:inline">Reached</span>
+                </button>
+            </div>`;
+        }
+
+        // ── Render a day section ──────────────────────────────
+        function renderSection(title, leads, badgeClass) {
+            if (!leads || leads.length === 0) return '';
+            const cardsHtml = leads.map(l => renderCard(l)).join('');
+            return `
+            <div class="day-section mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${badgeClass}">
+                        ${title}
+                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/60 text-[10px] font-bold">${leads.length}</span>
+                    </span>
+                    <div class="flex-1 border-t border-slate-200"></div>
+                </div>
+                <div class="space-y-2">${cardsHtml}</div>
+            </div>`;
+        }
+
+        // ── Load & render all leads ───────────────────────────
+        async function loadLeads() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('main-content').innerHTML = `
+                <div class="flex items-center justify-center py-16 text-slate-400" id="loading-state">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3"></i>
+                    <span class="text-sm font-medium">Loading callbacks...</span>
+                </div>`;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/leads`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const allLeads = Array.isArray(data) ? data : (data.leads || data.data || []);
+
+                // Filter only "Not Picked Up"
+                const notPickedUp = allLeads.filter(l =>
+                    (l.status || '').toLowerCase().replace(/\s+/g, ' ') === 'not picked up'
+                );
+
+                // Update stats
+                const groups = groupLeadsByDay(notPickedUp);
+                document.getElementById('total-count').textContent = notPickedUp.length;
+                document.getElementById('stat-today').textContent = groups.today.length;
+                document.getElementById('stat-yesterday').textContent = groups.yesterday.length;
+                document.getElementById('stat-older').textContent = Object.values(groups.older).reduce((s,a)=>s+a.length,0);
+
+                if (notPickedUp.length === 0) {
+                    document.getElementById('main-content').innerHTML = '';
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
+                }
+
+                let html = '';
+
+                html += renderSection('Today', groups.today, 'badge-today');
+                html += renderSection('Yesterday', groups.yesterday, 'badge-yesterday');
+
+                // Older groups sorted by date desc
+                const olderDates = Object.keys(groups.older).sort((a,b) => new Date(b) - new Date(a));
+                for (const dateLabel of olderDates) {
+                    html += renderSection(dateLabel, groups.older[dateLabel], 'badge-older');
+                }
+
+                document.getElementById('main-content').innerHTML = html || '<p class="text-slate-400 text-sm text-center py-10">No leads found.</p>';
+
+            } catch (err) {
+                document.getElementById('main-content').innerHTML = `
+                    <div class="text-center py-16">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-400 mb-3"></i>
+                        <p class="text-sm font-bold text-slate-600">Failed to load leads</p>
+                        <p class="text-xs text-slate-400 mt-1">${err.message}</p>
+                        <button onclick="loadLeads()" class="mt-4 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-all">
+                            Retry
+                        </button>
+                    </div>`;
+                console.error('❌ Failed to load leads:', err);
+            }
+        }
+
+        // ── Callback count changed ────────────────────────────
+        function onCallbackChange(leadId, value, select) {
+            // Save to localStorage immediately (instant)
+            setLocalCount(leadId, value);
+            // Save to Supabase (async, non-blocking)
+            saveCallbackCountToDb(leadId, value);
+
+            // Visual pulse feedback
+            select.classList.add('border-indigo-400', 'ring-2', 'ring-indigo-100');
+            setTimeout(() => select.classList.remove('border-indigo-400', 'ring-2', 'ring-indigo-100'), 800);
+
+            // Color-code by count
+            select.style.color = {'0':'#64748b','1':'#2563eb','2':'#d97706','3':'#ea580c','4':'#dc2626','5+':'#b91c1c'}[value] || '#64748b';
+        }
+
+        // ── Mark as Reached (change status to Contacted) ─────
+        async function markReached(leadId, name) {
+            if (!confirm(`Mark "${name}" as Contacted?`)) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Contacted' })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                // Remove card from page
+                const card = document.querySelector(`[data-id="${leadId}"]`);
+                if (card) {
+                    card.style.transition = 'all 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Update total count
+                        const countEl = document.getElementById('total-count');
+                        const cur = parseInt(countEl.textContent) || 0;
+                        if (cur > 0) countEl.textContent = cur - 1;
+
+                        // Check if day section is now empty
+                        document.querySelectorAll('.day-section').forEach(section => {
+                            if (section.querySelectorAll('.callback-card').length === 0) {
+                                section.remove();
+                            }
+                        });
+
+                        // If main-content is empty, show empty state
+                        if (document.querySelectorAll('.callback-card').length === 0) {
+                            document.getElementById('main-content').innerHTML = '';
+                            document.getElementById('empty-state').classList.remove('hidden');
+                        }
+                    }, 300);
+                }
+            } catch (err) {
+                alert(`Failed to update status: ${err.message}`);
+            }
+        }
+
+        // ── Init ─────────────────────────────────────────────
+        loadLeads();
+    </script>
+</body>
+</html>

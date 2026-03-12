@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <!-- Suppress verbose console.log in production; errors/warnings still appear -->
@@ -16,13 +16,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/tailwind.css">
     
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        tailwind.config = {
+        (window.tailwind||{}).config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
@@ -77,14 +77,6 @@
         /* Clean card styling */
         .hud__card { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .hud__card:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-
-        /* Sticky Nav Items */
-        .hud__nav-item {
-            @apply w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center text-xs shadow-sm hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer mb-2 transform active:scale-95;
-        }
-        .hud__nav-item--active {
-            @apply bg-slate-600 text-white border-slate-600 shadow-sm;
-        }
 
         /* Radio Controls */
         .hud__radio-chip {
@@ -292,59 +284,54 @@
                                 
                                 <!-- Name Fields -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Name</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div class="grid grid-cols-3 gap-3">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">First</label>
-                                            <input type="text" data-key="personalFirstName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="First Name">
+                                            <input type="text" data-key="personalFirstName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="First Name">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Middle</label>
-                                            <input type="text" data-key="personalMiddleName" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Middle">
+                                            <input type="text" data-key="personalMiddleName" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="Middle">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Last</label>
-                                            <input type="text" data-key="personalLastName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Last Name">
+                                            <input type="text" data-key="personalLastName" class="hud__input hud__input--light hud__input--required rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="Last Name">
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Address Fields -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Address</h4>
-                                    <div class="space-y-3">
+                                    <div class="grid grid-cols-3 gap-3">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Street Address</label>
-                                            <input type="text" data-key="personalAddress" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Enter Address">
+                                            <input type="text" data-key="personalAddress" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="Enter Address">
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div class="flex flex-col gap-1">
-                                                <label class="text-xs font-medium text-slate-500">City</label>
-                                                <input type="text" data-key="personalCity" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="City">
-                                            </div>
-                                            <div class="flex flex-col gap-1">
-                                                <label class="text-xs font-medium text-slate-500">Postal Code</label>
-                                                <input type="text" data-key="personalPostalCode" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Postal Code">
-                                            </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">City</label>
+                                            <input type="text" data-key="personalCity" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="City">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Postal Code</label>
+                                            <input type="text" data-key="personalPostalCode" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="Postal Code">
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Personal Details -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Personal Details</h4>
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <div class="grid grid-cols-3 gap-3">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Date of Birth</label>
-                                            <input type="text" data-key="personalDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                            <input type="text" data-key="personalDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors w-full" placeholder="MM/DD/YYYY">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Marital Status</label>
-                                            <input type="text" data-key="personalMaritalStatus" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Status">
+                                            <input type="text" data-key="personalMaritalStatus" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="Status">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Gender</label>
-                                            <select data-key="personalGender" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors cursor-pointer">
+                                            <select data-key="personalGender" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors cursor-pointer w-full">
                                                 <option value="">Select</option>
                                                 <option value="M">M</option>
                                                 <option value="F">F</option>
@@ -355,19 +342,18 @@
 
                                 <!-- Contact Information -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Contact Information</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div class="grid grid-cols-3 gap-3">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Mobile</label>
-                                            <input type="text" data-key="personalMobile" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="(---) --- ----">
+                                            <input type="text" data-key="personalMobile" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors w-full" placeholder="(---) --- ----">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Home Phone</label>
-                                            <input type="text" data-key="personalHomePhone" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="(---) --- ----">
+                                            <input type="text" data-key="personalHomePhone" data-mask="phone" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors w-full" placeholder="(---) --- ----">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Email</label>
-                                            <input type="email" data-key="personalEmail" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="email@example.com">
+                                            <input type="email" data-key="personalEmail" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full" placeholder="email@example.com">
                                         </div>
                                     </div>
                                 </div>
@@ -415,15 +401,14 @@
                                 
                                 <!-- Dates Section -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Dates</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Expiry Date</label>
-                                            <input type="text" data-key="mvrExpiry" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                            <input type="text" id="mvr-expiry" data-key="mvrExpiry" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Birthdate</label>
-                                            <input type="text" data-key="mvrDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+                                            <input type="text" id="mvr-dob" data-key="mvrDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
                                         </div>
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Issue Date</label>
@@ -434,7 +419,6 @@
 
                                 <!-- Licence Details Section -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Licence Details</h4>
                                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Status</label>
@@ -461,34 +445,18 @@
                             
                                 <!-- Convictions Section -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Convictions</h4>
-                                    <div class="flex flex-col gap-1 mb-4" style="max-width: 150px;">
-                                        <label class="text-xs font-medium text-slate-500"># Convictions</label>
-                                        <input type="number" data-key="mvrConvictionsCount" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-slate-50" placeholder="0" readonly>
-                                    </div>
-                                    
-                                    <!-- Convictions List Container -->
-                                    <div id="mvr-convictions-container" class="space-y-2">
-                                        <!-- Convictions will be populated here dynamically -->
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <label class="text-xs font-medium text-slate-500 whitespace-nowrap"># Convictions</label>
+                                            <input type="number" data-key="mvrConvictionsCount" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-slate-50 w-16" placeholder="0" readonly>
+                                        </div>
+                                        <!-- Convictions List Container -->
+                                        <div id="mvr-convictions-container" class="flex-1 min-w-0 space-y-2">
+                                            <!-- Convictions will be populated here dynamically -->
+                                        </div>
                                     </div>
                                 </div>
 
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- CARD 4: VEHICLES -->
-                    <section id="section-vehicles" class="scroll-mt-24 hud__vehicle-section">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-blue-700">4.</span>
-                                    <h3 class="text-sm font-bold text-blue-800">Vehicle Information</h3>
-                                </div>
-                                <button onclick="App.addVehicle()" class="text-[10px] font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded transition-all"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
-                            </div>
-                            <div class="p-5">
-                                <div id="vehicles-container" class="space-y-3"></div>
                             </div>
                         </div>
                     </section>
@@ -504,12 +472,12 @@
                             </div>
                             <div class="p-5">
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="flex flex-col gap-1">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="flex flex-col gap-1 hidden">
                                             <label class="text-xs font-medium text-slate-500">Driver Name</label>
                                             <input type="text" data-key="drvName" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors" placeholder="Driver Name">
                                         </div>
-                                        <div class="flex flex-col gap-1">
+                                        <div class="flex flex-col gap-1 hidden">
                                             <label class="text-xs font-medium text-slate-500">Date of Birth</label>
                                             <input type="text" data-key="drvDob" data-mask="date" class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
                                         </div>
@@ -540,7 +508,6 @@
                             
                                 <!-- Input Dates -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Date Inputs</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div class="flex flex-col gap-1">
                                             <label class="text-xs font-medium text-slate-500">Issue Date (Start)</label>
@@ -556,81 +523,148 @@
                                     </div>
                                 </div>
 
-                                <!-- Timeline Dates -->
+                                <!-- Licence Progression & Gaps -->
                                 <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Licence Timeline</h4>
-                                    <div class="space-y-0 relative hud__timeline">
-                                        <div class="absolute left-[118px] top-4 bottom-4 w-px border-l border-dashed border-blue-200 z-0"></div>
-                                
-                                <!-- Gap Indicator: First Ins → G -->
-                                <div class="flex items-center gap-4 relative z-10 py-1 hud__timeline-gap">
-                                    <div class="w-24 text-right"></div>
-                                    <div class="flex-1 flex items-center pl-4">
-                                        <span id="gap-first-g" class="text-[9px] font-medium text-blue-500 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 min-w-[36px] text-center">--</span>
+                                    <div class="flex items-center justify-end mb-3">
+                                        <button id="btn-optimize-dates" type="button"
+                                            onclick="App.optimizeLicenceDates()"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border-2 transition-all select-none cursor-pointer active:scale-95 bg-blue-600 border-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                                            title="Calculate optimal G1, G2, G dates from Issue Date and First Insurance Date">
+                                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                                            <span>Optimize</span>
+                                        </button>
                                     </div>
-                                </div>
-                                <div id="g-date-row" class="flex items-center gap-4 relative z-10 bg-white py-1 hud__timeline-item">
-                                    <div class="w-24 text-[10px] font-bold text-blue-600 uppercase text-right pt-1 hud__timeline-label">
-                                        G Date
-                                        <span id="g-date-na-badge" class="hidden ml-1 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded normal-case">N/A</span>
-                                    </div>
-                                    <div class="flex-1 flex items-center gap-2">
-                                        <div class="w-2 h-2 rounded-full bg-blue-400 -ml-[5px] ring-4 ring-white"></div>
-                                        <input type="text" id="expGDate_input" data-key="expGDate" data-mask="date" class="hud__input hud__input--light flex-1 rounded-md px-3 py-2 text-sm font-mono bg-white" placeholder="MM/DD/YYYY">
-                                        <select id="g-date-gap-select" onchange="App.applyGapToDate('expFirstIns','expGDate_input',parseInt(this.value))" class="text-[10px] text-slate-500 bg-white border border-slate-200 rounded px-1.5 py-1 cursor-pointer hover:border-slate-300 transition-colors focus:outline-none">
-                                            <option value="0">0 year</option>
-                                            <option value="1">1 year</option>
-                                            <option value="2">2 year</option>
-                                        </select>
+                                    <div class="flex items-center gap-2 w-full">
+
+                                        <!-- G1 label + date -->
+                                        <span class="text-xs font-bold text-blue-700 uppercase shrink-0">G1</span>
+                                        <input type="text" id="g1-date" data-key="expG1Date" data-mask="date" class="hud__input hud__input--light flex-1 min-w-0 rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+
+                                        <!-- Gap 1 pill -->
+                                        <div class="flex items-center bg-white border border-slate-200 rounded-full px-2 h-10 gap-1 shrink-0">
+                                            <button id="gap1-minus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">−</button>
+                                            <input id="gap1-input" type="text" inputmode="numeric" value="0" class="w-8 text-center text-xs font-mono font-semibold text-slate-700 border-none outline-none bg-transparent">
+                                            <button id="gap1-plus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">+</button>
+                                        </div>
+
+                                        <!-- G2 label + date -->
+                                        <span class="text-xs font-bold text-blue-700 uppercase shrink-0">G2</span>
+                                        <input type="text" id="g2-date" data-key="expG2Date" data-mask="date" class="hud__input hud__input--light flex-1 min-w-0 rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+
+                                        <!-- Gap 2 pill -->
+                                        <div class="flex items-center bg-white border border-slate-200 rounded-full px-2 h-10 gap-1 shrink-0">
+                                            <button id="gap2-minus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">−</button>
+                                            <input id="gap2-input" type="text" inputmode="numeric" value="0" class="w-8 text-center text-xs font-mono font-semibold text-slate-700 border-none outline-none bg-transparent">
+                                            <button id="gap2-plus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">+</button>
+                                        </div>
+
+                                        <!-- G label + date -->
+                                        <span class="text-xs font-bold text-blue-700 uppercase shrink-0" id="g-date-row">G <span id="g-date-na-badge" class="hidden text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 rounded normal-case">N/A</span></span>
+                                        <input type="text" id="g-date" data-key="expGDate" data-mask="date" class="hud__input hud__input--light flex-1 min-w-0 rounded-md px-3 py-2 focus:outline-none text-sm font-mono bg-white transition-colors" placeholder="MM/DD/YYYY">
+
+                                        <!-- Gap 3 pill -->
+                                        <div class="flex items-center bg-white border border-slate-200 rounded-full px-2 h-10 gap-1 shrink-0">
+                                            <button id="gap3-minus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">−</button>
+                                            <input id="gap3-input" type="text" inputmode="numeric" value="0" class="w-8 text-center text-xs font-mono font-semibold text-slate-700 border-none outline-none bg-transparent">
+                                            <button id="gap3-plus" type="button" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors text-sm font-bold leading-none select-none">+</button>
+                                        </div>
+
                                     </div>
                                 </div>
 
-                                <!-- Gap Indicator: G → G2 -->
-                                <div class="flex items-center gap-4 relative z-10 py-1 hud__timeline-gap">
-                                    <div class="w-24 text-right"></div>
-                                    <div class="flex-1 flex items-center pl-4">
-                                        <span id="gap-g-g2" class="text-[9px] font-medium text-blue-500 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 min-w-[36px] text-center">--</span>
-                                    </div>
-                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-                                <!-- G2 Date -->
-                                <div class="flex items-center gap-4 relative z-10 bg-white py-1 hud__timeline-item">
-                                    <div class="w-24 text-[10px] font-bold text-blue-600 uppercase text-right pt-1 hud__timeline-label">G2 Date</div>
-                                    <div class="flex-1 flex items-center gap-2">
-                                        <div class="w-2 h-2 rounded-full bg-blue-400 -ml-[5px] ring-4 ring-white"></div>
-                                        <input type="text" id="expG2Date_input" data-key="expG2Date" data-mask="date" class="hud__input hud__input--light flex-1 rounded-md px-3 py-2 text-sm font-mono bg-white" placeholder="MM/DD/YYYY">
-                                        <select onchange="App.applyGapToDate('expGDate','expG2Date_input',parseInt(this.value))" class="text-[10px] text-slate-500 bg-white border border-slate-200 rounded px-1.5 py-1 cursor-pointer hover:border-slate-300 transition-colors focus:outline-none">
-                                            <option value="0">0 year</option>
-                                            <option value="1">1 year</option>
-                                            <option value="2">2 year</option>
-                                        </select>
-                                    </div>
+                    <!-- CARD 4: VEHICLES -->
+                    <section id="section-vehicles" class="scroll-mt-24 hud__vehicle-section">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-blue-700">4.</span>
+                                    <h3 class="text-sm font-bold text-blue-800">Vehicle Information</h3>
                                 </div>
+                                <button onclick="App.addVehicle()" class="text-[10px] font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded transition-all"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
+                            </div>
+                            <div class="p-5">
+                                <div id="vehicles-container" class="space-y-3"></div>
+                            </div>
+                        </div>
+                    </section>
 
-                                <!-- Gap Indicator: G2 → G1 -->
-                                <div class="flex items-center gap-4 relative z-10 py-1 hud__timeline-gap">
-                                    <div class="w-24 text-right"></div>
-                                    <div class="flex-1 flex items-center pl-4">
-                                        <span id="gap-g2-g1" class="text-[9px] font-medium text-blue-500 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 min-w-[36px] text-center">--</span>
+                    <!-- CARD 5: PREMIUM DETAILS (not mapped to review / export) -->
+                    <section id="section-premium" class="hud__section scroll-mt-24">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-blue-700">5.</span>
+                                    <h3 class="text-sm font-bold text-blue-800">Premium Details</h3>
+                                </div>
+                            </div>
+                            <div class="p-5 space-y-4">
+                                <!-- Proposed -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <p class="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Proposed</p>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Auto</label>
+                                            <input id="premium-proposed-auto" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
+                                            <input id="premium-proposed-home" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Total</label>
+                                            <input id="premium-proposed-total" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
+                                        </div>
                                     </div>
                                 </div>
-
-                                <!-- G1 Date -->
-                                <div class="flex items-center gap-4 relative z-10 bg-white py-1 hud__timeline-item">
-                                    <div class="w-24 text-[10px] font-bold text-blue-600 uppercase text-right pt-1 hud__timeline-label">G1 Date</div>
-                                    <div class="flex-1 flex items-center gap-2">
-                                        <div class="w-2 h-2 rounded-full bg-blue-300 -ml-[5px] ring-4 ring-white"></div>
-                                        <input type="text" id="expG1Date_input" data-key="expG1Date" data-mask="date" class="hud__input hud__input--light flex-1 rounded-md px-3 py-2 text-sm font-mono bg-white" placeholder="MM/DD/YYYY">
-                                        <select onchange="App.applyGapToDate('expG2Date','expG1Date_input',parseInt(this.value))" class="text-[10px] text-slate-500 bg-white border border-slate-200 rounded px-1.5 py-1 cursor-pointer hover:border-slate-300 transition-colors focus:outline-none">
-                                            <option value="0">0 year</option>
-                                            <option value="1">1 year</option>
-                                            <option value="2">2 year</option>
-                                        </select>
+                                <!-- Current -->
+                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
+                                    <p class="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Current</p>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Auto</label>
+                                            <input id="premium-current-auto" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
+                                            <input id="premium-current-home" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Total</label>
+                                            <input id="premium-current-total" type="text" inputmode="decimal" placeholder="0.00"
+                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
+                                        </div>
                                     </div>
                                 </div>
+                                <!-- Difference (Proposed - Current, read-only) -->
+                                <div class="bg-rose-50/40 rounded-lg p-4 border border-rose-200">
+                                    <p class="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wide">Difference <span class="normal-case font-normal text-slate-400">(Proposed − Current)</span></p>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Auto</label>
+                                            <input id="premium-diff-auto" type="text" readonly placeholder="0.00"
+                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
+                                            <input id="premium-diff-home" type="text" readonly placeholder="0.00"
+                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-xs font-medium text-slate-500">Total</label>
+                                            <input id="premium-diff-total" type="text" readonly placeholder="0.00"
+                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
+                                        </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     </section>
@@ -651,53 +685,31 @@
                         </div>
                     </section>
 
+
                 </div>
-            </div>
-            
-            <!-- STICKY MINI NAV -->
-            <div id="sticky-mini-nav" class="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col z-30 space-y-2 hud__nav-rail">
-                <a href="#section-personal" class="hud__nav-item group relative" aria-label="Personal Info">
-                    <i class="fa-solid fa-user"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Personal Info</span>
-                </a>
-                <a href="#section-licensing" class="hud__nav-item group relative" aria-label="Licensing">
-                    <i class="fa-solid fa-id-card"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Licensing</span>
-                </a>
-                <a href="#section-mvr" class="hud__nav-item group relative" aria-label="MVR Info">
-                    <i class="fa-solid fa-file-contract"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">MVR Info</span>
-                </a>
-                <a href="#section-vehicles" class="hud__nav-item group relative" aria-label="Vehicles">
-                    <i class="fa-solid fa-car"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Vehicles</span>
-                </a>
-                <a href="#section-driver" class="hud__nav-item group relative" aria-label="Driver Info">
-                    <i class="fa-solid fa-address-card"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Driver Info</span>
-                </a>
-                <a href="#section-exp" class="hud__nav-item group relative" aria-label="Experience">
-                    <i class="fa-solid fa-timeline"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Experience</span>
-                </a>
-                <a href="#section-gap" class="hud__nav-item group relative" aria-label="Gap">
-                    <i class="fa-solid fa-stopwatch"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Gap Calc</span>
-                </a>
-                <a href="#section-claims" class="hud__nav-item group relative" aria-label="Claims">
-                    <i class="fa-solid fa-heart-crack"></i>
-                    <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap shadow-sm">Claims</span>
-                </a>
             </div>
         </div>
 
-        <!-- RIGHT SIDE: NAVIGATION RAIL -->
-        <div class="bg-white border-l border-slate-200 h-full flex flex-col items-center py-6 px-2 gap-4 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-            <button onclick="sessionStorage.setItem('navigatedFromPage', 'auto'); sessionStorage.setItem('propertySessionActive', 'true'); window.location.href='property_redesigned.html'" class="w-full flex flex-col items-center justify-center gap-1.5 px-3 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded transition-all shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-slate-500">
-                <i class="fa-solid fa-house text-base"></i>
-                <span class="text-[10px] font-bold leading-tight">Property</span>
-            </button>
+    </div>
+
+    <!-- RIGHT PAGE NAV -->
+    <div style="position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:9998;display:flex;flex-direction:column;gap:8px;padding:10px 8px;background:white;border:1px solid #e2e8f0;border-right:none;border-radius:12px 0 0 12px;box-shadow:-4px 0 20px rgba(0,0,0,0.07);">
+        <button onclick="window.location.href='meta dashboard.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Leads">
+            <i class="fa-solid fa-users" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Leads</span>
+        </button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#2563eb;color:white;border-radius:8px;cursor:default;" title="Auto Dashboard (current page)">
+            <i class="fa-solid fa-car" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Auto</span>
         </div>
+        <button onclick="sessionStorage.setItem('navigatedFromPage','auto');sessionStorage.setItem('propertySessionActive','true');window.location.href='property_redesigned.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Property">
+            <i class="fa-solid fa-house" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Property</span>
+        </button>
+        <button onclick="App.goToReview()" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Final Review">
+            <i class="fa-solid fa-clipboard-check" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Review</span>
+        </button>
     </div>
 
     <script>
@@ -969,12 +981,7 @@
                             current = section.getAttribute('id');
                         }
                     });
-                    document.querySelectorAll('.hud__nav-item').forEach(a => {
-                        a.classList.remove('hud__nav-item--active');
-                        if (a.getAttribute('href').includes(current)) {
-                            a.classList.add('hud__nav-item--active');
-                        }
-                    });
+
                 });
             },
 
@@ -1145,6 +1152,11 @@
                                 console.log('✅ Restored drivers from database');
                                 this.renderSelectors();
                                 this.refreshUI();
+                                
+                                // Restore premium details from database
+                                if (result.data.auto_data.premiumDetails) {
+                                    setTimeout(() => window.PremiumDetails?.setData(result.data.auto_data.premiumDetails), 200);
+                                }
                                 
                                 // Force set phone and email inputs
                                 setTimeout(() => {
@@ -1728,7 +1740,7 @@
 
                 this.updateLicenceGaps();
                 this.updateLicenceTimelineForClass();
-                // Old single gap calculation is deprecated - using renderGapSections instead
+                if (typeof window.checkMvrDates === 'function') window.checkMvrDates();
                 setTimeout(() => {
                     console.log('[DEPRECATED] Old calcInsuranceGap logic removed - using renderGapSections instead');
                 }, 50);
@@ -1877,7 +1889,7 @@
                                         <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">VIN Number</label>
                                         <div class="relative">
                                             <input type="text" data-key="vin" class="hud__input w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-medium text-slate-600 focus:border-slate-500 focus:ring-1 focus:ring-slate-400 outline-none transition-all placeholder-slate-400 uppercase" placeholder="ENTER 17-CHAR VIN">
-                                            <i class="fa-solid fa-fingerprint absolute left-2.5 top-2.5 text-slate-400"></i>
+                                            <i class="fa-solid fa-barcode absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                                         </div>
                                     </div>
                                     <div>
@@ -2929,7 +2941,7 @@
                 
                 // Handle no convictions case
                 if (!convictions || convictions.length === 0) {
-                    container.innerHTML = '<div class="text-xs text-green-600 font-medium py-2 px-3 bg-green-50 rounded border border-green-200">✓ No convictions found</div>';
+                    container.innerHTML = '<p class="text-xs text-green-600 font-medium py-1">✓ No convictions found</p>';
                     console.log('No convictions to render');
                     return;
                 }
@@ -3091,62 +3103,85 @@
                 // Auto-calculation removed — G Date, G2 Date, G1 Date are entered manually or via gap buttons.
             },
 
-            applyGapToDate: function(sourceKey, targetInputId, yearGap) {
+            optimizeLicenceDates: function() {
                 const drv = this.drivers[this.currDrvIdx];
-                const sourceVal = drv[sourceKey];
-                if (!sourceVal || sourceVal.length < 10) {
-                    alert('Please fill in the source date first.');
+                const issueDateRaw = drv.expIssueDate || '';
+                const firstInsRaw  = drv.expFirstIns  || '';
+
+                // Parse MM/DD/YYYY → ISO for the optimizer
+                function toISO(mmddyyyy) {
+                    if (!mmddyyyy) return null;
+                    const p = mmddyyyy.replace(/\D/g, '');
+                    if (p.length < 8) return null;
+                    return `${p.slice(4,8)}-${p.slice(0,2)}-${p.slice(2,4)}`;
+                }
+
+                const isoIssue = toISO(issueDateRaw);
+                const isoIns   = toISO(firstInsRaw);
+
+                if (!isoIssue || !isoIns) {
+                    alert('Please fill in both Issue Date and First Insurance Date before optimizing.');
                     return;
                 }
-                const parts = sourceVal.split('/');
-                if (parts.length !== 3) return;
-                const sourceDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
-                if (isNaN(sourceDate.getTime())) return;
 
-                // 1yr gap = random 11–12 months back; 2yr gap = random 23–24 months back
-                const minM = yearGap === 0 ? 0 : yearGap === 1 ? 11 : 23;
-                const maxM = yearGap === 0 ? 0 : yearGap === 1 ? 12 : 24;
-                const months = Math.floor(Math.random() * (maxM - minM + 1)) + minM;
+                const optimizer = new window.LicenseOptimizer(isoIssue, isoIns);
+                const solution  = optimizer.optimize();
 
-                const result = new Date(sourceDate);
-                result.setMonth(result.getMonth() - months);
+                if (!solution) {
+                    alert('Could not find a valid solution. Please check the Issue Date and First Insurance Date.');
+                    return;
+                }
 
-                // Randomize the day so dates don't look bot-generated (1–28, safe for all months)
-                // Always pick a day different from the source day
-                const sourceDay = sourceDate.getDate();
-                if (yearGap === 0) {
-                    // For 0-year: pick any day 1–28 that isn't the source day
-                    let rDay;
-                    do { rDay = Math.floor(Math.random() * 28) + 1; } while (rDay === sourceDay);
-                    result.setDate(rDay);
+                // Add minor randomness to day/month so dates look natural
+                // Month jitter ±1, day jitter ±14 — year is never touched
+                function jitterDate(d) {
+                    const out = new Date(d);
+                    const monthJitter = Math.floor(Math.random() * 3) - 1;  // -1, 0, or +1
+                    const dayJitter   = Math.floor(Math.random() * 29) - 14; // -14 to +14
+                    out.setMonth(out.getMonth() + monthJitter);
+                    out.setDate(out.getDate() + dayJitter);
+                    // Clamp day to valid range (setDate handles overflow, but keep it in 5–28 for realism)
+                    const day = out.getDate();
+                    if (day < 5)  out.setDate(5);
+                    if (day > 28) out.setDate(28);
+                    return out;
+                }
+
+                const j1 = jitterDate(solution.g1);
+                const j2 = jitterDate(solution.g2);
+                const j3 = jitterDate(solution.g);
+
+                // Convert Date → MM/DD/YYYY display format
+                function toDisplay(d) {
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const yy = d.getFullYear();
+                    return `${mm}/${dd}/${yy}`;
+                }
+
+                // Set values on inputs silently (via setDateSilent if available, else direct)
+                const g1El = document.getElementById('g1-date');
+                const g2El = document.getElementById('g2-date');
+                const gEl  = document.getElementById('g-date');
+
+                if (typeof window.setDateSilent === 'function') {
+                    window.setDateSilent(g1El, j1);
+                    window.setDateSilent(g2El, j2);
+                    window.setDateSilent(gEl,  j3);
                 } else {
-                    let rDay;
-                    do { rDay = Math.floor(Math.random() * 28) + 1; } while (rDay === sourceDay);
-                    result.setDate(rDay);
+                    if (g1El) g1El.value = toDisplay(j1);
+                    if (g2El) g2El.value = toDisplay(j2);
+                    if (gEl)  gEl.value  = toDisplay(j3);
                 }
 
-                // If setting G1 Date, clamp so it never goes below Issue Date (Start)
-                if (targetInputId === 'expG1Date_input' && drv.expIssueDate && drv.expIssueDate.length === 10) {
-                    const ip = drv.expIssueDate.split('/');
-                    const issueDate = new Date(parseInt(ip[2]), parseInt(ip[0]) - 1, parseInt(ip[1]));
-                    if (!isNaN(issueDate.getTime()) && result < issueDate) {
-                        result.setTime(issueDate.getTime());
-                        console.warn('⚠️ G1 Date clamped to Issue Date (Start):', drv.expIssueDate);
-                    }
-                }
+                // Sync back into driver state
+                drv.expG1Date = toDisplay(j1);
+                drv.expG2Date = toDisplay(j2);
+                drv.expGDate  = toDisplay(j3);
 
-                const mm = String(result.getMonth() + 1).padStart(2, '0');
-                const dd = String(result.getDate()).padStart(2, '0');
-                const yyyy = result.getFullYear();
-                const formatted = `${mm}/${dd}/${yyyy}`;
-
-                const input = document.getElementById(targetInputId);
-                if (input) {
-                    input.value = formatted;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof window.updateLicenceGapDisplays === 'function') {
+                    window.updateLicenceGapDisplays();
                 }
-                console.log(`✅ Applied ${yearGap}yr gap (${months}m) from ${sourceKey} (${sourceVal}) → ${targetInputId}: ${formatted}`);
             },
 
             // UI Helpers
@@ -3154,53 +3189,26 @@
                 const drv = this.drivers[this.currDrvIdx];
                 const cls = (drv.mvrClass || '').trim().toUpperCase();
                 const isG2orG1 = cls === 'G2' || cls === 'G1';
-
-                const row = document.getElementById('g-date-row');
+                const row   = document.getElementById('g-date-row');
                 const badge = document.getElementById('g-date-na-badge');
-                const input = document.getElementById('expGDate_input');
-                const gapSelect = document.getElementById('g-date-gap-select');
-                const gapIndicator = document.getElementById('gap-first-g');
-
+                const input = document.getElementById('g-date');
                 if (isG2orG1) {
-                    // Clear G Date - customer doesn't have G licence
                     drv.expGDate = '';
-                    drv.expGDate_base = '';
                     if (input) { input.value = ''; input.disabled = true; input.classList.add('opacity-40', 'cursor-not-allowed'); }
-                    if (gapSelect) { gapSelect.disabled = true; gapSelect.classList.add('opacity-40', 'cursor-not-allowed'); }
                     if (badge) badge.classList.remove('hidden');
-                    if (row) row.classList.add('opacity-60');
-                    if (gapIndicator) gapIndicator.innerText = 'N/A';
+                    if (row)   row.classList.add('opacity-60');
                     console.log(`ℹ️ License class is ${cls} — G Date cleared and locked`);
                 } else {
-                    // G licence (or unknown) — enable G Date
                     if (input) { input.disabled = false; input.classList.remove('opacity-40', 'cursor-not-allowed'); }
-                    if (gapSelect) { gapSelect.disabled = false; gapSelect.classList.remove('opacity-40', 'cursor-not-allowed'); }
                     if (badge) badge.classList.add('hidden');
-                    if (row) row.classList.remove('opacity-60');
+                    if (row)   row.classList.remove('opacity-60');
                 }
             },
 
             updateLicenceGaps: function() {
-                const drv = this.drivers[this.currDrvIdx];
-                const setGap = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
-                
-                const getDiffText = (d1Str, d2Str) => {
-                    if(!d1Str || !d2Str || d1Str.length<10 || d2Str.length<10) return "—";
-                    const d1 = new Date(d1Str);
-                    const d2 = new Date(d2Str);
-                    let diff = (d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-                    diff = Math.abs(Math.round(diff));
-                    
-                    const yrs = Math.floor(diff / 12);
-                    const mos = diff % 12;
-                    if(yrs > 0 && mos > 0) return `${yrs}y ${mos}m`;
-                    if(yrs > 0) return `${yrs} yrs`;
-                    return `${mos} mos`;
-                };
-
-                setGap('gap-first-g', getDiffText(drv.expFirstIns, drv.expGDate));
-                setGap('gap-g-g2', getDiffText(drv.expGDate, drv.expG2Date));
-                setGap('gap-g2-g1', getDiffText(drv.expG2Date, drv.expG1Date));
+                if (typeof window.updateLicenceGapDisplays === 'function') {
+                    window.updateLicenceGapDisplays();
+                }
             },
 
             calcInsuranceGap: function() {
@@ -3666,99 +3674,7 @@
                     }
                 });
 
-                // Validate required fields
-                let validationErrors = [];
-
-                this.drivers.forEach((d, i) => {
-                    if (!d.mainName) {
-                        validationErrors.push('Driver name is required');
-                    }
-
-                    if (d.vehicles && d.vehicles.length > 0) {
-                        d.vehicles.forEach((v, vIdx) => {
-                            if (!v.purchaseDate)  validationErrors.push(`Vehicle ${vIdx + 1}: Purchase Date required`);
-                            if (!v.annualKm)      validationErrors.push(`Vehicle ${vIdx + 1}: Annual KM required`);
-                            if (!v.parkingNight)  validationErrors.push(`Vehicle ${vIdx + 1}: Parking at Night required`);
-                        });
-                    }
-
-                    if (d.claims && d.claims.length > 0) {
-                        d.claims.forEach((c, cIdx) => {
-                            const hasCoverageAmount = c.tpbi || c.tppd || c.ab || c.coll || c.otherpd;
-                            if (!hasCoverageAmount)   validationErrors.push(`Claim ${cIdx + 1}: At least one coverage amount (TP/BI, TP/PD, AB, COLL, or OTHER PD) required`);
-                            if (!c.appliedDescription) validationErrors.push(`Claim ${cIdx + 1}: Applied Description required`);
-                        });
-                    }
-
-                    if (i === this.currDrvIdx) {
-                        // Current driver: check directly from DOM for accurate "Select Reason" detection
-                        document.querySelectorAll('.gap-section-card').forEach((card, cardIdx) => {
-                            const val = card.querySelector('.gap-reason-dropdown')?.value || '';
-                            if (!val) validationErrors.push(`Gap ${cardIdx + 1}: Reason for Lapse must be selected`);
-                        });
-                    } else if (d.lapses && d.lapses.length > 0) {
-                        // Other drivers: validate from previously collected lapse data
-                        d.lapses.forEach((l, lIdx) => {
-                            if (!l.reason || l.reason.trim() === '')
-                                validationErrors.push(`Gap ${lIdx + 1} (Driver ${i + 1}): Reason for Lapse must be selected`);
-                        });
-                    }
-
-                    // Validate licence timeline
-                    const driverLabel = this.drivers.length > 1 ? ` (Driver ${i + 1})` : '';
-                    const cls = (d.mvrClass || '').trim().toUpperCase();
-                    const isG2orG1 = cls === 'G2' || cls === 'G1';
-                    if (!isG2orG1 && !d.expGDate)  validationErrors.push(`Licence Timeline${driverLabel}: G Date is required`);
-                    if (!d.expG2Date)               validationErrors.push(`Licence Timeline${driverLabel}: G2 Date is required`);
-                    if (!d.expG1Date)               validationErrors.push(`Licence Timeline${driverLabel}: G1 Date is required`);
-
-                    // Validate city and postal code
-                    if (!d.personalCity || d.personalCity.trim() === '')             validationErrors.push(`City is required${driverLabel}`);
-                    if (!d.personalPostalCode || d.personalPostalCode.trim() === '') validationErrors.push(`Postal Code is required${driverLabel}`);
-                });
-
-                if (validationErrors.length > 0) {
-                    console.error('❌ Validation Errors (Review):', validationErrors);
-                    const existing = document.getElementById('review-validation-panel');
-                    if (existing) existing.remove();
-
-                    const errorItems = validationErrors.map(e =>
-                        `<li class="flex items-start gap-2 py-1.5 border-b border-red-100 last:border-0">
-                            <i class="fa-solid fa-circle-dot text-red-400 mt-0.5 shrink-0 text-[10px]"></i>
-                            <span>${e}</span>
-                        </li>`
-                    ).join('');
-
-                    const panel = document.createElement('div');
-                    panel.id = 'review-validation-panel';
-                    panel.innerHTML = `
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:14px;"></i>
-                                <span style="font-size:12px;font-weight:800;color:#1e293b;">Fix ${validationErrors.length} issue${validationErrors.length > 1 ? 's' : ''} before Review</span>
-                            </div>
-                            <button onclick="document.getElementById('review-validation-panel').remove()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:2px 4px;" title="Dismiss">&times;</button>
-                        </div>
-                        <ul style="list-style:none;margin:0;padding:0;font-size:11px;color:#64748b;font-weight:500;max-height:260px;overflow-y:auto;">
-                            ${errorItems}
-                        </ul>
-                    `;
-                    panel.style.cssText = 'position:fixed;top:60px;right:20px;z-index:9999;background:#fff;border:1.5px solid #fca5a5;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.14);padding:14px 16px;width:320px;font-family:inherit;';
-                    document.body.appendChild(panel);
-
-                    // Shake the Review breadcrumb link to draw attention
-                    const reviewLink = document.querySelector('a[onclick*="goToReview"]');
-                    if (reviewLink) {
-                        reviewLink.style.transition = 'transform 0.08s';
-                        let s = 0;
-                        const shake = setInterval(() => {
-                            reviewLink.style.transform = s % 2 === 0 ? 'translateX(4px)' : 'translateX(-4px)';
-                            if (++s > 5) { clearInterval(shake); reviewLink.style.transform = ''; }
-                        }, 80);
-                    }
-                    return;
-                }
-
+                // Validate required fields — DISABLED (navigate directly)
                 // Final flush to localStorage before navigating
                 this.saveToLocalStorage();
                 window.location.href = 'final review page.html';
@@ -3804,6 +3720,9 @@
                         id: this.drivers[0].personalEmail || Date.now().toString(), // Use email or timestamp as ID
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
+                        
+                        // Premium Details (Card 5)
+                        premiumDetails: window.PremiumDetails?.getData() || {},
                         
                         // All driver data
                         drivers: this.drivers.map(drv => ({
@@ -4093,25 +4012,29 @@
                     if (!response.ok) return null;
                     const result = await response.json();
                     if (result.success && result.data && result.data.auto_data?.drivers) {
-                        return result.data.auto_data.drivers;
+                        return result.data.auto_data; // return full auto_data, not just drivers
                     }
                     return null;
                 };
 
                 try {
-                    let drivers = null;
+                    let autoData = null;
                     if (leadId) {
-                        drivers = await tryFetchSaved(leadId);
+                        autoData = await tryFetchSaved(leadId);
                     }
-                    if (!drivers && email) {
-                        drivers = await tryFetchSaved(email);
+                    if (!autoData && email) {
+                        autoData = await tryFetchSaved(email);
                     }
 
-                    if (drivers) {
-                        console.log('✅ Loaded saved drivers data:', drivers);
-                        this.drivers = drivers;
+                    if (autoData) {
+                        console.log('✅ Loaded saved drivers data:', autoData.drivers);
+                        this.drivers = autoData.drivers;
                         this.currDrvIdx = 0;
                         foundData = true;
+                        // Restore premium details
+                        if (autoData.premiumDetails) {
+                            setTimeout(() => window.PremiumDetails?.setData(autoData.premiumDetails), 300);
+                        }
                     } else {
                         console.log('ℹ️ No saved data found for this lead, creating fresh driver with clicked lead info.');
                     }
@@ -4554,6 +4477,325 @@
         });
     </script>
 
+    <script>
+    // ========== MVR DOB vs EXPIRY colour check ==========
+    window.addEventListener('DOMContentLoaded', () => {
+        const expiryEl = document.getElementById('mvr-expiry');
+        const dobEl    = document.getElementById('mvr-dob');
+        if (!expiryEl || !dobEl) return;
+
+        function mmdd(str) {
+            if (!str || str.length < 5) return null;
+            // Format MM/DD/YYYY — take first 5 chars = MM/DD
+            return str.slice(0, 5);
+        }
+
+        function checkMvrDates() {
+            const expMMDD = mmdd(expiryEl.value);
+            const dobMMDD = mmdd(dobEl.value);
+            const bothFilled = expMMDD && dobMMDD && expMMDD.length === 5 && dobMMDD.length === 5;
+            const match = bothFilled && expMMDD === dobMMDD;
+
+            [expiryEl, dobEl].forEach(el => {
+                el.classList.remove('text-green-600', 'text-red-600', 'text-slate-900', 'text-slate-700');
+                if (!bothFilled) {
+                    el.classList.add('text-slate-900');
+                } else if (match) {
+                    el.classList.add('text-green-600');
+                } else {
+                    el.classList.add('text-red-600');
+                }
+            });
+        }
+
+        expiryEl.addEventListener('input',  checkMvrDates);
+        expiryEl.addEventListener('change', checkMvrDates);
+        dobEl.addEventListener('input',     checkMvrDates);
+        dobEl.addEventListener('change',    checkMvrDates);
+
+        // Expose so refreshUI can trigger it after a driver switch
+        window.checkMvrDates = checkMvrDates;
+        setTimeout(checkMvrDates, 300);
+    });
+    </script>
+
+    <script>
+    // ========== LICENCE TIMELINE — fresh logic ==========
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const g1El   = document.getElementById('g1-date');
+        const g2El   = document.getElementById('g2-date');
+        const gEl    = document.getElementById('g-date');
+        const gap1El = document.getElementById('gap1-input');
+        const gap2El = document.getElementById('gap2-input');
+        const gap3El = document.getElementById('gap3-input');
+
+        if (!g1El) return; // not on this page
+
+        // Gap displays are computed, not editable
+        [gap1El, gap2El, gap3El].forEach(el => {
+            if (el) { el.readOnly = true; el.style.cursor = 'default'; el.style.pointerEvents = 'none'; }
+        });
+
+        // --- Helpers ---
+        function parseDate(str) {
+            if (!str || str.length < 8) return null;
+            const p = str.split('/');
+            if (p.length !== 3) return null;
+            const d = new Date(parseInt(p[2]), parseInt(p[0]) - 1, parseInt(p[1]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function fmtDate(date) {
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${m}/${d}/${date.getFullYear()}`;
+        }
+
+        // Signed: positive = d2 is after d1, negative = d2 is before d1
+        function monthsBetween(str1, str2) {
+            const d1 = parseDate(str1), d2 = parseDate(str2);
+            if (!d1 || !d2) return null;
+            return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+        }
+
+        // Recalculate and show gap numbers from current date values
+        function updateGapDisplays() {
+            // Read firstIns directly from the DOM input so it's always current
+            const firstInsEl = document.querySelector('[data-key="expFirstIns"]');
+            const firstIns = firstInsEl ? firstInsEl.value : null;
+
+            const m1 = monthsBetween(g1El.value, g2El.value);  // positive = G2 after G1
+            const m2 = monthsBetween(g2El.value, gEl.value);   // positive = G after G2
+            const m3 = monthsBetween(gEl.value, firstIns);     // negative = G is after insurance date
+
+            if (gap1El) gap1El.value = m1 !== null ? m1 : '—';
+            if (gap2El) gap2El.value = m2 !== null ? m2 : '—';
+            if (gap3El) gap3El.value = m3 !== null ? m3 : '—';
+
+            // gap1/gap2: red if < 12 months (too short or dates crossed)
+            // gap3: red if negative (G is after insurance — allowed but flagged)
+            function colorPill(inputEl, months, allowNegative) {
+                if (!inputEl) return;
+                const pill = inputEl.closest('div');
+                if (!pill) return;
+                const isLow = months !== null && (allowNegative ? months < 0 : months < 12);
+                pill.classList.toggle('border-red-400',   isLow);
+                pill.classList.toggle('border-slate-200', !isLow);
+                inputEl.classList.toggle('text-red-600',   isLow);
+                inputEl.classList.toggle('text-slate-700', !isLow);
+            }
+            colorPill(gap1El, m1, false);
+            colorPill(gap2El, m2, false);
+            colorPill(gap3El, m3, true);  // gap3 goes red only when G is after insurance
+
+
+        }
+        window.updateLicenceGapDisplays = updateGapDisplays;
+
+        // Shift a date input by N months, with small day randomization
+        // clampToIssue = true only for G1 (can't go below issue date)
+        function shiftDate(inputEl, monthDelta, clampToIssue) {
+            const date = parseDate(inputEl.value);
+            if (!date) return;
+
+            date.setMonth(date.getMonth() + monthDelta);
+
+            // ±2 day jitter so dates look natural
+            const jitter = Math.floor(Math.random() * 5) - 2;
+            date.setDate(date.getDate() + jitter);
+
+            // Clamp G1 to issue date floor
+            if (clampToIssue) {
+                const drv = (typeof App !== 'undefined' && App.drivers) ? App.drivers[App.currDrvIdx] : null;
+                const issueDate = drv ? parseDate(drv.expIssueDate) : null;
+                if (issueDate && date < issueDate) date.setTime(issueDate.getTime());
+            }
+
+            // Ordering clamps: G1 ≤ G2 ≤ G
+            const g1v = parseDate(g1El.value);
+            const g2v = parseDate(g2El.value);
+            const gv  = parseDate(gEl.value);
+            if (inputEl === g1El && g2v && date > g2v) date.setTime(g2v.getTime());
+            if (inputEl === g2El) {
+                if (g1v && date < g1v) date.setTime(g1v.getTime());
+                if (gv  && date > gv)  date.setTime(gv.getTime());
+            }
+            if (inputEl === gEl  && g2v && date < g2v) date.setTime(g2v.getTime());
+
+            inputEl.value = fmtDate(date);
+            inputEl.dispatchEvent(new Event('input',  { bubbles: true }));
+            inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+            updateGapDisplays();
+        }
+
+        // Press-and-hold support
+        function makeHoldable(btnEl, action) {
+            if (!btnEl) return;
+            let timer, interval;
+            const start = (e) => {
+                if (e.type === 'mousedown' && e.button !== 0) return;
+                e.preventDefault();
+                action();
+                timer = setTimeout(() => { interval = setInterval(action, 100); }, 400);
+            };
+            const stop = () => { clearTimeout(timer); clearInterval(interval); };
+            btnEl.addEventListener('mousedown',   start);
+            btnEl.addEventListener('touchstart',  start, { passive: false });
+            btnEl.addEventListener('mouseup',     stop);
+            btnEl.addEventListener('mouseleave',  stop);
+            btnEl.addEventListener('touchend',    stop);
+            btnEl.addEventListener('touchcancel', stop);
+        }
+
+        // Gap 1 controls — move G1 date (G2 stays fixed)
+        makeHoldable(document.getElementById('gap1-plus'),  () => shiftDate(g1El, -1, true));  // G1 back  → gap grows
+        makeHoldable(document.getElementById('gap1-minus'), () => shiftDate(g1El, +1, true));  // G1 fwd   → gap shrinks
+
+        // Gap 2 controls — move G2 date (G1 and G stay fixed)
+        makeHoldable(document.getElementById('gap2-plus'),  () => shiftDate(g2El, -1, false)); // G2 back  → gap grows
+        makeHoldable(document.getElementById('gap2-minus'), () => shiftDate(g2El, +1, false)); // G2 fwd   → gap shrinks
+
+        // Gap 3 controls — move G date only
+        makeHoldable(document.getElementById('gap3-plus'),  () => shiftDate(gEl,  -1, false)); // G back
+        makeHoldable(document.getElementById('gap3-minus'), () => shiftDate(gEl,  +1, false)); // G fwd
+
+        // Auto-fill helper: add months to a date with ±2 day jitter
+        function addMonths(date, months) {
+            const d = new Date(date);
+            d.setMonth(d.getMonth() + months);
+            d.setDate(d.getDate() + Math.floor(Math.random() * 5) - 2);
+            return d;
+        }
+
+        function setDateSilent(inputEl, date) {
+            inputEl.value = fmtDate(date);
+            inputEl.dispatchEvent(new Event('input',  { bubbles: true }));
+            inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        window.setDateSilent = setDateSilent;
+
+        // Auto-fill: paste/type G1 → fill G2 and G if empty
+        g1El.addEventListener('change', () => {
+            const g1 = parseDate(g1El.value);
+            if (!g1) return;
+            if (!parseDate(g2El.value)) {
+                setDateSilent(g2El, addMonths(g1, 12));
+            }
+            if (!parseDate(gEl.value)) {
+                const g2 = parseDate(g2El.value);
+                if (g2) setDateSilent(gEl, addMonths(g2, 12));
+            }
+            updateGapDisplays();
+        });
+
+        // Auto-fill: paste/type G → fill G2 and G1 backward if empty
+        gEl.addEventListener('change', () => {
+            const g = parseDate(gEl.value);
+            if (!g) return;
+            if (!parseDate(g2El.value)) {
+                setDateSilent(g2El, addMonths(g, -12));
+            }
+            if (!parseDate(g1El.value)) {
+                const g2 = parseDate(g2El.value);
+                if (g2) setDateSilent(g1El, addMonths(g2, -12));
+            }
+            updateGapDisplays();
+        });
+
+        // Recalculate when dates are typed manually too
+        [g1El, g2El, gEl].forEach(el => el && el.addEventListener('change', updateGapDisplays));
+
+        // Also recalculate gap3 when First Insurance Date changes
+        const firstInsEl = document.querySelector('[data-key="expFirstIns"]');
+        if (firstInsEl) firstInsEl.addEventListener('change', updateGapDisplays);
+
+        // --- Licence Date Optimizer ---
+        window.LicenseOptimizer = class {
+            constructor(issueDate, firstInsuranceDate) {
+                this.issueDate = new Date(issueDate);
+                this.firstInsuranceDate = new Date(firstInsuranceDate);
+                this.idealG1ToG2 = 24;
+                this.idealG2ToG = 24;
+                this.idealGToInsurance = 12;
+                this.minG1ToG2 = 12;
+                this.minG2ToG = 12;
+                this.weightG1ToG2 = 1.0;
+                this.weightG2ToG = 2.0;
+                this.weightGToInsurance = 3.0;
+            }
+            addMonths(date, months) {
+                const result = new Date(date);
+                result.setMonth(result.getMonth() + months);
+                return result;
+            }
+            monthsBetween(date1, date2) {
+                const months = (date2.getFullYear() - date1.getFullYear()) * 12
+                              + (date2.getMonth() - date1.getMonth());
+                const days = (date2.getDate() - date1.getDate());
+                return months + days / 30.0;
+            }
+            calculatePenalty(actualGap, idealGap, weight) {
+                return Math.pow(Math.abs(actualGap - idealGap), 2) * weight;
+            }
+            evaluateSolution(g1, g2, g) {
+                const gapG1ToG2 = this.monthsBetween(g1, g2);
+                const gapG2ToG  = this.monthsBetween(g2, g);
+                const gapGToIns = this.monthsBetween(g, this.firstInsuranceDate);
+                return {
+                    totalPenalty: this.calculatePenalty(gapG1ToG2, this.idealG1ToG2, this.weightG1ToG2)
+                                + this.calculatePenalty(gapG2ToG,  this.idealG2ToG,  this.weightG2ToG)
+                                + this.calculatePenalty(gapGToIns, this.idealGToInsurance, this.weightGToInsurance),
+                    g1, g2, g
+                };
+            }
+            isValidSolution(g1, g2, g) {
+                // G1 must be on or after issue date
+                if (g1 < this.issueDate) return false;
+                // G1→G2 and G2→G each need at least 12 months
+                if (this.monthsBetween(g1, g2) < this.minG1ToG2) return false;
+                if (this.monthsBetween(g2, g)  < this.minG2ToG)  return false;
+                // G→insurance can be 0 or negative (G and G2 may be after insurance date)
+                return true;
+            }
+            optimize() {
+                let bestSolution = null, bestPenalty = Infinity;
+
+                // The ideal G date is insurance − 12 months...
+                const gIdealFromIns = this.addMonths(this.firstInsuranceDate, -this.idealGToInsurance);
+                // ...but G can never be earlier than issueDate + 24 months (minimum chain: G1=issue, G2=issue+12, G=issue+24)
+                const gMinRequired = this.addMonths(this.issueDate, this.minG1ToG2 + this.minG2ToG);
+                // Anchor the search on the later of the two so we never miss valid solutions
+                const gSearchCenter = gIdealFromIns > gMinRequired ? gIdealFromIns : gMinRequired;
+
+                // Determine how far above gSearchCenter we need to search:
+                // If insurance is very soon after issue, G must be well past insurance.
+                // We search −48 to +48 months from the center to cover all realistic cases.
+                for (let gOffset = -48; gOffset <= 48; gOffset++) {
+                    const g = this.addMonths(gSearchCenter, gOffset);
+                    const g2Ideal = this.addMonths(g, -this.idealG2ToG);
+                    for (let g2Offset = -24; g2Offset <= 24; g2Offset++) {
+                        const g2 = this.addMonths(g2Ideal, g2Offset);
+                        const g1Ideal = this.addMonths(g2, -this.idealG1ToG2);
+                        for (let g1Offset = -24; g1Offset <= 24; g1Offset++) {
+                            const g1 = this.addMonths(g1Ideal, g1Offset);
+                            if (this.isValidSolution(g1, g2, g)) {
+                                const result = this.evaluateSolution(g1, g2, g);
+                                if (result.totalPenalty < bestPenalty) {
+                                    bestPenalty = result.totalPenalty;
+                                    bestSolution = result;
+                                }
+                            }
+                        }
+                    }
+                }
+                return bestSolution;
+            }
+        }
+
+    });
+    </script>
+
     <!-- Call Wizard Modal -->
     <div id="callWizardModal" class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-5 relative">
@@ -4566,6 +4808,115 @@
             </div>
         </div>
     </div>
+
+    <!-- PREMIUM DETAILS — self-contained, not mapped to review/export -->
+    <script>
+    (function() {
+        const IDS = ['current-auto', 'current-home', 'current-total', 'proposed-auto', 'proposed-home', 'proposed-total'];
+
+        function getKey() {
+            try {
+                const lead = JSON.parse(localStorage.getItem('autoDashboardOriginalLead') || '{}');
+                const id = lead.leadId || lead.email || 'default';
+                return 'premiumDetails_' + id;
+            } catch (e) { return 'premiumDetails_default'; }
+        }
+
+        function save() {
+            const data = {};
+            IDS.forEach(id => {
+                const el = document.getElementById('premium-' + id);
+                if (el) data[id] = el.value;
+            });
+            localStorage.setItem(getKey(), JSON.stringify(data));
+        }
+
+        function load() {
+            try {
+                const data = JSON.parse(localStorage.getItem(getKey()) || '{}');
+                IDS.forEach(id => {
+                    const el = document.getElementById('premium-' + id);
+                    if (el && data[id] !== undefined) el.value = data[id];
+                });
+            } catch (e) {}
+        }
+
+        function calcTotal(autoId, homeId, totalId) {
+            const a = parseFloat((document.getElementById('premium-' + autoId)?.value || '').replace(/[^0-9.]/g, '')) || 0;
+            const h = parseFloat((document.getElementById('premium-' + homeId)?.value || '').replace(/[^0-9.]/g, '')) || 0;
+            const totalEl = document.getElementById('premium-' + totalId);
+            if (totalEl && (a > 0 || h > 0)) totalEl.value = (a + h).toFixed(2);
+        }
+
+        function calcDiff() {
+            ['auto', 'home', 'total'].forEach(col => {
+                const proposed = parseFloat((document.getElementById('premium-proposed-' + col)?.value || '').replace(/[^0-9.-]/g, '')) || 0;
+                const current  = parseFloat((document.getElementById('premium-current-'  + col)?.value || '').replace(/[^0-9.-]/g, '')) || 0;
+                const diffEl = document.getElementById('premium-diff-' + col);
+                if (diffEl) {
+                    const diff = proposed - current;
+                    diffEl.value = (proposed === 0 && current === 0) ? '' : diff.toFixed(2);
+                    // colour: negative = mild red, positive = mild green, zero = neutral
+                    diffEl.style.color = diff < 0 ? '#f43f5e' : diff > 0 ? '#16a34a' : '';
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Delay to let App.init() restore originalLead first
+            setTimeout(() => {
+                load();
+
+                // Auto + Home/Tenant → auto-compute Total
+                ['current-auto', 'current-home'].forEach(id => {
+                    document.getElementById('premium-' + id)?.addEventListener('input', () => {
+                        calcTotal('current-auto', 'current-home', 'current-total');
+                        calcDiff();
+                        save();
+                    });
+                });
+                ['proposed-auto', 'proposed-home'].forEach(id => {
+                    document.getElementById('premium-' + id)?.addEventListener('input', () => {
+                        calcTotal('proposed-auto', 'proposed-home', 'proposed-total');
+                        calcDiff();
+                        save();
+                    });
+                });
+                // Totals are editable — save on direct edits too, also recalc diff
+                ['current-total', 'proposed-total'].forEach(id => {
+                    document.getElementById('premium-' + id)?.addEventListener('input', () => {
+                        calcDiff();
+                        save();
+                    });
+                });
+                // Initial diff render after load
+                calcDiff();
+            }, 150);
+        });
+
+        // Expose API so App can read/write premium details during DB save/load
+        window.PremiumDetails = {
+            getData: function() {
+                const data = {};
+                IDS.forEach(id => {
+                    const el = document.getElementById('premium-' + id);
+                    if (el) data[id] = el.value;
+                });
+                return data;
+            },
+            setData: function(data) {
+                if (!data) return;
+                IDS.forEach(id => {
+                    const el = document.getElementById('premium-' + id);
+                    if (el && data[id] !== undefined) el.value = data[id];
+                });
+                // Persist to localStorage too
+                localStorage.setItem(getKey(), JSON.stringify(data));
+                calcDiff();
+            }
+        };
+    })();
+    </script>
 
 </body>
 </html>

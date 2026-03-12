@@ -16,9 +16,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/tailwind.css">
     <script>
-        tailwind.config = {
+        (window.tailwind||{}).config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
@@ -268,14 +268,13 @@
                     
                     <!-- Insured Person -->
                     <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                        <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Insured Person</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Date of Birth</label>
+                                <label class="text-xs font-medium text-slate-500">Insured DOB</label>
                                 <input type="text" data-key="insDob" data-mask="date" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="MM-DD-YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Gender</label>
+                                <label class="text-xs font-medium text-slate-500">Insured Gender</label>
                                 <select data-key="insGender" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
                                     <option value="">Select</option>
                                     <option value="M">Male</option>
@@ -287,14 +286,13 @@
 
                     <!-- Co-Insured Person (Optional) -->
                     <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                        <h4 class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">Co-Insured Person (Optional)</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Date of Birth</label>
+                                <label class="text-xs font-medium text-slate-500">Co-Insured DOB</label>
                                 <input type="text" data-key="coDob" data-mask="date" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="MM-DD-YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Gender</label>
+                                <label class="text-xs font-medium text-slate-500">Co-Insured Gender</label>
                                 <select data-key="coGender" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
                                     <option value="">Select</option>
                                     <option value="M">Male</option>
@@ -336,7 +334,6 @@
 
                     <!-- Insured Since -->
                     <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
-                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Insurance History</h4>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div class="flex flex-col gap-1">
                                 <label class="text-xs font-medium text-slate-500">Insured Since</label>
@@ -351,8 +348,24 @@
 
                     <!-- Property Details -->
                     <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
-                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Property Details</h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Structure</label>
+                                <select data-key="structureType" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Detached">Detached</option>
+                                    <option value="Semi-Detached">Semi-Detached</option>
+                                    <option value="Row/Townhouse">Row/Townhouse</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Year Built</label>
+                                <input type="number" data-key="yearBuilt" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="YYYY" min="1800" max="2030">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Stories</label>
+                                <input type="number" data-key="storeys" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1" min="1">
+                            </div>
                             <div class="flex flex-col gap-1">
                                 <label class="text-xs font-medium text-slate-500">Full Baths</label>
                                 <input type="number" data-key="fullBaths" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2">
@@ -362,87 +375,96 @@
                                 <input type="number" data-key="halfBaths" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500"># of Cars</label>
+                                <label class="text-xs font-medium text-slate-500">No of Cars</label>
                                 <input type="number" data-key="numberOfCars" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Basement Area (sq ft)</label>
-                                <input type="number" data-key="basementArea" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="800">
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Basement % Finished</label>
-                                <input type="number" data-key="basementFinished" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="50" min="0" max="100">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Construction Details -->
-                    <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
-                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Construction Details</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Structure Type</label>
-                                <select data-key="structureType" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                <label class="text-xs font-medium text-slate-500">Garage</label>
+                                <select data-key="garage" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
                                     <option value="">Select</option>
-                                    <option value="Detached">Detached</option>
-                                    <option value="Semi-Detached">Semi-Detached</option>
-                                    <option value="Row/Townhouse">Row/Townhouse</option>
+                                    <option value="Attached - Frame">Attached - Frame</option>
+                                    <option value="Detached - Frame">Detached - Frame</option>
+                                    <option value="Basement">Basement</option>
                                 </select>
                             </div>
-                            <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Stories</label>
-                                <input type="number" data-key="storeys" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0">
+                            <div class="flex flex-col gap-1 homeowner-only">
+                                <label class="text-xs font-medium text-slate-500">Basement Area</label>
+                                <input type="number" data-key="basementArea" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="800">
+                            </div>
+                            <div class="flex flex-col gap-1 homeowner-only">
+                                <label class="text-xs font-medium text-slate-500">Finished Percent</label>
+                                <select data-key="basementFinished" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1 homeowner-only">
+                                <label class="text-xs font-medium text-slate-500">No of Mortgages</label>
+                                <input type="number" data-key="noOfMortgages" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0" min="0">
+                            </div>
+                            <div class="flex flex-col gap-1 homeowner-only">
+                                <label class="text-xs font-medium text-slate-500">First Time Homebuyer</label>
+                                <select data-key="firstTimeBuyer" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
                             </div>
                         </div>
                     </div>
 
                     <!-- Systems & Updates -->
                     <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
-                        <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide mb-3">Systems & Updates</h4>
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Heating Year</label>
+                                <label class="text-xs font-medium text-slate-500">Heat Year</label>
                                 <input type="text" data-key="heatYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Electric Year</label>
+                                <label class="text-xs font-medium text-slate-500">Elec Year</label>
                                 <input type="text" data-key="elecYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Plumbing Year</label>
+                                <label class="text-xs font-medium text-slate-500">Plumb Year</label>
                                 <input type="text" data-key="plumbYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs font-medium text-slate-500">Roofing Year</label>
+                                <label class="text-xs font-medium text-slate-500">Roof Year</label>
                                 <input type="text" data-key="roofYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
                             </div>
                             <div class="flex flex-col gap-1">
                                 <label class="text-xs font-medium text-slate-500">Water Heater Year</label>
                                 <input type="text" data-key="tankYear" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY">
                             </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Roof Slope</label>
+                                <select data-key="roofSlope" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
+                                    <option value="">Select</option>
+                                    <option value="Flat">Flat</option>
+                                    <option value="Pitched">Pitched</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Property Address (Auto-populated from Auto Dashboard) -->
                     <div class="bg-green-50/30 rounded-lg p-4 border border-green-100">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-xs font-semibold text-green-800 uppercase tracking-wide">Property Address</h4>
+                        <div class="flex items-center justify-end mb-3">
                             <span class="text-xs text-green-600 font-medium"><i class="fa-solid fa-link mr-1"></i>From Auto Dashboard</span>
                         </div>
-                        <div class="space-y-3">
+                        <div class="grid grid-cols-3 gap-3">
                             <div class="flex flex-col gap-1">
                                 <label class="text-xs font-medium text-slate-500">Street Address *</label>
-                                <input type="text" data-key="address" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-slate-50 transition-colors" placeholder="Auto-populated from Auto Dashboard" readonly>
+                                <input type="text" data-key="address" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="Auto-populated from Auto Dashboard">
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">City</label>
-                                    <input type="text" data-key="city" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-slate-50 transition-colors" placeholder="City" readonly>
-                                </div>
-                                <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Postal Code</label>
-                                    <input type="text" data-key="postal" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-slate-50 transition-colors" placeholder="Postal" readonly>
-                                </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">City</label>
+                                <input type="text" data-key="city" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="City">
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-slate-500">Postal Code</label>
+                                <input type="text" data-key="postal" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="Postal">
                             </div>
                         </div>
                     </div>
@@ -522,7 +544,7 @@
 
             // Initialize
             init: function() {
-                console.log('🏠 Property Insurance App Initialized');
+                console.log('?? Property Insurance App Initialized');
                 this.attachEventListeners();
                 this.attachAutoSaveListeners();
                 this.attachPageLeaveWarning();
@@ -554,7 +576,7 @@
                     select.addEventListener('change', () => this.triggerAutoSave());
                 });
                 
-                console.log('✅ Auto-save listeners attached');
+                console.log('? Auto-save listeners attached');
             },
 
             // Attach Page Leave Warning
@@ -627,9 +649,9 @@
                     this.lastSavedData = JSON.stringify(data);
                     this.updateSaveIndicator('saved');
                     
-                    console.log(`💾 Auto-saved to localStorage (key: ${storageKey})`);
+                    console.log(`?? Auto-saved to localStorage (key: ${storageKey})`);
                 } catch (e) {
-                    console.error('❌ Auto-save failed:', e);
+                    console.error('? Auto-save failed:', e);
                     this.updateSaveIndicator('error');
                 }
             },
@@ -652,7 +674,7 @@
                         if (lead.leadId) customer.leadId = lead.leadId;
                     }
                 } catch (e) {
-                    console.warn('⚠️ Could not get email from Auto Dashboard:', e);
+                    console.warn('?? Could not get email from Auto Dashboard:', e);
                 }
                 
                 // Collect primary property data
@@ -692,19 +714,19 @@
                 btnContinue.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
                 btnContinue.onclick = () => this.continueFromSelection();
                 
-                console.log(`✅ User type selected: ${type}`);
+                console.log(`? User type selected: ${type}`);
             },
 
             // Show selection modal (when no saved data)
             showSelectionModal: function() {
                 document.getElementById('selection-modal').classList.add('active');
-                console.log('📋 Showing selection modal');
+                console.log('?? Showing selection modal');
             },
 
             // Request policy type change (with confirmation)
             requestPolicyTypeChange: function() {
                 const currentType = this.userType === 'homeowner' ? 'Homeowner' : 'Tenant';
-                const message = `⚠️ WARNING: Changing Policy Type\n\nYou are currently in ${currentType} mode.\n\nSwitching policy type will DELETE all existing property data:\n• Customer information\n• Primary property details\n${this.userType === 'homeowner' ? '• All rental properties\n' : ''}
+                const message = `?? WARNING: Changing Policy Type\n\nYou are currently in ${currentType} mode.\n\nSwitching policy type will DELETE all existing property data:\n� Customer information\n� Primary property details\n${this.userType === 'homeowner' ? '� All rental properties\n' : ''}
 This action cannot be undone.\n\nAre you sure you want to continue?`;
                 
                 if (confirm(message)) {
@@ -714,7 +736,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
 
             // Execute policy type change (clear data and show modal)
             changePolicyType: function() {
-                console.log('🔄 Changing policy type, clearing all data...');
+                console.log('?? Changing policy type, clearing all data...');
                 
                 // Reset state
                 this.userType = null;
@@ -734,7 +756,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 } catch (e) {}
                 const storageKey = `propertyData_${leadId || 'default'}`;
                 localStorage.removeItem(storageKey);
-                console.log(`🗑️ Cleared localStorage: ${storageKey}`);
+                console.log(`??? Cleared localStorage: ${storageKey}`);
                 
                 // Clear all form inputs
                 document.querySelectorAll('[data-key]').forEach(input => {
@@ -757,7 +779,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 // Show selection modal
                 this.showSelectionModal();
                 
-                console.log('✅ Policy type change complete, ready for new selection');
+                console.log('? Policy type change complete, ready for new selection');
             },
 
             // Continue from selection
@@ -780,12 +802,13 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     document.getElementById('primary-property-title').textContent = 'Rental Property (Your Home)';
                     document.getElementById('primary-type-selection').classList.add('hidden');
                     document.getElementById('rental-properties-section').classList.add('hidden');
+                    document.querySelectorAll('.homeowner-only').forEach(el => el.classList.add('hidden'));
                 }
                 
                 // Trigger auto-save with user type selection
                 this.triggerAutoSave();
                 
-                console.log(`📄 Main content displayed for ${this.userType}`);
+                console.log(`?? Main content displayed for ${this.userType}`);
             },
 
             // STEP 2: Select Primary Property Type (House or Condo) - Homeowners only
@@ -800,7 +823,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 // Trigger auto-save
                 this.triggerAutoSave();
                 
-                console.log(`✅ Primary property type selected: ${type}`);
+                console.log(`? Primary property type selected: ${type}`);
             },
 
             // Show Rental Type Modal
@@ -839,7 +862,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 btnAddRental.classList.add('bg-purple-600', 'hover:bg-purple-700', 'cursor-pointer');
                 btnAddRental.onclick = () => this.addRentalProperty();
                 
-                console.log(`✅ Rental type selected: ${type}`);
+                console.log(`? Rental type selected: ${type}`);
             },
 
             // Add Rental Property
@@ -857,14 +880,19 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     exteriorFinish: '',
                     structureType: '',
                     storeys: '',
-                    livingArea: '',
                     fullBaths: '',
                     halfBaths: '',
                     numberOfCars: '',
+                    garage: '',
+                    yearBuilt: '',
+                    noOfMortgages: '',
+                    basementArea: '',
+                    basementFinished: '',
                     heatYear: '',
                     elecYear: '',
                     plumbYear: '',
                     roofYear: '',
+                    roofSlope: '',
                     tankYear: '',
                     collapsed: false
                 };
@@ -876,7 +904,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 // Trigger auto-save
                 this.triggerAutoSave();
                 
-                console.log(`➕ Rental property added:`, rental);
+                console.log(`? Rental property added:`, rental);
             },
 
             // Render Rental Property Card
@@ -916,7 +944,6 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     <div class="rental-card-body p-5 space-y-4">
                         <!-- Property Address -->
                         <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
-                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Property Address</h4>
                             <div class="space-y-3">
                                 <div class="flex flex-col gap-1">
                                     <label class="text-xs font-medium text-slate-500">Street Address</label>
@@ -935,12 +962,11 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                             </div>
                         </div>
 
-                        <!-- Construction Details -->
+                        <!-- Property Details -->
                         <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
-                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Construction Details</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Structure Type</label>
+                                    <label class="text-xs font-medium text-slate-500">Structure</label>
                                     <select data-rental-id="${rental.id}" data-key="structureType" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                         <option value="">Select</option>
                                         <option value="Detached">Detached</option>
@@ -949,19 +975,12 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                                     </select>
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Stories</label>
-                                    <input type="number" data-rental-id="${rental.id}" data-key="storeys" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                    <label class="text-xs font-medium text-slate-500">Year Built</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="yearBuilt" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="YYYY" min="1800" max="2030" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Property Details -->
-                        <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
-                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Property Details</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Living Area (sq ft)</label>
-                                    <input type="number" data-rental-id="${rental.id}" data-key="livingArea" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1500" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                    <label class="text-xs font-medium text-slate-500">Stories</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="storeys" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1" min="1" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
                                     <label class="text-xs font-medium text-slate-500">Full Baths</label>
@@ -972,35 +991,67 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                                     <input type="number" data-rental-id="${rental.id}" data-key="halfBaths" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="1" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500"># of Cars</label>
+                                    <label class="text-xs font-medium text-slate-500">No of Cars</label>
                                     <input type="number" data-rental-id="${rental.id}" data-key="numberOfCars" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="2" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Garage</label>
+                                    <select data-rental-id="${rental.id}" data-key="garage" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="Attached - Frame">Attached - Frame</option>
+                                        <option value="Detached - Frame">Detached - Frame</option>
+                                        <option value="Basement">Basement</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Basement Area</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="basementArea" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="800" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Finished Percent</label>
+                                    <select data-rental-id="${rental.id}" data-key="basementFinished" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">No of Mortgages</label>
+                                    <input type="number" data-rental-id="${rental.id}" data-key="noOfMortgages" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors" placeholder="0" min="0" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                             </div>
                         </div>
 
                         <!-- Systems & Updates -->
                         <div class="bg-purple-50/30 rounded-lg p-4 border border-purple-100">
-                            <h4 class="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-3">Systems & Updates</h4>
                             <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Heating Year</label>
+                                    <label class="text-xs font-medium text-slate-500">Heat Year</label>
                                     <input type="text" data-rental-id="${rental.id}" data-key="heatYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Electric Year</label>
+                                    <label class="text-xs font-medium text-slate-500">Elec Year</label>
                                     <input type="text" data-rental-id="${rental.id}" data-key="elecYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Plumbing Year</label>
+                                    <label class="text-xs font-medium text-slate-500">Plumb Year</label>
                                     <input type="text" data-rental-id="${rental.id}" data-key="plumbYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
-                                    <label class="text-xs font-medium text-slate-500">Roofing Year</label>
+                                    <label class="text-xs font-medium text-slate-500">Roof Year</label>
                                     <input type="text" data-rental-id="${rental.id}" data-key="roofYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                 </div>
                                 <div class="flex flex-col gap-1">
                                     <label class="text-xs font-medium text-slate-500">Water Heater Year</label>
                                     <input type="text" data-rental-id="${rental.id}" data-key="tankYear" class="hud__input--light rounded-md px-3 py-2 text-sm font-mono bg-white transition-colors" placeholder="YYYY" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-xs font-medium text-slate-500">Roof Slope</label>
+                                    <select data-rental-id="${rental.id}" data-key="roofSlope" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
+                                        <option value="">Select</option>
+                                        <option value="Flat">Flat</option>
+                                        <option value="Pitched">Pitched</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -1048,10 +1099,112 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 // Trigger auto-save
                 this.triggerAutoSave();
                 
-                console.log(`📝 Rental property updated:`, rental);
+                console.log(`?? Rental property updated:`, rental);
             },
 
             // Remove Rental Property
+            lookupYearBuilt: async function(scope, rentalId) {
+                const GEMINI_KEY = 'AIzaSyCv-sURWwRwmmdRluGtPqysKoOdDUcLZXE';
+                let address = '';
+                let inputEl, btn;
+
+                if (scope === 'primary') {
+                    const addr   = document.querySelector('[data-key="address"][data-scope="primary"]')?.value || '';
+                    const city   = document.querySelector('[data-key="city"][data-scope="primary"]')?.value || '';
+                    const postal = document.querySelector('[data-key="postal"][data-scope="primary"]')?.value || '';
+                    address = [addr, city, postal].filter(Boolean).join(', ');
+                    inputEl = document.getElementById('yearBuilt-primary');
+                    btn     = document.getElementById('yearBuilt-btn-primary');
+                } else {
+                    const card   = document.getElementById(`rental-${rentalId}`);
+                    const addr   = card?.querySelector('[data-key="address"]')?.value || '';
+                    const city   = card?.querySelector('[data-key="city"]')?.value || '';
+                    const postal = card?.querySelector('[data-key="postal"]')?.value || '';
+                    address = [addr, city, postal].filter(Boolean).join(', ');
+                    inputEl = document.getElementById(`yearBuilt-rental-${rentalId}`);
+                    btn     = document.getElementById(`yearBuilt-btn-rental-${rentalId}`);
+                }
+
+                if (!address.trim()) {
+                    alert('Please enter a property address first.');
+                    return;
+                }
+
+                const origHTML = btn.innerHTML;
+                btn.innerHTML  = '<i class="fa-solid fa-spinner fa-spin" style="font-size:11px;"></i>';
+                btn.disabled   = true;
+
+                // Helper: extract first plausible year from any text
+                const extractYear = (text) => {
+                    if (!text) return null;
+                    // First try exact "YEAR: 2014" format we asked for
+                    const fmtMatch = text.match(/YEAR:\s*(\d{4})/i);
+                    if (fmtMatch) return fmtMatch[1];
+                    // Fall back: any 4-digit year 1500-2039 in the text
+                    const matches = text.match(/\b(1[5-9]\d{2}|20[0-3]\d)\b/g);
+                    if (matches && matches.length > 0) return matches[0];
+                    return null;
+                };
+
+                const tryGemini = async (modelName) => {
+                    const prompt = `According to property and municipal records, what year was the residential property at ${address} originally built? Search Google for this address on realtor.ca, zolo.ca, housesigma.com, MPAC records, and municipal property databases. Year built means the actual original construction year, NOT the listing year or sale year. Reply ONLY in this exact format: YEAR: [4-digit-year]`;
+                    const res = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_KEY}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: prompt }] }],
+                                tools: [{ google_search: {} }],
+                                generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+                            })
+                        }
+                    );
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+                    const candidate = data?.candidates?.[0];
+                    if (!candidate || candidate.finishReason === 'SAFETY' || !candidate.content) {
+                        throw new Error('Response blocked or empty (finishReason: ' + (candidate?.finishReason || 'none') + ')');
+                    }
+                    return (candidate.content.parts?.[0]?.text || '').trim();
+                };
+
+                try {
+                    let text = '';
+                    // Try gemini-2.5-pro first (best search grounding), fall back to gemini-2.0-flash
+                    try {
+                        text = await tryGemini('gemini-2.5-pro');
+                    } catch(e1) {
+                        console.warn('gemini-2.5-pro failed, trying gemini-2.0-flash:', e1.message);
+                        text = await tryGemini('gemini-2.0-flash');
+                    }
+
+                    console.log('Gemini year built raw response:', JSON.stringify(text));
+                    const year = extractYear(text);
+
+                    if (year) {
+                        inputEl.value = year;
+                        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                        btn.innerHTML = '<i class="fa-solid fa-check" style="font-size:11px;"></i>';
+                        setTimeout(() => { btn.innerHTML = origHTML; btn.disabled = false; }, 2000);
+                        return;
+                    } else {
+                        // Gemini couldn't find the year - let user enter manually
+                        const manual = prompt(`Gemini could not find the year built for:\n${address}\n\nPlease enter the year built manually (or press Cancel to skip):`);
+                        if (manual && manual.match(/^\d{4}$/)) {
+                            inputEl.value = manual.trim();
+                            inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Gemini API error:', err);
+                    alert('Error calling Gemini API: ' + err.message);
+                }
+
+                btn.innerHTML = origHTML;
+                btn.disabled  = false;
+            },
+
             removeRentalProperty: function(rentalId) {
                 if (!confirm('Are you sure you want to remove this rental property?')) return;
                 
@@ -1076,17 +1229,17 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 // Trigger auto-save after removal
                 this.triggerAutoSave();
                 
-                console.log(`🗑️ Rental property removed: ${rentalId}`);
+                console.log(`??? Rental property removed: ${rentalId}`);
             },
 
             // Save to Database (also syncs to backend)
             saveToDatabase: function() {
-                console.log('💾 Saving property data to database...');
+                console.log('?? Saving property data to database...');
                 
                 // Use the collectAllData function
                 const data = this.collectAllData();
                 
-                console.log('📦 Property data collected:', data);
+                console.log('?? Property data collected:', data);
                 
                 // Validate required fields
                 if (!data.primaryProperty.address) {
@@ -1098,7 +1251,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 const leadId = data.customer.leadId || data.customer.email || 'default';
                 const storageKey = `propertyData_${leadId}`;
                 localStorage.setItem(storageKey, JSON.stringify(data));
-                console.log(`💾 Saved to localStorage key: ${storageKey}`);
+                console.log(`?? Saved to localStorage key: ${storageKey}`);
                 
                 // Mark as saved
                 this.hasUnsavedChanges = false;
@@ -1118,7 +1271,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                 .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        console.log('✅ Property data synced to database:', result);
+                        console.log('? Property data synced to database:', result);
                         
                         // Show success animation
                         btnSave.classList.add('save-success');
@@ -1136,7 +1289,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     }
                 })
                 .catch(error => {
-                    console.error('❌ Error syncing to database:', error);
+                    console.error('? Error syncing to database:', error);
                     btnSave.innerHTML = originalText;
                     btnSave.disabled = false;
                     alert(`Error syncing to database: ${error.message}\n\nDon't worry - your data is still saved locally!`);
@@ -1158,7 +1311,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                         leadId = lead.leadId || lead.email || 'default';
                     }
                 } catch (e) {
-                    console.warn('⚠️ Could not get lead ID:', e);
+                    console.warn('?? Could not get lead ID:', e);
                 }
                 
                 // Clear localStorage
@@ -1187,7 +1340,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                         leadId = lead.leadId || lead.email || 'default';
                     }
                 } catch (e) {
-                    console.warn('⚠️ Could not get lead ID:', e);
+                    console.warn('?? Could not get lead ID:', e);
                 }
                 
                 // First try localStorage with lead-specific key
@@ -1199,12 +1352,12 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                         // Check if V2 format
                         if (parsedData.userType && parsedData.primaryProperty) {
                             this.restoreData(parsedData);
-                            console.log(`✅ Property data restored from localStorage (key: ${storageKey})`);
+                            console.log(`? Property data restored from localStorage (key: ${storageKey})`);
                             return;
                         }
                     }
                 } catch (e) {
-                    console.warn('⚠️ Error loading from localStorage:', e);
+                    console.warn('?? Error loading from localStorage:', e);
                 }
                 
                 // If localStorage is empty, try to fetch from database
@@ -1225,17 +1378,21 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                             email = lead.email;
                         }
                     } catch (e) {
-                        console.warn('⚠️ Could not get email from auto dashboard lead');
+                        console.warn('?? Could not get email from auto dashboard lead');
                     }
                 }
                 
                 if (!email) {
-                    console.log('ℹ️ No email available, showing selection modal');
+                    console.log('?? No email available, showing selection modal');
                     this.showSelectionModal();
                     return;
                 }
                 
-                console.log(`📂 Loading property data from database for: ${email}`);
+                console.log(`?? Loading property data from database for: ${email}`);
+                
+                // Show modal immediately � no waiting for network
+                // restoreData() will hide it if DB comes back with good data
+                this.showSelectionModal();
                 
                 fetch(`/api/get-property-data/${email}`)
                     .then(response => response.json())
@@ -1246,7 +1403,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                             
                             // Check if this is V2 format (redesigned page data)
                             if (savedCustomer.version === 'v2') {
-                                console.log('📂 Found V2 property data in database');
+                                console.log('?? Found V2 property data in database');
                                 this.restoreData({
                                     userType: savedCustomer.userType,
                                     primaryType: savedCustomer.primaryType,
@@ -1254,18 +1411,18 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                                     primaryProperty: savedCustomer.primaryProperty,
                                     rentalProperties: savedCustomer.rentalProperties || []
                                 });
-                                console.log('✅ Property data restored from database');
+                                console.log('? Property data restored from database');
                             } else {
-                                console.log('ℹ️ Database has old format data, showing selection modal');
+                                console.log('?? Database has old format data, showing selection modal');
                                 this.showSelectionModal();
                             }
                         } else {
-                            console.log('ℹ️ No saved property data found in database, showing selection modal');
+                            console.log('?? No saved property data found in database, showing selection modal');
                             this.showSelectionModal();
                         }
                     })
                     .catch(error => {
-                        console.warn('⚠️ Error loading from database:', error);
+                        console.warn('?? Error loading from database:', error);
                         this.showSelectionModal();
                     });
             },
@@ -1292,6 +1449,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     document.getElementById('primary-property-title').textContent = 'Rental Property (Your Home)';
                     document.getElementById('primary-type-selection').classList.add('hidden');
                     document.getElementById('rental-properties-section').classList.add('hidden');
+                    document.querySelectorAll('.homeowner-only').forEach(el => el.classList.add('hidden'));
                 }
                 
                 // Restore customer data
@@ -1372,38 +1530,62 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                     if (drivers && drivers[currDrvIdx]) {
                         const driver = drivers[currDrvIdx];
                         
+                        // Helper: set value and fire change so auto-save picks it up
+                        const setAndSave = (el, val) => {
+                            if (el && !el.value && val) {
+                                el.value = val;
+                                el.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        };
+
                         // Populate primary property address from Auto Dashboard personal info
-                        if (driver.personalAddress) {
-                            const addressInput = document.querySelector('[data-scope="primary"][data-key="address"]');
-                            if (addressInput && !addressInput.value) addressInput.value = driver.personalAddress;
+                        // Strip city/province/postal from personalAddress if the DASH PDF embedded them
+                        let streetOnly = (driver.personalAddress || '').trim();
+                        const city   = (driver.personalCity || '').trim();
+                        const postal = (driver.personalPostalCode || '').trim();
+                        // If city name appears inside the address string, cut before it
+                        if (city && streetOnly.toUpperCase().includes(city.toUpperCase())) {
+                            const idx = streetOnly.toUpperCase().indexOf(city.toUpperCase());
+                            streetOnly = streetOnly.substring(0, idx).replace(/[,\s]+$/, '').trim();
                         }
-                        if (driver.personalCity) {
-                            const cityInput = document.querySelector('[data-scope="primary"][data-key="city"]');
-                            if (cityInput && !cityInput.value) cityInput.value = driver.personalCity;
-                        }
-                        if (driver.personalPostalCode) {
-                            const postalInput = document.querySelector('[data-scope="primary"][data-key="postal"]');
-                            if (postalInput && !postalInput.value) postalInput.value = driver.personalPostalCode;
-                        }
-                        
+                        // Also strip a trailing Canadian postal code pattern if still present
+                        streetOnly = streetOnly.replace(/\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i, '').replace(/[,\s]+$/, '').trim();
+                        setAndSave(document.querySelector('[data-scope="primary"][data-key="address"]'), streetOnly);
+                        setAndSave(document.querySelector('[data-scope="primary"][data-key="city"]'),    city);
+                        setAndSave(document.querySelector('[data-scope="primary"][data-key="postal"]'),  postal);
+
                         // Populate insured person DOB and Gender from Auto Dashboard
-                        if (driver.personalDob) {
-                            const dobInput = document.querySelector('[data-key="insDob"]:not([data-scope])');
-                            if (dobInput && !dobInput.value) dobInput.value = driver.personalDob;
-                        }
-                        if (driver.personalGender) {
-                            const genderInput = document.querySelector('[data-key="insGender"]:not([data-scope])');
-                            if (genderInput && !genderInput.value) genderInput.value = driver.personalGender;
-                        }
+                        setAndSave(document.querySelector('[data-key="insDob"]:not([data-scope])'),    driver.personalDob);
+                        setAndSave(document.querySelector('[data-key="insGender"]:not([data-scope])'), driver.personalGender);
                         
-                        console.log('✅ Auto-populated address and customer info from Auto Dashboard');
+                        console.log('? Auto-populated address and customer info from Auto Dashboard');
                     }
                 }
             } catch (e) {
-                console.warn('⚠️ Could not auto-populate from Auto Dashboard:', e);
+                console.warn('?? Could not auto-populate from Auto Dashboard:', e);
             }
         });
     </script>
+
+    <!-- RIGHT PAGE NAV -->
+    <div style="position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:9998;display:flex;flex-direction:column;gap:8px;padding:10px 8px;background:white;border:1px solid #e2e8f0;border-right:none;border-radius:12px 0 0 12px;box-shadow:-4px 0 20px rgba(0,0,0,0.07);">
+        <button onclick="window.location.href='meta dashboard.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Leads">
+            <i class="fa-solid fa-users" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Leads</span>
+        </button>
+        <button onclick="sessionStorage.setItem('navigatedFromPage','property');window.location.href='Auto dashboard.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Auto Dashboard">
+            <i class="fa-solid fa-car" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Auto</span>
+        </button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#2563eb;color:white;border-radius:8px;cursor:default;" title="Property (current page)">
+            <i class="fa-solid fa-house" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Property</span>
+        </div>
+        <button onclick="window.location.href='final review page.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Final Review">
+            <i class="fa-solid fa-clipboard-check" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Review</span>
+        </button>
+    </div>
 
 </body>
 </html>

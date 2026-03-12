@@ -597,7 +597,11 @@ def get_leads_from_db(filters=None):
                     lead['address'] = auto_data.get('personalAddress', '')
                     lead['marital_status'] = auto_data.get('personalMaritalStatus', '')
                     lead['gender'] = auto_data.get('personalGender', '')
-                    print(f"✅ Enriched lead {lead.get('name')} with personal info")
+                    # Check if license number is present in first driver — means real data was parsed
+                    drivers = auto_data.get('drivers', [])
+                    lic = drivers[0].get('licNumber', '').strip() if drivers else ''
+                    lead['has_auto_data'] = bool(lic)
+                    print(f"✅ Enriched lead {lead.get('name')} with personal info (has_auto_data={lead['has_auto_data']})")
         
         return leads
     except Exception as e:
@@ -1132,21 +1136,40 @@ def get_manual_leads():
 
 @app.route('/api/leads', methods=['GET'])
 def get_leads():
-    """Get leads from database for general use (signing portal, etc.)"""
+    """Get leads from database for general use (signing portal, meta dashboard, etc.)"""
     try:
         response = supabase.table('leads').select('*').order('created_at', desc=True).execute()
         leads = response.data if response.data else []
         
         # Normalize data structure for compatibility
         for lead in leads:
-            # Ensure name field exists
             if not lead.get('name'):
                 first = lead.get('first_name', '') or ''
                 last = lead.get('last_name', '') or ''
                 lead['name'] = f"{first} {last}".strip() or lead.get('email') or 'Unknown'
-            # Add client_name alias for signing portal
             lead['client_name'] = lead.get('name')
-        
+
+        # Batch-enrich has_auto_data flag — check if licNumber is present in auto_data
+        # This tells the meta dashboard which leads have had real data parsed in Auto dashboard
+        emails = list({lead['email'].strip().lower() for lead in leads if lead.get('email')})
+        auto_data_by_email = {}
+        if emails:
+            try:
+                auto_result = supabase.table('auto_data').select('email,auto_data').in_('email', emails).execute()
+                for row in (auto_result.data or []):
+                    email_key = (row.get('email') or '').strip().lower()
+                    data = row.get('auto_data')
+                    if email_key and isinstance(data, dict):
+                        drivers = data.get('drivers', [])
+                        lic = drivers[0].get('licNumber', '').strip() if drivers else ''
+                        auto_data_by_email[email_key] = bool(lic)
+            except Exception as e:
+                print(f"⚠️ Error fetching auto_data for has_auto_data: {e}")
+
+        for lead in leads:
+            email_key = (lead.get('email') or '').strip().lower()
+            lead['has_auto_data'] = auto_data_by_email.get(email_key, False)
+
         print(f"📋 Fetched {len(leads)} leads from database")
         return jsonify(leads), 200
     except Exception as e:

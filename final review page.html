@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Policy Review</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/tailwind.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -82,7 +82,7 @@
                 
                 if (savedDrivers) {
                     drivers = JSON.parse(savedDrivers);
-                    console.log('✅ Loaded drivers from localStorage:', drivers);
+                    console.log('? Loaded drivers from localStorage:', drivers);
                     // Debug: Log driver 0's city and postal
                     if (drivers[0]) {
                         console.log('   - drv0.personalCity:', drivers[0].personalCity);
@@ -93,7 +93,7 @@
                 
                 if (savedLead) {
                     leadInfo = JSON.parse(savedLead);
-                    console.log('✅ Loaded lead info from localStorage:', leadInfo);
+                    console.log('? Loaded lead info from localStorage:', leadInfo);
                     console.log('   - city:', leadInfo.city);
                     console.log('   - postal:', leadInfo.postal);
                 }
@@ -120,12 +120,12 @@
                     gender: leadInfo.gender || ''
                 };
                 
-                console.log('📋 Final leadInfo:', leadInfo);
-                console.log('   ✅ City from Auto Dashboard:', leadInfo.city);
-                console.log('   ✅ Postal from Auto Dashboard:', leadInfo.postal);
+                console.log('?? Final leadInfo:', leadInfo);
+                console.log('   ? City from Auto Dashboard:', leadInfo.city);
+                console.log('   ? Postal from Auto Dashboard:', leadInfo.postal);
                 return { drivers, leadInfo };
             } catch (e) {
-                console.error('❌ Error loading data:', e);
+                console.error('? Error loading data:', e);
                 return { drivers: [], leadInfo: {} };
             }
         }
@@ -181,7 +181,7 @@
                     return `propertyData_${leadId}`;
                 }
             } catch (e) {
-                console.warn('⚠️ Failed to get lead ID for property storage:', e);
+                console.warn('?? Failed to get lead ID for property storage:', e);
             }
             return 'propertyData_default';
         }
@@ -193,12 +193,12 @@
                 const savedProperty = localStorage.getItem(storageKey);
                 if (savedProperty) {
                     const data = JSON.parse(savedProperty);
-                    console.log(`✅ Loaded property data from localStorage (key: ${storageKey}):`, data);
+                    console.log(`? Loaded property data from localStorage (key: ${storageKey}):`, data);
                     
                     // V2 FORMAT: Redesigned property page format
                     // {userType, primaryType, customer, primaryProperty, rentalProperties}
                     if (data.userType && data.primaryProperty) {
-                        console.log('📋 Detected V2 property format from redesigned page');
+                        console.log('?? Detected V2 property format from redesigned page');
                         return { ...data, isV2: true };
                     }
                     
@@ -212,7 +212,7 @@
                 }
                 return {};
             } catch (e) {
-                console.error('❌ Error loading property data:', e);
+                console.error('? Error loading property data:', e);
                 return {};
             }
         }
@@ -240,24 +240,24 @@
             
             if (drv0?.personalAddress) RAW_DATA.customers[0]["Address"] = sanitize(drv0.personalAddress);
             
-            // ✅ CITY: Pull from Auto Dashboard (drv0.personalCity) - ALWAYS set from driver data
+            // ? CITY: Pull from Auto Dashboard (drv0.personalCity) - ALWAYS set from driver data
             const cityValue = drv0?.personalCity || leadInfo.city || '';
             RAW_DATA.customers[0]["City"] = sanitize(cityValue);
-            console.log('📍 Mapped City to Client Details:', cityValue);
+            console.log('?? Mapped City to Client Details:', cityValue);
             
-            // ✅ POSTAL: Pull from Auto Dashboard (drv0.personalPostalCode) - ALWAYS set from driver data
+            // ? POSTAL: Pull from Auto Dashboard (drv0.personalPostalCode) - ALWAYS set from driver data
             const postalValue = drv0?.personalPostalCode || leadInfo.postal || leadInfo.postalCode || '';
             RAW_DATA.customers[0]["Postal Code"] = sanitize(postalValue);
-            console.log('📮 Mapped Postal Code to Client Details:', postalValue);
+            console.log('?? Mapped Postal Code to Client Details:', postalValue);
             
             if (drv0?.personalMobile || leadInfo.phone) RAW_DATA.customers[0]["Mobile"] = sanitize(drv0?.personalMobile || leadInfo.phone);
             if (drv0?.personalEmail || leadInfo.email) RAW_DATA.customers[0]["Email"] = sanitize(drv0?.personalEmail || leadInfo.email);
             if (leadInfo.homePhone || drv0?.personalHomePhone) RAW_DATA.customers[0]["Home Phone"] = sanitize(leadInfo.homePhone || drv0?.personalHomePhone);
             
-            // ✅ EFFECTIVE DATE: Pull from drv0.licRenewal (Renewal Date in Driver & Licensing section)
+            // ? EFFECTIVE DATE: Pull from drv0.licRenewal (Renewal Date in Driver & Licensing section)
             const effectiveDateValue = drv0?.licRenewal || leadInfo.effectiveDate || '';
             RAW_DATA.customers[0]["Effective Date"] = sanitize(effectiveDateValue);
-            console.log('📅 Mapped Effective Date from Renewal Date:', effectiveDateValue);
+            console.log('?? Mapped Effective Date from Renewal Date:', effectiveDateValue);
             
             if (drv0?.personalGender) RAW_DATA.customers[0]["Gender"] = sanitize(drv0.personalGender);
             if (drv0?.personalMaritalStatus) RAW_DATA.customers[0]["Marital Status"] = sanitize(drv0.personalMaritalStatus);
@@ -272,7 +272,7 @@
                 
                 if (drv) {
                     // Use driver's separate name fields first (same logic as Personal Information card)
-                    // Priority: personalFirstName/Middle/Last → fallback to parsing full name
+                    // Priority: personalFirstName/Middle/Last ? fallback to parsing full name
                     const driverName = drv.personalName || drv.drvName || (driverIndex === 0 ? leadInfo.name : '') || '';
                     const driverNameParts = parseName(driverName);
                     
@@ -322,14 +322,12 @@
                     // CONVICTIONS
                     if (drv.convictionsList && drv.convictionsList.length > 0) {
                         RAW_DATA.customers[0].drivers[driverIndex].convictions = drv.convictionsList.map(conv => {
-                            // Get the selected reason - check both fields
                             const selectedReason = conv.reason || conv.selectedReason || '';
-                            console.log(`📋 Conviction: ${conv.description} → Reason: "${selectedReason}"`);
+                            console.log(`?? Conviction: ${conv.description} ? Reason: "${selectedReason}"`);
                             return {
-                                "Date": sanitize(conv.date),
-                                "Description": sanitize(conv.description),
-                                "Speed over the limit": sanitize(drv.mvrSpeed || ''),
-                                "Selected Reason": sanitize(selectedReason)
+                                "date of loss": sanitize(conv.date),
+                                "description": sanitize(selectedReason || conv.description),
+                                "speeding": sanitize(drv.mvrSpeed || '')
                             };
                         });
                     } else {
@@ -361,10 +359,10 @@
                             return {
                                 "Lapse Date": sanitize(lapse["Lapse Date"] || lapse.lapseDate || lapse["Date"] || lapse.date || ''),
                                 "Reinstated": sanitize(lapse.reinstatedDate || lapse.Reinstated || lapse.reinstated || lapse["Reinstated Date"] || ''),
-                                "Reason": reason  // ✅ DROPDOWN SELECTED REASON
+                                "Reason": reason  // ? DROPDOWN SELECTED REASON
                             };
                         });
-                        console.log(`📋 Loaded ${drv.lapses.length} lapse record(s) for Driver ${driverIndex + 1} with selected reason(s)`);
+                        console.log(`?? Loaded ${drv.lapses.length} lapse record(s) for Driver ${driverIndex + 1} with selected reason(s)`);
                     } else {
                         RAW_DATA.customers[0].drivers[driverIndex].lapses = [];
                     }
@@ -389,7 +387,7 @@
             // PROPERTY DATA SECTIONS (from property.html)
             // Handle V2 FORMAT: From redesigned property page
             if (propData.isV2 && propData.primaryProperty) {
-                console.log('📋 Processing V2 property format from redesigned page');
+                console.log('?? Processing V2 property format from redesigned page');
                 
                 const v2Customer = propData.customer || {};
                 const primaryProp = propData.primaryProperty || {};
@@ -407,8 +405,8 @@
                     }
                 }
                 RAW_DATA.customers[0].viewMode = propData.userType === 'tenant' ? 'Tenants' : 'Homeowners';
-                console.log('🔍 Set viewMode:', RAW_DATA.customers[0].viewMode);
-                console.log('🏠 Property Type:', propertyType);
+                console.log('?? Set viewMode:', RAW_DATA.customers[0].viewMode);
+                console.log('?? Property Type:', propertyType);
                 
                 // Map V2 customer fields
                 RAW_DATA.customers[0]["Insured DOB"] = sanitize(v2Customer.insDob || "");
@@ -420,30 +418,34 @@
                 
                 // Map V2 primary property fields
                 RAW_DATA.customers[0]["Property Address"] = sanitize(primaryProp.address || "");
-                RAW_DATA.customers[0]["City"] = sanitize(primaryProp.city || "");
-                RAW_DATA.customers[0]["Postal Code"] = sanitize(primaryProp.postal || "");
+                RAW_DATA.customers[0]["City"] = sanitize(primaryProp.city || RAW_DATA.customers[0]["City"] || "");
+                RAW_DATA.customers[0]["Postal Code"] = sanitize(primaryProp.postal || RAW_DATA.customers[0]["Postal Code"] || "");
                 RAW_DATA.customers[0]["Property Type"] = propertyType;
                 RAW_DATA.customers[0]["Insured Since"] = sanitize(primaryProp.insuredSince || "");
                 RAW_DATA.customers[0]["Insured with Brokerage Since"] = sanitize(primaryProp.insuredWithBrokerageSince || "");
                 RAW_DATA.customers[0]["Structure"] = sanitize(primaryProp.structureType || "");
                 RAW_DATA.customers[0]["Stories"] = sanitize(primaryProp.storeys || "");
-                RAW_DATA.customers[0]["Total Living Area"] = sanitize(primaryProp.livingArea || "");
-                RAW_DATA.customers[0]["Full Bath"] = sanitize(primaryProp.fullBaths || "");
-                RAW_DATA.customers[0]["Half Bath"] = sanitize(primaryProp.halfBaths || "");
-                RAW_DATA.customers[0]["Number of Cars"] = sanitize(primaryProp.numberOfCars || "");
+                RAW_DATA.customers[0]["Full Baths"] = sanitize(primaryProp.fullBaths || "");
+                RAW_DATA.customers[0]["Half Baths"] = sanitize(primaryProp.halfBaths || "");
+                RAW_DATA.customers[0]["No of Cars"] = sanitize(primaryProp.numberOfCars || "");
                 RAW_DATA.customers[0]["Basement Area"] = sanitize(primaryProp.basementArea || "");
-                RAW_DATA.customers[0]["Basement % Finished"] = sanitize(primaryProp.basementFinished || "");
+                RAW_DATA.customers[0]["Finished Percent"] = sanitize(primaryProp.basementFinished || "");
+                RAW_DATA.customers[0]["No of Mortgages"] = sanitize(primaryProp.noOfMortgages || "");
+                RAW_DATA.customers[0]["First Time Homebuyer"] = sanitize(primaryProp.firstTimeBuyer || "");
+                RAW_DATA.customers[0]["Garage"] = sanitize(primaryProp.garage || "");
                 
                 // Map V2 mechanical systems
                 RAW_DATA.customers[0]["Elec Year"] = sanitize(primaryProp.elecYear || "");
                 RAW_DATA.customers[0]["Plumb Year"] = sanitize(primaryProp.plumbYear || "");
                 RAW_DATA.customers[0]["Water Heater Year"] = sanitize(primaryProp.tankYear || "");
                 RAW_DATA.customers[0]["Roof Year"] = sanitize(primaryProp.roofYear || "");
+                RAW_DATA.customers[0]["Roof Slope"] = sanitize(primaryProp.roofSlope || "");
                 RAW_DATA.customers[0]["Heat Year"] = sanitize(primaryProp.heatYear || "");
                 
                 // Build properties array (primary + rentals) for display and export
                 RAW_DATA.customers[0].properties = [{
                     "Property Type": propertyType,
+                    "Type": sanitize(primaryProp.propertyType || propertyType || ""),
                     "Insured DOB": sanitize(v2Customer.insDob || ""),
                     "Insured Gender": sanitize(v2Customer.insGender || ""),
                     "Co-Insured DOB": sanitize(v2Customer.coDob || ""),
@@ -456,24 +458,29 @@
                     "Structure": sanitize(primaryProp.structureType || ""),
                     "structureType": sanitize(primaryProp.structureType || ""),
                     "Stories": sanitize(primaryProp.storeys || ""),
-                    "Total Living Area": sanitize(primaryProp.livingArea || ""),
-                    "Full Bath": sanitize(primaryProp.fullBaths || ""),
-                    "Half Bath": sanitize(primaryProp.halfBaths || ""),
-                    "Number of Cars": sanitize(primaryProp.numberOfCars || ""),
+                    "Year Built": sanitize(primaryProp.yearBuilt || ""),
+                    "Full Baths": sanitize(primaryProp.fullBaths || ""),
+                    "Half Baths": sanitize(primaryProp.halfBaths || ""),
+                    "No of Cars": sanitize(primaryProp.numberOfCars || ""),
                     "Basement Area": sanitize(primaryProp.basementArea || ""),
-                    "Basement Finished": sanitize(primaryProp.basementFinished || ""),
-                    "Electrical Year": sanitize(primaryProp.elecYear || ""),
-                    "Plumbing Year": sanitize(primaryProp.plumbYear || ""),
-                    "Tank Year": sanitize(primaryProp.tankYear || ""),
-                    "Roofing Year": sanitize(primaryProp.roofYear || ""),
-                    "Heating Year": sanitize(primaryProp.heatYear || "")
+                    "Finished Percent": sanitize(primaryProp.basementFinished || ""),
+                    "No of Mortgages": sanitize(primaryProp.noOfMortgages || ""),
+                    "First Time Homebuyer": sanitize(primaryProp.firstTimeBuyer || ""),
+                    "Garage": sanitize(primaryProp.garage || ""),
+                    "Elec Year": sanitize(primaryProp.elecYear || ""),
+                    "Plumb Year": sanitize(primaryProp.plumbYear || ""),
+                    "Water Heater Year": sanitize(primaryProp.tankYear || ""),
+                    "Roof Year": sanitize(primaryProp.roofYear || ""),
+                    "Roof Slope": sanitize(primaryProp.roofSlope || ""),
+                    "Heat Year": sanitize(primaryProp.heatYear || "")
                 }];
                 
                 // Add rental properties if any
                 rentals.forEach((rental, idx) => {
-                    const rentalType = rental.type === 'rental-house' ? 'Rental Dwelling' : 'Rented Condo';
+                    const rentalType = rental.type === 'rental-house' ? 'Rented Dwelling' : 'Rented Condo';
                     RAW_DATA.customers[0].properties.push({
                         "Property Type": rentalType,
+                        "Type": rentalType,
                         "Rental Address": sanitize(rental.address || ""),
                         "Rental Postal": sanitize(rental.postal || ""),
                         "City": sanitize(rental.city || ""),
@@ -481,16 +488,21 @@
                         "Exterior Finish": sanitize(rental.exteriorFinish || ""),
                         "Structure": sanitize(rental.structureType || ""),
                         "structureType": sanitize(rental.structureType || ""),
+                        "Year Built": sanitize(rental.yearBuilt || ""),
                         "Stories": sanitize(rental.storeys || ""),
-                        "Total Living Area": sanitize(rental.livingArea || ""),
-                        "Full Bath": sanitize(rental.fullBaths || ""),
-                        "Half Bath": sanitize(rental.halfBaths || ""),
-                        "Number of Cars": sanitize(rental.numberOfCars || ""),
-                        "Electrical Year": sanitize(rental.elecYear || ""),
-                        "Plumbing Year": sanitize(rental.plumbYear || ""),
-                        "Tank Year": sanitize(rental.tankYear || ""),
-                        "Roofing Year": sanitize(rental.roofYear || ""),
-                        "Heating Year": sanitize(rental.heatYear || "")
+                        "Full Baths": sanitize(rental.fullBaths || ""),
+                        "Half Baths": sanitize(rental.halfBaths || ""),
+                        "No of Cars": sanitize(rental.numberOfCars || ""),
+                        "Garage": sanitize(rental.garage || ""),
+                        "No of Mortgages": sanitize(rental.noOfMortgages || ""),
+                        "Basement Area": sanitize(rental.basementArea || ""),
+                        "Finished Percent": sanitize(rental.basementFinished || ""),
+                        "Elec Year": sanitize(rental.elecYear || ""),
+                        "Plumb Year": sanitize(rental.plumbYear || ""),
+                        "Water Heater Year": sanitize(rental.tankYear || ""),
+                        "Roof Year": sanitize(rental.roofYear || ""),
+                        "Roof Slope": sanitize(rental.roofSlope || ""),
+                        "Heat Year": sanitize(rental.heatYear || "")
                     });
                     // Set rental address/postal on main customer for first rental
                     if (idx === 0) {
@@ -499,14 +511,14 @@
                     }
                 });
                 
-                console.log('✅ V2 Properties mapped:', RAW_DATA.customers[0].properties);
-                console.log('✅ V2 RAW_DATA populated:', RAW_DATA.customers[0]);
+                console.log('? V2 Properties mapped:', RAW_DATA.customers[0].properties);
+                console.log('? V2 RAW_DATA populated:', RAW_DATA.customers[0]);
             }
             // Handle NEW format: properties array with customer objects
             else if (propData.properties && Array.isArray(propData.properties)) {
-                // ✅ COPY VIEWMODE FROM PROPERTY DATA
+                // ? COPY VIEWMODE FROM PROPERTY DATA
                 RAW_DATA.customers[0].viewMode = propData.viewMode;
-                console.log('🔍 Set viewMode:', propData.viewMode);
+                console.log('?? Set viewMode:', propData.viewMode);
                 
                 // NEW FORMAT: Multiple properties with their own customer data
                 RAW_DATA.customers[0].properties = propData.properties.map(prop => {
@@ -530,45 +542,43 @@
                         "Exterior Finish": sanitize(prop.exteriorFinish || ""),
                         "Structure": sanitize(prop.structure || ""),  // Property Type: Rented Dwelling, Rented Condo, Tenant
                         "structureType": sanitize(prop.structureType || ""),  // Structure Type: Detached, Semi-Detached, etc.
-                        "Number of Cars": sanitize(prop.numberOfCars || ""),
+                        "No of Cars": sanitize(prop.numberOfCars || ""),
                         "Stories": sanitize(prop.storeys || ""),
-                        "Total Living Area": sanitize(prop.livingArea || ""),
-                        "Full Bath": sanitize(prop.fullBaths || ""),
-                        "Half Bath": sanitize(prop.halfBaths || ""),
-                        "Basement Finished": sanitize(prop.bsmtFin || ""),
+                        "Full Baths": sanitize(prop.fullBaths || ""),
+                        "Half Baths": sanitize(prop.halfBaths || ""),
+                        "Finished Percent": sanitize(prop.bsmtFin || ""),
                         "Basement Area": sanitize(prop.bsmtArea || ""),
                         "Separate Entrance": sanitize(prop.sepEntrance || ""),
-                        "Mortgages": sanitize(prop.mortgageCount || ""),
-                        "First Time Buyer": sanitize(prop.firstTimeBuyer || ""),
+                        "No of Mortgages": sanitize(prop.noOfMortgages || ""),
+                        "First Time Homebuyer": sanitize(prop.firstTimeBuyer || ""),
                         "Garage": sanitize(prop.garage || ""),
-                        "Electrical Year": sanitize(prop.elecYear || ""),
-                        "Plumbing Year": sanitize(prop.plumbYear || ""),
-                        "Roofing Year": sanitize(prop.roofYear || ""),
-                        "Roof Type": sanitize(prop.roofType || ""),
+                        "Elec Year": sanitize(prop.elecYear || ""),
+                        "Plumb Year": sanitize(prop.plumbYear || ""),
+                        "Roof Year": sanitize(prop.roofYear || ""),
                         "Roof Slope": sanitize(prop.roofSlope || ""),
-                        "Heating Year": sanitize(prop.heatYear || ""),
-                        "Tank Year": sanitize(prop.tankYear || ""),
+                        "Heat Year": sanitize(prop.heatYear || ""),
+                        "Water Heater Year": sanitize(prop.tankYear || ""),
                         "Tank Type": sanitize(prop.tankType || ""),
                         "Rental Address": sanitize(prop.rentalAddress || ""),
                         "Rental Postal": sanitize(prop.rentalPostal || ""),
                         "Insured Since": sanitize(propCustomer.insuredSince || prop.insuredSince || "")
                     };
                 });
-                console.log('✅ Loaded new format properties:', RAW_DATA.customers[0].properties);
+                console.log('? Loaded new format properties:', RAW_DATA.customers[0].properties);
                 
                 // ALSO populate RAW_DATA.customers[0] with primary property data for form inputs
                 if (propData.properties && propData.properties[0]) {
                     const primaryProp = propData.properties[0];
                     const propCustomer = primaryProp.customer || {};
-                    console.log('📋 Primary Property Object:', primaryProp);
-                    console.log('👤 Primary Customer Object:', propCustomer);
-                    console.log('🔍 Key field values being mapped:');
-                    console.log('  - insName:', primaryProp.insName, '→ will set Insured Name');
-                    console.log('  - insDob:', primaryProp.insDob, '→ will set Insured DOB');
-                    console.log('  - insGender:', primaryProp.insGender, '→ will set Gender');
-                    console.log('  - coInsName:', primaryProp.coInsName, '→ will set Co-Insured Name');
-                    console.log('  - coDob:', primaryProp.coDob, '→ will set Co-Insured DOB');
-                    console.log('  - coGender:', primaryProp.coGender, '→ will set Co-Insured Gender');
+                    console.log('?? Primary Property Object:', primaryProp);
+                    console.log('?? Primary Customer Object:', propCustomer);
+                    console.log('?? Key field values being mapped:');
+                    console.log('  - insName:', primaryProp.insName, '? will set Insured Name');
+                    console.log('  - insDob:', primaryProp.insDob, '? will set Insured DOB');
+                    console.log('  - insGender:', primaryProp.insGender, '? will set Gender');
+                    console.log('  - coInsName:', primaryProp.coInsName, '? will set Co-Insured Name');
+                    console.log('  - coDob:', primaryProp.coDob, '? will set Co-Insured DOB');
+                    console.log('  - coGender:', primaryProp.coGender, '? will set Co-Insured Gender');
 
                     console.log('  - livingArea:', primaryProp.livingArea);
 
@@ -578,10 +588,10 @@
                     // Property form only updates property-specific fields (Insured Name, etc. - NOT client details)
                     // City, Postal Code, and Effective Date come from Auto Dashboard - DO NOT OVERWRITE HERE
                     
-                    // ✅ Check if tenant mode for proper field mapping
+                    // ? Check if tenant mode for proper field mapping
                     const isTenantMode = propData.viewMode === "Tenants";
                     
-                    // ✅ Property Address comes from property page (property-specific field)
+                    // ? Property Address comes from property page (property-specific field)
                     // NOTE: Home Phone is part of Client Details and comes from Auto Dashboard - DO NOT overwrite here
                     RAW_DATA.customers[0]["Property Address"] = sanitize(propCustomer.address || "");
                     
@@ -589,7 +599,7 @@
                     RAW_DATA.customers[0]["Insured Name"] = sanitize(propCustomer.insName || primaryProp.insName || "");
                     RAW_DATA.customers[0]["Insured DOB"] = sanitize(propCustomer.insDob || primaryProp.insDob || "");
                     RAW_DATA.customers[0]["Insured Gender"] = sanitize(propCustomer.insGender || primaryProp.insGender || "");
-                    console.log('✅ Mapped Insured fields from propCustomer:');
+                    console.log('? Mapped Insured fields from propCustomer:');
                     console.log('  Insured Name:', RAW_DATA.customers[0]["Insured Name"]);
                     console.log('  Insured DOB:', RAW_DATA.customers[0]["Insured DOB"]);
                     console.log('  Insured Gender:', RAW_DATA.customers[0]["Insured Gender"]);
@@ -610,10 +620,9 @@
                     // Property Structure - available to both homeowners and tenants
                     RAW_DATA.customers[0]["Structure"] = sanitize(primaryProp.structureType || primaryProp.structure || "");
                     RAW_DATA.customers[0]["Stories"] = sanitize(primaryProp.storeys || "");
-                    RAW_DATA.customers[0]["Total Living Area"] = sanitize(primaryProp.livingArea || "");
-                    RAW_DATA.customers[0]["Full Bath"] = sanitize(primaryProp.fullBaths || "");
-                    RAW_DATA.customers[0]["Half Bath"] = sanitize(primaryProp.halfBaths || "");
-                    RAW_DATA.customers[0]["Number of Cars"] = sanitize(primaryProp.numberOfCars || "");
+                    RAW_DATA.customers[0]["Full Baths"] = sanitize(primaryProp.fullBaths || "");
+                    RAW_DATA.customers[0]["Half Baths"] = sanitize(primaryProp.halfBaths || "");
+                    RAW_DATA.customers[0]["No of Cars"] = sanitize(primaryProp.numberOfCars || "");
                     RAW_DATA.customers[0]["Is Condominium"] = sanitize(primaryProp.isCondominium || "");
                     
                     // Rental Address (conditional - for rented dwelling/condo properties)
@@ -623,24 +632,22 @@
                     // Homeowner-only fields (hidden in tenant)
                     if (!isTenantMode) {
                         RAW_DATA.customers[0]["Basement Area"] = sanitize(primaryProp.bsmtArea || "");
-                        RAW_DATA.customers[0]["Basement % Finished"] = sanitize(primaryProp.bsmtFin || "");
-                        RAW_DATA.customers[0]["Inlaw Suite"] = sanitize(primaryProp.sepEntrance || "");
-                        RAW_DATA.customers[0]["Mortgages"] = sanitize(primaryProp.mortgageCount || "");
-                        RAW_DATA.customers[0]["First Time Buyer"] = sanitize(primaryProp.firstTimeBuyer || "");
+                        RAW_DATA.customers[0]["Finished Percent"] = sanitize(primaryProp.bsmtFin || "");
+                        RAW_DATA.customers[0]["No of Mortgages"] = sanitize(primaryProp.noOfMortgages || "");
+                        RAW_DATA.customers[0]["First Time Homebuyer"] = sanitize(primaryProp.firstTimeBuyer || "");
                         
                         // Mechanical Systems - homeowner only
                         RAW_DATA.customers[0]["Elec Year"] = sanitize(primaryProp.elecYear || "");
                         RAW_DATA.customers[0]["Plumb Year"] = sanitize(primaryProp.plumbYear || "");
                         RAW_DATA.customers[0]["Water Heater Year"] = sanitize(primaryProp.tankYear || "");
                         RAW_DATA.customers[0]["Roof Year"] = sanitize(primaryProp.roofYear || "");
-                        RAW_DATA.customers[0]["Roof Type"] = sanitize(primaryProp.roofType || "");
                         RAW_DATA.customers[0]["Roof Slope"] = sanitize(primaryProp.roofSlope || "");
                         RAW_DATA.customers[0]["Heat Year"] = sanitize(primaryProp.heatYear || "");
                         
                         RAW_DATA.customers[0]["Garage"] = sanitize(primaryProp.garage || "");
                     }
                     
-                    console.log('✅ ALL MAPPINGS COMPLETE - RAW_DATA.customers[0]:', RAW_DATA.customers[0]);
+                    console.log('? ALL MAPPINGS COMPLETE - RAW_DATA.customers[0]:', RAW_DATA.customers[0]);
                 }
             } else {
                 // OLD FORMAT: Single property (backward compatibility)
@@ -658,25 +665,22 @@
                 // Property Details - Map all fields from property.html
                 RAW_DATA.customers[0]["Structure"] = sanitize(propToUse.structureType || propToUse.structure || propData.structureType || propData.structure);
                 RAW_DATA.customers[0]["Stories"] = sanitize(propToUse.storeys || propData.storeys);
-                RAW_DATA.customers[0]["Total Living Area"] = sanitize(propToUse.livingArea || propData.livingArea);
-                RAW_DATA.customers[0]["Full Bath"] = sanitize(propToUse.fullBaths || propData.fullBaths);
-                RAW_DATA.customers[0]["Half Bath"] = sanitize(propToUse.halfBaths || propData.halfBaths);
+                RAW_DATA.customers[0]["Full Baths"] = sanitize(propToUse.fullBaths || propData.fullBaths);
+                RAW_DATA.customers[0]["Half Baths"] = sanitize(propToUse.halfBaths || propData.halfBaths);
                 RAW_DATA.customers[0]["Basement Area"] = sanitize(propToUse.bsmtArea || propData.bsmtArea);
-                RAW_DATA.customers[0]["Basement % Finished"] = sanitize(propToUse.bsmtFin || propData.bsmtFin);
-                RAW_DATA.customers[0]["Inlaw Suite"] = sanitize(propToUse.sepEntrance || propData.sepEntrance);
+                RAW_DATA.customers[0]["Finished Percent"] = sanitize(propToUse.bsmtFin || propData.bsmtFin);
                 
                 // Mechanical Systems
                 RAW_DATA.customers[0]["Elec Year"] = sanitize(propToUse.elecYear || propData.elecYear);
                 RAW_DATA.customers[0]["Plumb Year"] = sanitize(propToUse.plumbYear || propData.plumbYear);
                 RAW_DATA.customers[0]["Water Heater Year"] = sanitize(propToUse.tankYear || propData.tankYear);
                 RAW_DATA.customers[0]["Roof Year"] = sanitize(propToUse.roofYear || propData.roofYear);
-                RAW_DATA.customers[0]["Roof Type"] = sanitize(propToUse.roofType || propData.roofType);
                 RAW_DATA.customers[0]["Roof Slope"] = sanitize(propToUse.roofSlope || propData.roofSlope);
                 RAW_DATA.customers[0]["Heat Year"] = sanitize(propToUse.heatYear || propData.heatYear);
                 
                 // Coverage & Policy Details
-                RAW_DATA.customers[0]["Mortgages"] = sanitize(propToUse.mortgageCount || propData.mortgageCount);
-                RAW_DATA.customers[0]["First Time Buyer"] = sanitize(propToUse.firstTimeBuyer || propData.firstTimeBuyer);
+                RAW_DATA.customers[0]["No of Mortgages"] = sanitize(propToUse.noOfMortgages || propData.noOfMortgages);
+                RAW_DATA.customers[0]["First Time Homebuyer"] = sanitize(propToUse.firstTimeBuyer || propData.firstTimeBuyer);
                 
                 // Policy History
                 RAW_DATA.customers[0]["Insured Since"] = sanitize(propToUse.insuredSince || propData.insuredSince);
@@ -684,10 +688,10 @@
                 // Security Features - Only Smoke Detectors and Fire Extinguishers remain
 
                 RAW_DATA.customers[0]["Garage"] = sanitize(propToUse.garage || propData.garage);
-                RAW_DATA.customers[0]["Number of Cars"] = sanitize(propToUse.numberOfCars || propData.numberOfCars);
+                RAW_DATA.customers[0]["No of Cars"] = sanitize(propToUse.numberOfCars || propData.numberOfCars);
             }
             
-            console.log('✅ RAW_DATA populated:', RAW_DATA);
+            console.log('? RAW_DATA populated:', RAW_DATA);
         }
         
         // --- Initial Data ---
@@ -715,21 +719,20 @@
                     
                     // General / Property Details
                     "Property Address": "", 
-                    "Mortgages": "",
-                    "First Time Buyer": "",
+                    "No of Mortgages": "",
+                    "First Time Homebuyer": "",
 
                     // Dwelling Information
                     "Construction": "", "Exterior Finish": "", "Structure": "", 
-                    "Garage": "", "Number of Cars": "", 
-                    "Stories": "", "Full Bath": "", "Half Bath": "", 
-                    "Total Living Area": "", "Basement Area": "", "Basement % Finished": "",
-                    "Inlaw Suite": "",
+                    "Garage": "", "No of Cars": "", 
+                    "Stories": "", "Full Baths": "", "Half Baths": "", 
+                    "Basement Area": "", "Finished Percent": "",
                     "Rental Address": "", "Rental Postal": "", "Is Condominium": "",
 
                     // Mechanical Details
                     "Elec Year": "",
                     "Plumb Year": "", "Water Heater Year": "", "Valve Type": "",
-                    "Roof Year": "", "Roof Type": "", "Roof Slope": "",
+                    "Roof Year": "", "Roof Slope": "",
                     "Heat Year": "",
 
                     // Security - Only Smoke Detectors and Fire Extinguishers remain
@@ -771,9 +774,9 @@
                             ],
                             "convictions": [
                                 {
-                                   "Date": "",
-                                   "Description": "",
-                                   "Speed over the limit": ""
+                                   "date of loss": "",
+                                   "description": "",
+                                   "speeding": ""
                                 }
                             ],
                             "lapses": [
@@ -815,6 +818,12 @@
                 return dateStr;
             }
             
+            // If in YYYY/MM/DD format (MVR conviction dates), convert to MM/DD/YYYY
+            if (dateStr.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+                const parts = dateStr.split('/');
+                return `${parts[1]}/${parts[2]}/${parts[0]}`;
+            }
+            
             // If in MMDDYYYY format (8 digits), format to MM/DD/YYYY
             if (dateStr.length === 8 && !isNaN(dateStr)) {
                 return `${dateStr.substring(0, 2)}/${dateStr.substring(2, 4)}/${dateStr.substring(4)}`;
@@ -835,7 +844,7 @@
             `;
         };
 
-        // ── Validation Helpers ────────────────────────────────────────────
+        // -- Validation Helpers --------------------------------------------
         const isEmptyVal = (v) => !v || v === '-' || String(v).trim() === '';
 
         const parseReviewDate = (dateStr) => {
@@ -855,7 +864,16 @@
             if (isEmptyVal(customer['City']))          issues.push('City missing');
             if (isEmptyVal(customer['Postal Code']))   issues.push('Postal Code missing');
             if (isEmptyVal(customer['Mobile']) && isEmptyVal(customer['Home Phone'])) issues.push('Phone missing');
-            if (isEmptyVal(customer['Effective Date'])) issues.push('Effective Date missing');
+            if (isEmptyVal(customer['Effective Date'])) {
+                issues.push('Effective Date missing');
+            } else {
+                const effDate = parseReviewDate(formatDateDisplay(customer['Effective Date'] || ''));
+                if (effDate) {
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const diffDays = Math.round((effDate - today) / 86400000);
+                    if (diffDays > 45) issues.push(`Effective Date is ${diffDays} days away (max 45 days)`);
+                }
+            }
             return issues;
         };
 
@@ -929,13 +947,12 @@
             if (isEmptyVal(addr))                          issues.push('Address missing');
             if (isEmptyVal(property['structureType'] || property['Structure'] || '')) issues.push('Structure Type missing');
             if (isEmptyVal(property['Stories'] || property['storeys'] || ''))     issues.push('Stories missing');
-            if (isEmptyVal(property['Total Living Area'] || property['livingArea'] || '')) issues.push('Living Area missing');
             if (isEmptyVal(property['Heating Year'] || property['heatYear'] || '')) issues.push('Heat Year missing');
             if (isEmptyVal(property['Electrical Year'] || property['elecYear'] || '')) issues.push('Elec Year missing');
             if (isEmptyVal(property['Roofing Year'] || property['roofYear'] || '')) issues.push('Roof Year missing');
             return issues;
         };
-        // ─────────────────────────────────────────────────────────────────────
+        // ---------------------------------------------------------------------
 
         const renderPanel = (title, iconName, content, issues = []) => {
             const hasIssues = issues.length > 0;
@@ -1028,7 +1045,7 @@
                         </a>
                         <div class="h-4 w-px bg-slate-300 mx-1"></div>
                         <!-- Actions -->
-                        <button onclick="exportToJSON()" 
+                        <button onclick="exportToJSON(event)" 
                             class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm bg-slate-600 text-white hover:bg-slate-700">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i> Export
                         </button>
@@ -1046,7 +1063,7 @@
 
             RAW_DATA.customers.forEach((customer, cIdx) => {
 
-                // ── Pre-compute validation for all sections ──────────────────
+                // -- Pre-compute validation for all sections ------------------
                 const clientIssues = validateClient(customer);
                 const driverValidation = customer.drivers.map(drv => ({
                     personal: validateDriverPersonal(drv),
@@ -1069,7 +1086,7 @@
                 html += totalIssues === 0
                     ? `<div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 shadow-sm">
                         <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                        <span class="text-xs font-semibold text-emerald-800">All sections complete — ready to export</span>
+                        <span class="text-xs font-semibold text-emerald-800">All sections complete � ready to export</span>
                        </div>`
                     : `<div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 shadow-sm">
                         <div class="flex items-center gap-2 mb-2">
@@ -1082,7 +1099,7 @@
                             </span>`).join('')}
                         </div>
                        </div>`;
-                // ─────────────────────────────────────────────────────────────
+                // -------------------------------------------------------------
 
                 html += `<div class="grid grid-cols-12 gap-4">`;
                 
@@ -1112,8 +1129,12 @@
                             ${renderField("Email", customer["Email"])}
                         </div>
                         
-                        <div>
+                        <div class="pb-3 border-b border-slate-100 space-y-1">
                             ${renderField("Effective", customer["Effective Date"])}
+                        </div>
+                        <div>
+                            ${renderField("Property Type", customer["Property Type"])}
+                            ${renderField("Insured DOB", customer["Insured DOB"])}
                         </div>
                     </div>
                 `;
@@ -1229,7 +1250,7 @@
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["AB"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["COL"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["Other"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
-                                <td class="px-2 py-1.5 border-b border-slate-50" style="display: ${isEditing ? 'table-cell' : 'none'};"><button onclick="deleteClaim(${dIdx}, ${cIdx})" style="color: #9ca3af; font-size: 12px; cursor: pointer; padding: 2px 4px;">✕</button></td>
+                                <td class="px-2 py-1.5 border-b border-slate-50" style="display: ${isEditing ? 'table-cell' : 'none'};"><button onclick="deleteClaim(${dIdx}, ${cIdx})" style="color: #9ca3af; font-size: 12px; cursor: pointer; padding: 2px 4px;">?</button></td>
                             </tr>
                         `).join('')}</tbody></table></div>`;
                     html += `<div class="col-span-1 md:col-span-2">${renderPanel(`Driver ${dIdx + 1}: Claims`, "alert-circle", claimsContent, driverValidation[dIdx]?.claims || [])}</div>`;
@@ -1237,11 +1258,11 @@
                     // Convictions - Takes 1 column
                     const convictionsContent = (!driver.convictions || driver.convictions.length === 0) ? 
                         '<div class="text-center py-4 text-xs text-slate-400 italic">No convictions on record</div>' :
-                        `<div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-slate-100 text-xs font-bold text-slate-500 uppercase"><tr>${["Date","Description","Speed Over"].map(c=>`<th class="px-2 py-1.5 whitespace-nowrap">${c}</th>`).join('')}</tr></thead><tbody>${driver.convictions.map(c => `
+                        `<div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-slate-100 text-xs font-bold text-slate-500 uppercase"><tr>${["Date of Loss","Description","Speeding"].map(c=>`<th class="px-2 py-1.5 whitespace-nowrap">${c}</th>`).join('')}</tr></thead><tbody>${driver.convictions.map(c => `
                             <tr class="hover:bg-slate-50">
-                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${(!isEditing ? formatDateDisplay(c["Date"]) : c["Date"]) || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
-                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["Selected Reason"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
-                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["Speed over the limit"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
+                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${(!isEditing ? formatDateDisplay(c["date of loss"]) : c["date of loss"]) || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
+                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["description"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
+                                <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${c["speeding"] || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
                             </tr>
                         `).join('')}</tbody></table></div>`;
                     html += renderPanel(`Driver ${dIdx + 1}: Convictions`, "gavel", convictionsContent);
@@ -1257,7 +1278,7 @@
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${(!isEditing ? formatDateDisplay(l["Lapse Date"]) : l["Lapse Date"]) || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${(!isEditing ? formatDateDisplay(l["Reinstated"]) : l["Reinstated"]) || ''}" ${isEditing ? '' : 'disabled'} class="w-full text-xs"></td>
                                 <td class="px-2 py-1.5 border-b border-slate-50"><input type="text" value="${reasonText}" ${isEditing ? '' : 'disabled'} class="w-full text-xs" title="Reason for Lapse - Selected from dropdown in Auto Dashboard"></td>
-                                <td class="px-2 py-1.5 border-b border-slate-50" style="display: ${isEditing ? 'table-cell' : 'none'};"><button onclick="deleteLapse(${dIdx}, ${lIdx})" style="color: #9ca3af; font-size: 12px; cursor: pointer; padding: 2px 4px;">✕</button></td>
+                                <td class="px-2 py-1.5 border-b border-slate-50" style="display: ${isEditing ? 'table-cell' : 'none'};"><button onclick="deleteLapse(${dIdx}, ${lIdx})" style="color: #9ca3af; font-size: 12px; cursor: pointer; padding: 2px 4px;">?</button></td>
                             </tr>
                         `;
                         }).join('')}</tbody></table></div>`;
@@ -1288,7 +1309,7 @@
                 const combinedPropertyContent = `
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                         <!-- Section 1: Property Type -->
-                        ${renderField("Property Type", propertyType)}
+                        ${renderField("Type", primaryProperty?.["Type"] || propertyType)}
 
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
@@ -1310,15 +1331,15 @@
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                         <!-- Section 4: Property Details -->
-                        ${renderField("Full Bath", customer["Full Bath"])}
-                        ${renderField("Half Bath", customer["Half Bath"])}
-                        ${renderField("Number of Cars", customer["Number of Cars"])}
+                        ${renderField("Full Baths", customer["Full Baths"])}
+                        ${renderField("Half Baths", customer["Half Baths"])}
+                        ${renderField("No of Cars", customer["No of Cars"])}
                         ${!isTenant ? renderField("Basement Area", customer["Basement Area"]) : ''}
-                        ${!isTenant ? renderField("% Finished", customer["Basement % Finished"]) : ''}
+                        ${!isTenant ? renderField("Finished Percent", customer["Finished Percent"]) : ''}
                         ${!isTenant ? renderField("Garage", customer["Garage"]) : ''}
-                        ${!isTenant ? renderField("Mortgages", customer["Mortgages"]) : ''}
-                        ${!isTenant ? renderField("First Time Buyer", customer["First Time Buyer"]) : ''}
-                        ${!isTenant ? renderField("Inlaw Suite", customer["Inlaw Suite"]) : ''}
+                        ${!isTenant ? renderField("No of Mortgages", customer["No of Mortgages"]) : ''}
+                        ${!isTenant ? renderField("First Time Homebuyer", customer["First Time Homebuyer"]) : ''}
+                        ${!isTenant ? '' : ''}
 
                         <!-- Separator -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
@@ -1337,7 +1358,6 @@
                         ${renderField("Plumb Year", customer["Plumb Year"])}
                         ${renderField("Roof Year", customer["Roof Year"])}
                         ${renderField("Water Heater Year", customer["Water Heater Year"])}
-                        ${renderField("Roof Type", customer["Roof Type"])}
                         ${renderField("Roof Slope", customer["Roof Slope"])}
                         ` : ''}
 
@@ -1362,7 +1382,7 @@
                         const secondaryPropertyContent = `
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                                 <!-- Section 1: Property Type -->
-                                ${renderField("Property Type", secPropertyType)}
+                                ${renderField("Type", property["Type"] || secPropertyType)}
 
                                 <!-- Separator -->
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
@@ -1377,26 +1397,31 @@
 
                                 <!-- Section 3: Construction Details -->
                                 ${renderField("Structure", property["structureType"] || property["Structure"] || "")}
+                                ${renderField("Year Built", property["Year Built"] || property["yearBuilt"] || "")}
                                 ${renderField("Stories", property["Stories"] || property["storeys"] || "")}
 
                                 <!-- Separator -->
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 4: Property Details -->
-                                ${renderField("Living Area", property["Total Living Area"] || property["livingArea"] || "")}
-                                ${renderField("Full Bath", property["Full Bath"] || property["fullBaths"] || "")}
-                                ${renderField("Half Bath", property["Half Bath"] || property["halfBaths"] || "")}
-                                ${renderField("Number of Cars", property["Number of Cars"] || property["numberOfCars"] || "")}
+                                ${renderField("Full Baths", property["Full Baths"] || property["fullBaths"] || "")}
+                                ${renderField("Half Baths", property["Half Baths"] || property["halfBaths"] || "")}
+                                ${renderField("No of Cars", property["No of Cars"] || property["numberOfCars"] || "")}
+                                ${renderField("Garage", property["Garage"] || property["garage"] || "")}
+                                ${renderField("No of Mortgages", property["No of Mortgages"] || property["noOfMortgages"] || "")}
+                                ${renderField("Basement Area", property["Basement Area"] || property["basementArea"] || "")}
+                                ${renderField("Finished Percent", property["Finished Percent"] || property["basementFinished"] || "")}
 
                                 <!-- Separator -->
                                 <div class="col-span-1 md:col-span-2 lg:col-span-3 border-b border-slate-200 my-2"></div>
 
                                 <!-- Section 5: Systems & Updates -->
-                                ${renderField("Heat Year", property["Heating Year"] || property["heatYear"] || "")}
-                                ${renderField("Elec Year", property["Electrical Year"] || property["elecYear"] || "")}
-                                ${renderField("Plumb Year", property["Plumbing Year"] || property["plumbYear"] || "")}
-                                ${renderField("Roof Year", property["Roofing Year"] || property["roofYear"] || "")}
-                                ${renderField("Water Heater Year", property["Tank Year"] || property["tankYear"] || "")}
+                                ${renderField("Heat Year", property["Heat Year"] || property["heatYear"] || "")}
+                                ${renderField("Elec Year", property["Elec Year"] || property["elecYear"] || "")}
+                                ${renderField("Plumb Year", property["Plumb Year"] || property["plumbYear"] || "")}
+                                ${renderField("Roof Year", property["Roof Year"] || property["roofYear"] || "")}
+                                ${renderField("Water Heater Year", property["Water Heater Year"] || property["tankYear"] || "")}
+                                ${renderField("Roof Slope", property["Roof Slope"] || property["roofSlope"] || "")}
                             </div>
                         `;
                         html += renderPanel(`Rental Property ${secondaryIndex}`, "building", secondaryPropertyContent, rentalIssues);
@@ -1425,27 +1450,24 @@
                     "Insured Since": "insuredSince",
                     "Address": "address",
                     "Stories": "storeys",
-                    "Mortgages": "mortgageCount",
-                    "First Time Buyer": "firstTimeBuyer",
+                    "No of Mortgages": "noOfMortgages",
+                    "First Time Homebuyer": "firstTimeBuyer",
                     "Construction": "construction",
                     "Exterior Finish": "exteriorFinish",
                     "Structure": "structure",
-                    "Living Area": "livingArea",
-                    "Full Bath": "fullBaths",
-                    "Half Bath": "halfBaths",
+                    "Full Baths": "fullBaths",
+                    "Half Baths": "halfBaths",
                     "Basement Area": "bsmtArea",
-                    "Basement % Finished": "bsmtFin",
-                    "Inlaw Suite": "sepEntrance",
+                    "Finished Percent": "bsmtFin",
                     "Elec Year": "elecYear",
                     "Plumb Year": "plumbYear",
                     "Water Heater Year": "tankYear",
                     "Roof Year": "roofYear",
-                    "Roof Type": "roofType",
                     "Roof Slope": "roofSlope",
                     "Heat Year": "heatYear",
 
                     "Garage": "garage",
-                    "Number of Cars": "numberOfCars",
+                    "No of Cars": "numberOfCars",
                     "First Name": "name",
                     "City": "city",
                     "Postal": "postal",
@@ -1453,8 +1475,7 @@
                     "Co-Insured Name": "coInsName",
                     "Home Phone": "phone",
                     "Date of Birth": "dob",
-                    "Total Living Area": "livingArea",
-                    "% Finished": "bsmtFin"
+                    "Finished Percent": "bsmtFin"
                 };
 
                 // Get all input values from the DOM - Find span with label text, not label element
@@ -1473,12 +1494,12 @@
                                 labelText = labelText.slice(0, -1);
                             }
                             editedValues[labelText] = input.value || '';
-                            console.log(`📝 Captured: "${labelText}" = "${input.value}"`);
+                            console.log(`?? Captured: "${labelText}" = "${input.value}"`);
                         }
                     }
                 });
 
-                console.log('📋 All edited values captured:', Object.keys(editedValues).length, 'fields');
+                console.log('?? All edited values captured:', Object.keys(editedValues).length, 'fields');
 
                 // Update localStorage property data
                 const storageKey = getPropertyStorageKey();
@@ -1500,17 +1521,17 @@
                             }
                             // Update RAW_DATA
                             RAW_DATA.customers[0][labelText] = value;
-                            console.log(`💾 Updated: "${labelText}" → "${value}"`);
+                            console.log(`?? Updated: "${labelText}" ? "${value}"`);
                             updateCount++;
                         }
                     });
 
                     // Save back to localStorage
                     localStorage.setItem(storageKey, JSON.stringify(propData));
-                    console.log(`✅ Edited data saved to localStorage (${updateCount} fields updated, key: ${storageKey})`);
+                    console.log(`? Edited data saved to localStorage (${updateCount} fields updated, key: ${storageKey})`);
                 }
             } catch (error) {
-                console.error('❌ Error saving edited data:', error);
+                console.error('? Error saving edited data:', error);
             }
         }
 
@@ -1571,6 +1592,16 @@
             if (cleaned.match(/^\d{2}-\d{2}-\d{4}$/)) {
                 return cleaned.replace(/-/g, "");
             }
+            // Format YYYY/MM/DD to MMDDYYYY (MVR conviction dates)
+            if (cleaned.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+                const parts = cleaned.split('/');
+                return parts[1] + parts[2] + parts[0];
+            }
+            // Format YYYY-MM-DD to MMDDYYYY
+            if (cleaned.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const parts = cleaned.split('-');
+                return parts[1] + parts[2] + parts[0];
+            }
             return cleaned;
         }
 
@@ -1609,7 +1640,97 @@
             renderApp();
         }
 
-        function exportToJSON() {
+        // ═══════════════════════════════════════════════════════════
+        // FIELD_MAP — Single source of truth for property export fields
+        // Both primary & rental property mappings are driven from here.
+        // To add/remove a field, edit ONLY this config.
+        // ═══════════════════════════════════════════════════════════
+
+        // Shared property fields exported for BOTH primary and rental properties
+        const SHARED_PROPERTY_FIELDS = [
+            // --- Address ---
+            { out: "Address",          src: prop => prop["Rental Address"] || prop["Customer Address"] || "", fmt: "clean" },
+            { out: "Rental Address",   src: prop => prop["Rental Address"] || "",                            fmt: "clean" },
+            { out: "Rental Postal",    src: prop => prop["Rental Postal"] || prop["Postal"] || "",           fmt: "clean" },
+            { out: "City",             src: prop => prop["City"] || "",                                      fmt: "clean" },
+            // --- Building ---
+            { out: "Year Built",       src: prop => prop["Year Built"] || "",                                fmt: "clean" },
+            { out: "Stories",          src: prop => prop["Stories"] || "",                                    fmt: "clean" },
+            { out: "Construction",     src: prop => prop["Construction"] || "",                               fmt: "clean" },
+            { out: "Exterior Finish",  src: prop => prop["Exterior Finish"] || "",                            fmt: "clean" },
+            { out: "Structure",        src: prop => prop["structureType"] || prop["Structure"] || "",         fmt: "clean" },
+            { out: "Full Baths",       src: prop => prop["Full Baths"] || "",                                 fmt: "clean" },
+            { out: "Half Baths",       src: prop => prop["Half Baths"] || "",                                 fmt: "clean" },
+            { out: "No of Cars",       src: prop => prop["No of Cars"] || "",                                 fmt: "clean" },
+            { out: "Garage",           src: prop => prop["garage"] || prop["Garage"] || "",                   fmt: "clean" },
+            { out: "No of Mortgages",  src: prop => prop["noOfMortgages"] || prop["No of Mortgages"] || "",   fmt: "clean" },
+            { out: "Basement Area",    src: prop => prop["Basement Area"] || "",                              fmt: "clean" },
+            { out: "Finished Percent", src: prop => prop["Finished Percent"] || "",                           fmt: "clean" },
+            // --- Mechanical / Systems ---
+            { out: "Elec Year",        src: prop => prop["Elec Year"] || "",                                  fmt: "clean" },
+            { out: "Plumb Year",       src: prop => prop["Plumb Year"] || "",                                 fmt: "clean" },
+            { out: "Water Heater Year",src: prop => prop["Water Heater Year"] || "",                          fmt: "clean" },
+            { out: "Roof Year",        src: prop => prop["Roof Year"] || "",                                  fmt: "clean" },
+            { out: "Roof Slope",       src: prop => prop["Roof Slope"] || "",                                 fmt: "clean" },
+            { out: "Heat Year",        src: prop => prop["Heat Year"] || "",                                  fmt: "clean" },
+        ];
+
+        // Additional fields for PRIMARY property only (insured info, co-insured, homeowner-specific)
+        const PRIMARY_ONLY_FIELDS = [
+            { out: "Insured Name",     src: () => "",                                                         fmt: "clean" },  // Removed in V2
+            { out: "Insured DOB",      src: prop => prop["Insured DOB"] || "",                                fmt: "date" },
+            { out: "Insured Gender",   src: prop => prop["Insured Gender"] || "",                              fmt: "clean" },
+            { out: "Insured Since",    src: prop => prop["Insured Since"] || "",                               fmt: "date" },
+            { out: "Insured with Brokerage Since", src: prop => prop["Insured with Brokerage Since"] || "",    fmt: "date" },
+            { out: "Co-Insured Name",  src: () => "",                                                         fmt: "clean" },  // Removed in V2
+            { out: "Co-Insured DOB",   src: prop => prop["Co-Insured DOB"] || "",                              fmt: "date" },
+            { out: "Co-Insured Gender", src: prop => prop["Co-Insured Gender"] || "",                          fmt: "clean" },
+            { out: "First Time Homebuyer", src: prop => prop["First Time Homebuyer"] || "",                    fmt: "clean" },
+        ];
+
+        // Apply a single field spec to a property object
+        function applyField(spec, prop) {
+            const raw = spec.src(prop);
+            return spec.fmt === "date" ? formatDateForExport(raw) : cleanExportValue(raw);
+        }
+
+        // Map a primary property using FIELD_MAP
+        function mapPrimaryProperty(prop, isTenantMode) {
+            const result = {
+                "Property Type": cleanExportValue(prop["Property Type"] || (isTenantMode ? "Tenant" : "Homeowner")),
+                "Type": cleanExportValue(prop["Type"] || "")
+            };
+            // Insured & co-insured fields (primary only)
+            PRIMARY_ONLY_FIELDS.forEach(spec => { result[spec.out] = applyField(spec, prop); });
+            // Address first for primary (Customer Address priority)
+            result["Address"] = cleanExportValue(prop["Customer Address"] || prop["Rental Address"] || "");
+            // All shared fields
+            SHARED_PROPERTY_FIELDS.forEach(spec => {
+                if (spec.out !== "Address") {  // Address already set with primary-specific priority
+                    result[spec.out] = applyField(spec, prop);
+                }
+            });
+            return result;
+        }
+
+        // Map a rental property using FIELD_MAP
+        function mapRentalProperty(prop) {
+            const result = {
+                "Property Type": cleanExportValue(prop["Property Type"] || "Rental Dwelling"),
+                "Type": cleanExportValue(prop["Type"] || "")
+            };
+            // Address first for rental (Rental Address priority)
+            result["Address"] = cleanExportValue(prop["Rental Address"] || prop["Customer Address"] || "");
+            // All shared fields
+            SHARED_PROPERTY_FIELDS.forEach(spec => {
+                if (spec.out !== "Address") {  // Address already set with rental-specific priority
+                    result[spec.out] = applyField(spec, prop);
+                }
+            });
+            return result;
+        }
+
+        async function exportToJSON(event) {
             try {
                 // First, update RAW_DATA with any missing values from rendered page
                 // This ensures we capture everything that's displayed
@@ -1671,6 +1792,11 @@
                                 "Continuous Insurance Date": formatDateForExport(driver["Cont Insurance Date"] || ""),
                                 "Company Insured": formatDateForExport(driver["Company Insured"] || ""),
                                 "claims": claims,
+                                "convictions": (driver.convictions || []).map(conv => ({
+                                    "date of loss": formatDateForExport(conv["date of loss"] || ""),
+                                    "description": cleanExportValue(conv["description"] || ""),
+                                    "speeding": cleanExportValue(conv["speeding"] || "")
+                                })),
                                 "lapses": lapses
                             };
                         });
@@ -1683,6 +1809,7 @@
                                     driver.vehicles.forEach(veh => {
                                         allVehicles.push({
                                             "Vehicle Condition": cleanExportValue(veh["Vehicle Condition"] || ""),
+                                            "Leased": cleanExportValue(veh["Leased"] || ""),
                                             "Purchase Date": formatDateForExport(veh["Purchase Date"] || ""),
                                             "KM at Purchase": cleanExportValue(veh["KM at Purchase"] || ""),
                                             "Parking at night": cleanExportValue(veh["Parking at night"] || ""),
@@ -1696,45 +1823,10 @@
                             });
                         }
 
-                        // Collect all properties
+                        // Collect all properties using FIELD_MAP (single source of truth)
                         const isTenantMode = customer.viewMode === "Tenants";
-                        const allProperties = (customer.properties || []).map((prop, propIndex) => {
-                            // V2 Format: Include all fields for backward compatibility
-                            return {
-                                "Property Type": cleanExportValue(prop["Property Type"] || (isTenantMode ? "Tenant" : (propIndex === 0 ? "Homeowner" : "Rental Dwelling"))),
-                                "Insured Name": "",
-                                "Insured DOB": formatDateForExport(prop["Insured DOB"] || ""),
-                                "Gender": cleanExportValue(prop["Insured Gender"] || ""),
-                                "Insured Since": formatDateForExport(prop["Insured Since"] || ""),
-                                "Address": cleanExportValue(prop["Customer Address"] || prop["Rental Address"] || ""),
-                                "Rental Address": cleanExportValue(prop["Rental Address"] || ""),
-                                "Rental Postal": cleanExportValue(prop["Rental Postal"] || prop["Postal"] || ""),
-                                "Stories": cleanExportValue(prop["Stories"] || ""),
-                                "Construction": cleanExportValue(prop["Construction"] || ""),
-                                "Exterior Finish": cleanExportValue(prop["Exterior Finish"] || ""),
-                                "Structure": cleanExportValue(prop["structureType"] || prop["Structure"] || ""),
-                                "Total Living Area": cleanExportValue(prop["Total Living Area"] || ""),
-                                "Full Baths": cleanExportValue(prop["Full Bath"] || ""),
-                                "Half Baths": cleanExportValue(prop["Half Bath"] || ""),
-                                "No of Cars": cleanExportValue(prop["Number of Cars"] || ""),
-                                "Co-Insured Name": "",
-                                "Co-Insured DOB": formatDateForExport(prop["Co-Insured DOB"] || ""),
-                                "Co-Insured Gender": cleanExportValue(prop["Co-Insured Gender"] || ""),
-                                "Mortgages": "",
-                                "First Time Buyer": "",
-                                "Inlaw Suite": "",
-                                "Basement Area": cleanExportValue(prop["Basement Area"] || ""),
-                                "% Finished": cleanExportValue(prop["Basement Finished"] || ""),
-                                "Garage": "",
-                                "Elec Year": cleanExportValue(prop["Electrical Year"] || ""),
-                                "Plumb Year": cleanExportValue(prop["Plumbing Year"] || ""),
-                                "Water Heater": cleanExportValue(prop["Tank Year"] || ""),
-                                "Roof Year": cleanExportValue(prop["Roofing Year"] || ""),
-                                "Roof Type": "",
-                                "Roof Slope": "",
-                                "Heat Year": cleanExportValue(prop["Heating Year"] || "")
-                            };
-                        });
+                        const allProperties = (customer.properties || []).slice(0, 1).map(prop => mapPrimaryProperty(prop, isTenantMode));
+                        const allRentedProperties = (customer.properties || []).slice(1).map(prop => mapRentalProperty(prop));
                         
                         return {
                             "First Name": cleanExportValue(customer["First Name"] || ""),
@@ -1749,78 +1841,50 @@
                             "Effective Date": formatDateForExport(customer["Effective Date"] || ""),
                             "Gender": cleanExportValue(customer["Gender"] || ""),
                             "Marital Status": cleanExportValue(customer["Marital Status"] || ""),
+                            "Property Type": cleanExportValue(customer["Property Type"] || ""),
+                            "Insured DOB": formatDateForExport(customer["Insured DOB"] || ""),
                             "drivers": simplifiedDrivers,
                             "vehicles": allVehicles,
-                            "properties": customer.properties ? customer.properties.map((prop, propIndex) => {
-                                const isTenantMode = customer.viewMode === "Tenants";
-                                
-                                // V2 Format: Include all fields for backward compatibility
-                                // Fields not used in V2 UI are exported as empty strings
-                                const baseProps = {
-                                    "Property Type": cleanExportValue(prop["Property Type"] || (isTenantMode ? "Tenant" : (propIndex === 0 ? "Homeowner" : "Rental Dwelling"))),
-                                    "Insured Name": "",  // Removed in V2
-                                    "Insured DOB": formatDateForExport(prop["Insured DOB"] || ""),
-                                    "Gender": cleanExportValue(prop["Insured Gender"] || ""),
-                                    "Insured Since": formatDateForExport(prop["Insured Since"] || ""),
-                                    "Address": cleanExportValue(prop["Customer Address"] || prop["Rental Address"] || ""),
-                                    "Rental Address": cleanExportValue(prop["Rental Address"] || ""),
-                                    "Rental Postal": cleanExportValue(prop["Rental Postal"] || prop["Postal"] || ""),
-                                    "Stories": cleanExportValue(prop["Stories"] || ""),
-                                    "Construction": cleanExportValue(prop["Construction"] || ""),
-                                    "Exterior Finish": cleanExportValue(prop["Exterior Finish"] || ""),
-                                    "Structure": cleanExportValue(prop["structureType"] || prop["Structure"] || ""),
-                                    "Total Living Area": cleanExportValue(prop["Total Living Area"] || ""),
-                                    "Full Baths": cleanExportValue(prop["Full Bath"] || ""),
-                                    "Half Baths": cleanExportValue(prop["Half Bath"] || ""),
-                                    "No of Cars": cleanExportValue(prop["Number of Cars"] || ""),
-                                    "Co-Insured Name": "",  // Removed in V2
-                                    "Co-Insured DOB": formatDateForExport(prop["Co-Insured DOB"] || ""),
-                                    "Co-Insured Gender": cleanExportValue(prop["Co-Insured Gender"] || ""),
-                                    "Mortgages": "",  // Removed in V2
-                                    "First Time Buyer": "",  // Removed in V2
-                                    "Inlaw Suite": "",  // Removed in V2
-                                    "Basement Area": cleanExportValue(prop["Basement Area"] || ""),
-                                    "% Finished": cleanExportValue(prop["Basement Finished"] || ""),
-                                    "Garage": "",  // Removed in V2
-                                    "Elec Year": cleanExportValue(prop["Electrical Year"] || ""),
-                                    "Plumb Year": cleanExportValue(prop["Plumbing Year"] || ""),
-                                    "Water Heater": cleanExportValue(prop["Tank Year"] || ""),
-                                    "Roof Year": cleanExportValue(prop["Roofing Year"] || ""),
-                                    "Roof Type": "",  // Removed in V2
-                                    "Roof Slope": "",  // Removed in V2
-                                    "Heat Year": cleanExportValue(prop["Heating Year"] || "")
-                                };
-                                
-                                return baseProps;
-                            }) : allProperties
+                            "properties": customer.properties ? customer.properties.slice(0, 1).map(prop => mapPrimaryProperty(prop, isTenantMode)) : allProperties,
+                            "rented_properties": customer.properties && customer.properties.length > 1 ? customer.properties.slice(1).map(prop => mapRentalProperty(prop)) : allRentedProperties
                         };
                     })
                 };
                 
-                // Generate filename with timestamp
-                const now = new Date();
-                const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const filename = `policy-data-${timestamp}.json`;
-                
                 // Convert to pretty JSON string (use \r\n for Windows Notepad compatibility)
                 const jsonString = JSON.stringify(exportData, null, 2).replace(/\n/g, '\r\n');
                 
-                // Create blob and download
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
+                // Save As dialog using File System Access API (Chrome/Edge)
+                if (window.showSaveFilePicker) {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: 'import.json',
+                            types: [{
+                                description: 'JSON File',
+                                accept: { 'application/json': ['.json'] }
+                            }]
+                        });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(jsonString);
+                        await writable.close();
+                    } catch (saveErr) {
+                        if (saveErr.name === 'AbortError') return; // user cancelled — do nothing
+                        throw saveErr;
+                    }
+                } else {
+                    // Fallback for browsers without showSaveFilePicker (Firefox, Safari)
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'import.json';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
                 
-                // Trigger download
-                document.body.appendChild(link);
-                link.click();
-                
-                // Cleanup
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                
-                console.log('✅ Exported JSON:', filename);
+                console.log('✅ Exported JSON: import.json');
                 console.log('📦 Export data:', exportData);
                 
                 // Show success message
@@ -1833,7 +1897,7 @@
                     lucide.createIcons();
                 }, 2000);
             } catch (error) {
-                console.error('❌ Export error:', error);
+                console.error('? Export error:', error);
                 alert('Failed to export JSON. Please check console for details.');
             }
         }
@@ -1846,5 +1910,26 @@
         });
 
     </script>
+
+    <!-- RIGHT PAGE NAV -->
+    <div style="position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:9998;display:flex;flex-direction:column;gap:8px;padding:10px 8px;background:white;border:1px solid #e2e8f0;border-right:none;border-radius:12px 0 0 12px;box-shadow:-4px 0 20px rgba(0,0,0,0.07);">
+        <button onclick="window.location.href='meta dashboard.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Leads">
+            <i class="fa-solid fa-users" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Leads</span>
+        </button>
+        <button onclick="sessionStorage.setItem('navigatedFromPage','finalreview');window.location.href='Auto dashboard.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Auto Dashboard">
+            <i class="fa-solid fa-car" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Auto</span>
+        </button>
+        <button onclick="sessionStorage.setItem('navigatedFromPage','finalreview');sessionStorage.setItem('propertySessionActive','true');window.location.href='property_redesigned.html'" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#f1f5f9;color:#475569;border-radius:8px;border:none;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='white'" onmouseout="this.style.background='#f1f5f9';this.style.color='#475569'" title="Property">
+            <i class="fa-solid fa-house" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Property</span>
+        </button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;background:#2563eb;color:white;border-radius:8px;cursor:default;" title="Final Review (current page)">
+            <i class="fa-solid fa-clipboard-check" style="font-size:14px;"></i>
+            <span style="font-size:9px;font-weight:700;line-height:1;">Review</span>
+        </div>
+    </div>
+
 </body>
 </html>

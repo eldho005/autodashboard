@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <!-- Suppress verbose console.log in production; errors/warnings still appear -->
@@ -28,9 +28,9 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/tailwind.css">
     <script>
-        tailwind.config = {
+        (window.tailwind||{}).config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
@@ -127,7 +127,7 @@
 
     <!-- Add/Edit Lead Modal -->
     <div id="lead-modal" class="modal hidden fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-100">
+        <div class="modal-content bg-white w-full max-w-md rounded-xl shadow-lg overflow-hidden transform scale-100">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                 <h3 id="modal-title" class="text-lg font-bold text-slate-800"><i class="fa-solid fa-user-plus text-indigo-500 mr-2"></i> Add Manual Lead</h3>
                 <button type="button" class="js-close-modal text-slate-400 hover:text-slate-600 transition-colors">
@@ -200,7 +200,7 @@
 
                 <div class="pt-2 flex gap-3">
                     <button type="button" class="js-close-modal flex-none w-24 h-10 rounded-lg border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-                    <button type="submit" id="modal-submit-btn" class="flex-1 h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+                    <button type="submit" id="modal-submit-btn" class="flex-1 h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2">
                         <span>Next: Policy Details</span> <i class="fa-solid fa-chevron-right text-xs"></i>
                     </button>
                 </div>
@@ -210,7 +210,7 @@
 
     <!-- Reminder Modal -->
     <div id="reminder-modal" class="modal hidden fixed inset-0 z-[80] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
+        <div class="modal-content bg-white w-full max-w-sm rounded-xl shadow-lg overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
             <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center sticky top-0">
                 <h3 class="text-lg font-bold text-amber-900"><i class="fa-solid fa-bell text-amber-500 mr-2"></i> Set Reminder</h3>
                 <button type="button" class="js-close-reminder text-amber-400 hover:text-amber-600 transition-colors">
@@ -236,7 +236,7 @@
 
                 <div class="pt-2 flex gap-3">
                     <button type="button" class="js-close-reminder flex-none w-24 h-10 rounded-lg border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-                    <button type="submit" class="flex-1 h-10 rounded-lg bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 shadow-md shadow-amber-200 transition-all">Set Reminder</button>
+                    <button type="submit" class="flex-1 h-10 rounded-lg bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 shadow-sm transition-all">Set Reminder</button>
                 </div>
             </form>
 
@@ -249,38 +249,27 @@
 
     <!-- View All Data Modal -->
     <div id="view-data-modal" class="modal hidden fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
+        <div class="modal-content bg-white w-full max-w-lg rounded-xl shadow-lg overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
             <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center sticky top-0 z-10">
-                <h3 class="text-lg font-bold text-indigo-900"><i class="fa-solid fa-database text-indigo-500 mr-2"></i> Complete Lead Data</h3>
+                <div>
+                    <h3 class="text-base font-bold text-indigo-900"><i class="fa-solid fa-paper-plane text-indigo-500 mr-2"></i> Data Sent to Meta</h3>
+                    <p class="text-[11px] text-indigo-400 mt-0.5">Fields used for Meta Conversions API matching</p>
+                </div>
                 <button type="button" class="js-close-view-data text-indigo-400 hover:text-indigo-600 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
             
-            <div id="view-data-content" class="p-6 space-y-6">
-                <!-- Facebook Lead Data Section -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <i class="fa-brands fa-meta text-blue-500"></i> Facebook Lead Data
-                    </h4>
-                    <div id="fb-lead-data" class="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-2">
+            <div id="view-data-content" class="p-6">
+                <table id="lead-data-table" class="w-full text-sm">
+                    <tbody>
                         <!-- Populated by JS -->
-                    </div>
-                </div>
-                
-                <!-- Parsed DASH/MVR Data Section -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-file-lines text-emerald-500"></i> Parsed DASH/MVR Data
-                    </h4>
-                    <div id="parsed-data" class="bg-emerald-50 rounded-lg border border-emerald-200 p-4 space-y-2">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
+                    </tbody>
+                </table>
             </div>
             
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <button type="button" class="js-close-view-data w-full h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-md transition-all">Close</button>
+                <button type="button" class="js-close-view-data w-full h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-sm transition-all">Close</button>
             </div>
         </div>
     </div>
@@ -289,7 +278,7 @@
     <div class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <span class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-md shadow-indigo-200 flex-shrink-0">
+                <span class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
                     <i class="fa-brands fa-meta"></i>
                 </span>
                 <div>
@@ -298,12 +287,17 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
+                <!-- Callbacks Link -->
+                <a href="/callbacks" class="h-8 px-3 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 transition-all text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-phone-missed"></i>
+                    <span class="hidden sm:inline">Callbacks</span>
+                </a>
                 <!-- User Menu -->
                 <div class="relative">
                     <button id="userMenuBtn" class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200 hover:bg-indigo-200 transition-all">JD</button>
                     
                     <!-- Dropdown Menu -->
-                    <div id="userMenu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden py-1">
+                    <div id="userMenu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-100 z-50 overflow-hidden py-1">
                         <div class="px-4 py-3 border-b border-slate-100">
                             <p class="text-xs font-bold text-slate-800" id="userEmail">policy@meta.com</p>
                             <p class="text-[10px] text-slate-400">Logged In</p>
@@ -339,7 +333,7 @@
                             <i class="fa-solid fa-caret-down text-xs"></i>
                         </button>
                         <!-- Dropdown -->
-                        <div id="date-range-menu" class="hidden absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden py-1">
+                        <div id="date-range-menu" class="hidden absolute right-0 top-full mt-2 w-32 bg-white rounded-lg shadow-lg border border-slate-100 z-50 overflow-hidden py-1">
                             <button class="date-shortcut w-full text-left px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" data-range="today">Today</button>
                             <button class="date-shortcut w-full text-left px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" data-range="yesterday">Yesterday</button>
                             <button class="date-shortcut w-full text-left px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" data-range="last7">Last 7 Days</button>
@@ -380,7 +374,7 @@
                     <div class="text-2xl font-bold text-slate-800" id="stat-closed">0</div>
                     <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">Closed Won</div>
                 </div>
-                <div class="col-span-2 md:col-span-1 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg shadow-slate-900/20 group relative overflow-hidden">
+                <div class="col-span-2 md:col-span-1 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm group relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-3 opacity-10 text-white text-5xl transform translate-x-2 -translate-y-2"><i class="fa-solid fa-dollar-sign"></i></div>
                     <div class="flex justify-between items-start mb-2 relative z-10">
                         <div class="w-8 h-8 rounded-lg bg-slate-700 text-emerald-400 flex items-center justify-center text-sm border border-slate-600"><i class="fa-solid fa-sack-dollar"></i></div>
@@ -431,11 +425,12 @@
                             <option value="Contacted">Contacted</option>
                             <option value="Quote Sent">Quote Sent</option>
                             <option value="Closed Won">Closed Won</option>
+                            <option value="Not Picked Up">Not Picked Up</option>
                         </select>
                         <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
                     </div>
 
-                    <button class="js-open-modal h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-200 flex items-center gap-2 whitespace-nowrap">
+                    <button class="js-open-modal h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2 whitespace-nowrap">
                         <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Add Lead</span>
                     </button>
                     <div class="flex items-center gap-2">
@@ -460,7 +455,7 @@
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-44">Contact Info</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-36">Status</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider min-w-[180px]" id="header-calculator">Policy Details</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-36 bg-indigo-50/50">Meta Signal</th>
+                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-36">Meta Signal</th>
                             <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right w-32">Action</th>
                         </tr>
                     </thead>
@@ -473,12 +468,32 @@
                     <p>No leads found matching your criteria.</p>
                 </div>
             </div>
+
+            <!-- Pagination bar -->
+            <div id="pagination-bar" class="hidden mt-4 flex items-center justify-between text-xs text-slate-500">
+                <span id="pagination-info"></span>
+                <div class="flex items-center gap-1">
+                    <button id="page-first" class="h-7 px-2 rounded bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </button>
+                    <button id="page-prev" class="h-7 px-2 rounded bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+                    <span id="pagination-pages" class="flex items-center gap-1"></span>
+                    <button id="page-next" class="h-7 px-2 rounded bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                    <button id="page-last" class="h-7 px-2 rounded bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
         </section>
     </div>
 
     <!-- Template -->
     <template id="row-template">
-        <tr class="group hover:bg-indigo-50/30 transition-colors" data-id="">
+        <tr class="group hover:bg-slate-50 transition-colors" data-id="">
             <td class="p-2 md:p-3 align-top md:border-none border-b border-dashed border-slate-100 checkbox-col text-center">
                 <input type="checkbox" class="lead-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1.5">
             </td>
@@ -524,6 +539,7 @@
                         <option value="Sold">Sold</option>
                         <option value="Unqualified">Unqualified</option>
                         <option value="Lost">Lost</option>
+                        <option value="Not Picked Up">Not Picked Up</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
                 </div>
@@ -533,7 +549,7 @@
                 <!-- Content Injected via JS -->
             </td>
 
-            <td class="p-2 md:p-3 align-top bg-indigo-50/20 md:bg-indigo-50/30 border-l border-r border-indigo-100/50">
+            <td class="p-2 md:p-3 align-top border-l border-r border-slate-100">
                 <span class="mobile-label">Meta Signal Control</span>
                 
                 <button class="action-sync w-full h-7 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1 mt-1">
@@ -600,7 +616,8 @@
                 NEW: 'New Lead',
                 CONTACTED: 'Contacted',
                 QUOTE: 'Quote Sent',
-                WON: 'Closed Won'
+                WON: 'Closed Won',
+                NOT_PICKED: 'Not Picked Up'
             },
             CLASSES: {
                 ICON_GENERAL: 'bg-blue-50 border-blue-100 text-blue-500',
@@ -631,7 +648,9 @@
                     filterStatus: 'all',
                     searchTerm: '',
                     selectedIds: new Set(),
-                    loading: true
+                    loading: true,
+                    currentPage: 1,
+                    pageSize: 30
                 };
                 
                 this.datePickerInstance = null; // Store main dashboard picker instance
@@ -661,6 +680,13 @@
                     searchInput: document.getElementById('lead-search'),
                     statusFilter: document.getElementById('status-filter'),
                     noResults: document.getElementById('no-results'),
+                    paginationBar: document.getElementById('pagination-bar'),
+                    paginationInfo: document.getElementById('pagination-info'),
+                    paginationPages: document.getElementById('pagination-pages'),
+                    pageFirst: document.getElementById('page-first'),
+                    pagePrev: document.getElementById('page-prev'),
+                    pageNext: document.getElementById('page-next'),
+                    pageLast: document.getElementById('page-last'),
                     selectAllCheckbox: document.getElementById('select-all'),
                     bulkActionBar: document.getElementById('bulk-action-bar'),
                     selectedCount: document.getElementById('selected-count'),
@@ -680,46 +706,55 @@
             }
 
             async init() {
-                console.log('🚀 Dashboard init() started');
-                this.updateModalFields(CONFIG.TYPES.GENERAL); // Init modal with default fields
+                this.updateModalFields(CONFIG.TYPES.GENERAL);
                 this.bindEvents();
-                this.initDatePickers(); // Init global pickers like view date
-                this.setupDateShortcuts(); // Init date shortcuts
-                
-                // Wait for Google API to load before initializing
-                setTimeout(() => this.initGoogleContacts(), 1000);
+                this.initDatePickers();
+                this.setupDateShortcuts();
+                this._googleInitAttempts = 0;
+                this._tryInitGoogle();
 
-                // IMPORTANT: Load existing leads on STARTUP ONLY
-                // Facebook leads load from Meta API; manual leads load from database
-                // After this, NEW leads ONLY come from WebSocket webhook push
-                console.log('📞 Loading existing leads (Facebook + manual) on startup...');
-                await this.loadExistingLeadsFromDatabase();
-                this.renderAll();
-                this.updateStats();
-                
-                // Start checking for reminders every minute
-                this.checkAllReminders();
-                setInterval(() => this.checkAllReminders(), 60000); // Check every 60 seconds
-                
-                // Connect to WebSocket for REAL-TIME lead push from webhook
-                this.startAutoRefresh(); // Setup WebSocket listener for new leads
-                console.log('✅ Dashboard init() completed');
+                const cached = this.getPersistedLeads();
+                if (cached) {
+                    // Cache hit — render immediately, refresh silently in background
+                    this.state.leads = cached;
+                    this.state.loading = false;
+                    this.renderAll();
+                    this.updateStats();
+                    this.checkAllReminders();
+                    setInterval(() => this.checkAllReminders(), 60000);
+                    this.startAutoRefresh();
+                    // Background refresh to pick up any changes since cache was saved
+                    this.loadExistingLeadsFromDatabase().then(() => {
+                        this.renderAll();
+                        this.updateStats();
+                    });
+                } else {
+                    // Cache miss — full blocking fetch (first visit or cache expired)
+                    await this.loadExistingLeadsFromDatabase();
+                    this.renderAll();
+                    this.updateStats();
+                    this.checkAllReminders();
+                    setInterval(() => this.checkAllReminders(), 60000);
+                    this.startAutoRefresh();
+                }
+            }
+
+            _tryInitGoogle() {
+                this._googleInitAttempts++;
+                if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                    this.initGoogleContacts();
+                } else if (this._googleInitAttempts < 10) {
+                    setTimeout(() => this._tryInitGoogle(), 1000);
+                } else {
+                    console.error('❌ Google Identity Services failed to load after 10 attempts. Check network/CSP.');
+                }
             }
 
             initGoogleContacts() {
-                console.log('🔍 Checking Google API availability...');
-                console.log('  - window.google:', !!window.google);
-                console.log('  - window.google.accounts:', !!(window.google && window.google.accounts));
-                console.log('  - window.google.accounts.oauth2:', !!(window.google && window.google.accounts && window.google.accounts.oauth2));
-                console.log('  - GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
+                console.log('🔑 Initializing Google Contacts (attempt', this._googleInitAttempts, ')...');
                 
                 if (!GOOGLE_CLIENT_ID) {
                     console.error('❌ Google Client ID not configured');
-                    return;
-                }
-                
-                if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
-                    console.error('❌ Google Identity Services not loaded. Make sure you are on HTTPS or authorized localhost.');
                     return;
                 }
                 
@@ -727,29 +762,44 @@
                     this.googleTokenClient = window.google.accounts.oauth2.initTokenClient({
                         client_id: GOOGLE_CLIENT_ID,
                         scope: GOOGLE_CONTACTS_SCOPE,
+                        error_callback: (err) => {
+                            console.error('❌ Google OAuth error_callback:', err);
+                            const msg = err.type === 'popup_blocked_by_browser'
+                                ? 'Google popup was blocked — please allow popups for this site'
+                                : err.type === 'access_denied'
+                                ? 'Google access denied — you declined the permission'
+                                : `Google auth error: ${err.type || JSON.stringify(err)}`;
+                            this.handleGoogleError(this.googleSaveContext?.btn, msg);
+                            this.googleSaveContext = null;
+                        },
                         callback: (resp) => {
-                            console.log('📥 Google OAuth callback received:', resp);
+                            console.log('📥 Google OAuth callback received');
                             if (!resp || resp.error) {
-                                console.error('❌ Google OAuth error:', resp);
-                                this.handleGoogleError(this.googleSaveContext?.btn, 'Google authorization failed');
+                                const errDetail = resp?.error_description || resp?.error || 'unknown error';
+                                console.error('❌ Google OAuth error in callback:', resp);
+                                const isOriginError = errDetail.includes('origin') || errDetail.includes('redirect');
+                                const msg = isOriginError
+                                    ? `Google: origin not authorized — add http://localhost:5000 in Google Cloud Console → OAuth Client → Authorized JS origins`
+                                    : `Google auth failed: ${errDetail}`;
+                                this.handleGoogleError(this.googleSaveContext?.btn, msg);
+                                this.googleSaveContext = null;
                                 return;
                             }
                             this.googleAccessToken = resp.access_token;
                             console.log('✅ Google access token received');
-                            console.log('📋 Context before creating contact:', this.googleSaveContext);
                             const ctx = this.googleSaveContext;
                             this.googleSaveContext = null;
                             if (ctx) {
-                                console.log('🚀 Calling createGoogleContact with context:', ctx);
                                 this.createGoogleContact(ctx, resp.access_token);
                             } else {
                                 console.error('❌ No context saved! Cannot create contact.');
                             }
                         }
                     });
-                    console.log('✅ Google Token Client initialized');
+                    console.log('✅ Google Token Client initialized successfully');
                 } catch (error) {
                     console.error('❌ Failed to initialize Google Token Client:', error);
+                    this.googleTokenClient = null;
                 }
             }
             sortLeadsByDate() {
@@ -798,18 +848,21 @@
             getPersistedLeads() {
                 try {
                     const raw = sessionStorage.getItem('current_leads');
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    if (!Array.isArray(parsed)) return [];
-                    return parsed;
+                    if (!raw) return null; // null = no cache
+                    const parsed = JSON.parse(raw);
+                    if (!parsed || !Array.isArray(parsed.leads)) return null;
+                    // Expire after 5 minutes
+                    if (Date.now() - parsed.ts > 5 * 60 * 1000) return null;
+                    return parsed.leads;
                 } catch (error) {
                     console.warn('⚠️ Failed to read persisted leads:', error);
-                    return [];
+                    return null;
                 }
             }
 
             savePersistedLeads(leads) {
                 try {
-                    sessionStorage.setItem('current_leads', JSON.stringify(leads || []));
+                    sessionStorage.setItem('current_leads', JSON.stringify({ leads: leads || [], ts: Date.now() }));
                 } catch (error) {
                     console.warn('⚠️ Failed to save persisted leads:', error);
                 }
@@ -977,29 +1030,30 @@
             }
 
             initDatePickers() {
-                // Initialize Flatpickr on all elements with class 'date-picker'
+                // Initialize Flatpickr — skip elements that are already initialized
                 setTimeout(() => {
-                    if (window.flatpickr) {
-                        // General Date Pickers
-                        flatpickr(".date-picker", CONFIG.DATE_PICKER_OPTS.general);
-                        
-                        // Dashboard Range Picker (New) - Use current month as default
+                    if (!window.flatpickr) return;
+
+                    // General date pickers (skip already-initialized)
+                    document.querySelectorAll('.date-picker').forEach(el => {
+                        if (!el._flatpickr) flatpickr(el, CONFIG.DATE_PICKER_OPTS.general);
+                    });
+
+                    // Dashboard range picker — create only once
+                    if (!this.datePickerInstance) {
                         const today = new Date();
                         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                        
-                        this.datePickerInstance = flatpickr("#dashboard-date-range", {
+                        const lastDay  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        this.datePickerInstance = flatpickr('#dashboard-date-range', {
                             ...CONFIG.DATE_PICKER_OPTS.range,
-                            defaultDate: [firstDay, lastDay],
-                            onChange: (selectedDates, dateStr) => {
-                                // Logic to filter stats could go here
-                                console.log("Range selected:", dateStr);
-                            }
+                            defaultDate: [firstDay, lastDay]
                         });
-                        
-                        // Reminder Time Picker
-                        flatpickr(".time-picker", CONFIG.DATE_PICKER_OPTS.time);
                     }
+
+                    // Reminder time pickers (skip already-initialized)
+                    document.querySelectorAll('.time-picker').forEach(el => {
+                        if (!el._flatpickr) flatpickr(el, CONFIG.DATE_PICKER_OPTS.time);
+                    });
                 }, 50);
             }
             
@@ -1068,6 +1122,7 @@
                 this.dom.tabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         this.state.activeTab = btn.dataset.tab;
+                        this.state.currentPage = 1;
                         this.updateTabsUI();
                         this.renderAll();
                         this.updateStats();
@@ -1102,11 +1157,26 @@
                 // Filter & Search Events
                 this.dom.searchInput.addEventListener('input', (e) => {
                     this.state.searchTerm = e.target.value.toLowerCase();
+                    this.state.currentPage = 1;
                     this.renderAll();
                 });
                 this.dom.statusFilter.addEventListener('change', (e) => {
                     this.state.filterStatus = e.target.value;
+                    this.state.currentPage = 1;
                     this.renderAll();
+                });
+
+                // Pagination Events
+                this.dom.pageFirst.addEventListener('click', () => { this.state.currentPage = 1; this.renderAll(); });
+                this.dom.pagePrev.addEventListener('click', () => { this.state.currentPage--; this.renderAll(); });
+                this.dom.pageNext.addEventListener('click', () => { this.state.currentPage++; this.renderAll(); });
+                this.dom.pageLast.addEventListener('click', () => {
+                    this.state.currentPage = Math.ceil(this.getFilteredLeads().length / this.state.pageSize);
+                    this.renderAll();
+                });
+                this.dom.paginationPages.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-page]');
+                    if (btn) { this.state.currentPage = parseInt(btn.dataset.page); this.renderAll(); }
                 });
 
                 // Bulk Selection Events
@@ -1157,11 +1227,9 @@
             }
 
             getFilteredLeads() {
-                console.log('🔍 getFilteredLeads called, total leads:', this.state.leads.length);
                 const filtered = this.state.leads.filter(lead => {
                     // Filter by Tab Type
                     if (this.state.activeTab !== 'all' && lead.type !== this.state.activeTab) {
-                        console.log(`❌ Lead ${lead.id} filtered out by tab (${lead.type} !== ${this.state.activeTab})`);
                         return false;
                     }
 
@@ -1174,7 +1242,6 @@
                     const matchesStatus = this.state.filterStatus === 'all' || lead.status === this.state.filterStatus;
                     return matchesSearch && matchesStatus;
                 });
-                console.log('✅ Filtered results:', filtered.length);
                 return filtered;
             }
             
@@ -1213,28 +1280,67 @@
             }
 
             renderAll() {
-                console.log('🎨 renderAll() called');
-                console.log('📊 Total leads in state:', this.state.leads.length);
-                console.log('🔍 Active tab:', this.state.activeTab);
-                console.log('🔍 Filter status:', this.state.filterStatus);
-                console.log('🔍 Search term:', this.state.searchTerm);
-                
                 this.dom.tbody.innerHTML = '';
                 const filtered = this.getFilteredLeads();
-                
-                console.log('✅ Filtered leads:', filtered.length);
-                
-                if (filtered.length === 0) {
+                const total = filtered.length;
+
+                if (total === 0) {
                     this.dom.noResults.classList.remove('hidden');
-                    console.log('⚠️ No results - showing no results message');
+                    this.dom.paginationBar.classList.add('hidden');
                 } else {
                     this.dom.noResults.classList.add('hidden');
-                    filtered.forEach(lead => this.renderRow(lead));
-                    console.log('✅ Rendered', filtered.length, 'rows');
+
+                    // Clamp currentPage within valid range
+                    const totalPages = Math.ceil(total / this.state.pageSize);
+                    if (this.state.currentPage > totalPages) this.state.currentPage = totalPages;
+                    if (this.state.currentPage < 1) this.state.currentPage = 1;
+
+                    const start = (this.state.currentPage - 1) * this.state.pageSize;
+                    const pageLeads = filtered.slice(start, start + this.state.pageSize);
+                    pageLeads.forEach(lead => this.renderRow(lead));
+
+                    this.renderPagination(total, totalPages);
                 }
-                
+
                 this.updateBulkUI();
-                this.initDatePickers(); // Re-init date pickers for new rows
+                this.initDatePickers();
+                // Keep cache in sync with any local mutations (status changes, deletes, edits)
+                if (this.state.leads.length > 0) this.savePersistedLeads(this.state.leads);
+            }
+
+            renderPagination(total, totalPages) {
+                const bar = this.dom.paginationBar;
+                if (totalPages <= 1) {
+                    bar.classList.add('hidden');
+                    return;
+                }
+                bar.classList.remove('hidden');
+
+                const cur = this.state.currentPage;
+                const start = (cur - 1) * this.state.pageSize + 1;
+                const end = Math.min(cur * this.state.pageSize, total);
+                this.dom.paginationInfo.textContent = `Showing ${start}–${end} of ${total} leads`;
+
+                // Prev / First buttons
+                this.dom.pageFirst.disabled = cur === 1;
+                this.dom.pagePrev.disabled = cur === 1;
+                this.dom.pageNext.disabled = cur === totalPages;
+                this.dom.pageLast.disabled = cur === totalPages;
+
+                // Page number buttons — show at most 5 pages around current
+                const pages = [];
+                let lo = Math.max(1, cur - 2);
+                let hi = Math.min(totalPages, lo + 4);
+                lo = Math.max(1, hi - 4);
+                for (let p = lo; p <= hi; p++) pages.push(p);
+
+                this.dom.paginationPages.innerHTML = pages.map(p => `
+                    <button data-page="${p}" class="h-7 w-7 rounded text-[11px] font-medium transition-colors
+                        ${p === cur
+                            ? 'bg-indigo-600 text-white border border-indigo-600'
+                            : 'bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-600'}">
+                        ${p}
+                    </button>`).join('');
             }
 
             /**
@@ -1281,6 +1387,16 @@
                 // Checkbox & Reminder
                 row.querySelector('.lead-checkbox').checked = this.state.selectedIds.has(lead.id);
                 this._renderReminderButton(row, lead);
+
+                // Change Process button to green when license number is on file (data was parsed)
+                if (lead.has_auto_data) {
+                    const btn = row.querySelector('.action-process');
+                    if (btn) {
+                        btn.classList.remove('bg-slate-900', 'hover:bg-slate-800');
+                        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                        btn.title = 'Data parsed — ready to process';
+                    }
+                }
 
                 this.dom.tbody.appendChild(clone);
             }
@@ -1941,11 +2057,8 @@
                 }
 
                 // Show modal immediately with loading state
-                const fbDataContainer = document.getElementById('fb-lead-data');
-                const parsedContainer = document.getElementById('parsed-data');
-                
-                fbDataContainer.innerHTML = '<p class="text-slate-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</p>';
-                parsedContainer.innerHTML = '<p class="text-emerald-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</p>';
+                const tableBody = document.querySelector('#lead-data-table tbody');
+                tableBody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
                 
                 this.dom.viewDataModal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
@@ -1976,66 +2089,48 @@
                     };
                     const parsedData = result.parsed_data;
 
-                    // Populate Facebook Lead Data
-                    const fbFields = [
-                        { label: 'Name', value: leadData.name, icon: 'fa-user' },
-                        { label: 'Phone', value: leadData.phone, icon: 'fa-phone' },
-                        { label: 'Email', value: leadData.email, icon: 'fa-envelope' },
-                        { label: 'Status', value: leadData.status, icon: 'fa-flag' },
-                        { label: 'Type', value: leadData.type || 'Auto', icon: 'fa-car' },
-                        { label: 'Driver License', value: leadData.driver_license_received, icon: 'fa-id-card' },
-                        { label: 'Auto Qualified', value: leadData.is_auto_qualified ? 'Yes (5+ years)' : 'No', icon: 'fa-check-circle' },
-                        { label: 'Meta Lead ID', value: leadData.meta_lead_id, icon: 'fa-fingerprint' },
-                        { label: 'Created', value: leadData.created_at ? new Date(leadData.created_at).toLocaleString() : '', icon: 'fa-calendar' }
+                    // All 6 fields in one table
+                    // All fields in one table
+                    const eventStageMap = { 'Qualified': 'Qualified', 'Sold': 'Purchase' };
+                    const eventStage = eventStageMap[leadData.status] || null;
+
+                    const allFields = [
+                        { label: 'Event Stage',   value: eventStage,               icon: 'fa-bullseye' },
+                        { label: 'Meta Lead ID',  value: leadData.meta_lead_id,     icon: 'fa-fingerprint' },
+                        { label: 'Phone',         value: leadData.phone,            icon: 'fa-phone' },
+                        { label: 'Email',         value: leadData.email,            icon: 'fa-envelope' },
+                        { label: 'Full Name',     value: parsedData.full_name,      icon: 'fa-user' },
+                        { label: 'Full Address',  value: parsedData.address,        icon: 'fa-location-dot' },
+                        { label: 'City',          value: parsedData.city,           icon: 'fa-city' },
+                        { label: 'Province',      value: 'Ontario',                 icon: 'fa-map' },
+                        { label: 'Postal Code',   value: parsedData.postal_code,    icon: 'fa-envelope-open-text' },
+                        { label: 'Date of Birth', value: parsedData.date_of_birth,  icon: 'fa-cake-candles' }
                     ];
 
-                    fbDataContainer.innerHTML = fbFields
-                        .filter(f => f.value)
-                        .map(f => `
-                            <div class="flex items-start gap-2 text-sm">
-                                <i class="fa-solid ${f.icon} text-slate-400 w-4 mt-0.5"></i>
-                                <span class="font-medium text-slate-600 min-w-[100px]">${f.label}:</span>
-                                <span class="text-slate-800 break-all">${f.value}</span>
-                            </div>
-                        `).join('') || '<p class="text-slate-400 text-sm italic">No Facebook lead data available</p>';
-
-                    // Populate Parsed DASH/MVR Data
-                    if (parsedData.has_parsed_data) {
-                        const parsedFields = [
-                            { label: 'Full Name', value: parsedData.full_name, icon: 'fa-user' },
-                            { label: 'First Name', value: parsedData.first_name, icon: 'fa-user' },
-                            { label: 'Last Name', value: parsedData.last_name, icon: 'fa-user' },
-                            { label: 'Full Address', value: parsedData.address, icon: 'fa-location-dot' },
-                            { label: 'City', value: parsedData.city, icon: 'fa-city' },
-                            { label: 'Postal Code', value: parsedData.postal_code, icon: 'fa-mailbox' },
-                            { label: 'Date of Birth', value: parsedData.date_of_birth, icon: 'fa-cake-candles' },
-                            { label: 'Gender', value: parsedData.gender, icon: 'fa-venus-mars' },
-                            { label: 'Marital Status', value: parsedData.marital_status, icon: 'fa-ring' },
-                            { label: 'MVR Issue Date', value: parsedData.mvr_issue_date, icon: 'fa-calendar-check' }
-                        ];
-
-                        parsedContainer.innerHTML = parsedFields
-                            .filter(f => f.value)
-                            .map(f => `
-                                <div class="flex items-start gap-2 text-sm">
-                                    <i class="fa-solid ${f.icon} text-emerald-500 w-4 mt-0.5"></i>
-                                    <span class="font-medium text-emerald-700 min-w-[100px]">${f.label}:</span>
-                                    <span class="text-emerald-900 break-all">${f.value}</span>
-                                </div>
-                            `).join('');
-                    } else {
-                        parsedContainer.innerHTML = `
-                            <div class="text-center py-4">
-                                <i class="fa-solid fa-file-circle-question text-3xl text-slate-300 mb-2"></i>
-                                <p class="text-slate-400 text-sm">No parsed DASH/MVR data found</p>
-                                <p class="text-slate-400 text-xs mt-1">Process this lead in Auto Dashboard to parse documents</p>
-                            </div>
-                        `;
-                    }
+                    tableBody.innerHTML = allFields.map((f, i) => {
+                        let displayValue;
+                        if (!f.value) {
+                            displayValue = '<span class="text-slate-300 italic">—</span>';
+                        } else if (f.label === 'Event Stage') {
+                            const badgeClass = f.value === 'Qualified'
+                                ? 'bg-indigo-100 text-indigo-700'
+                                : 'bg-emerald-100 text-emerald-700';
+                            displayValue = `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass}">${f.value}</span>`;
+                        } else {
+                            displayValue = `<span class="text-slate-800 break-all">${f.value}</span>`;
+                        }
+                        return `
+                        <tr class="${i < allFields.length - 1 ? 'border-b border-slate-100' : ''}">
+                            <td class="py-3 pr-3 w-5 text-slate-400">
+                                <i class="fa-solid ${f.icon}"></i>
+                            </td>
+                            <td class="py-3 pr-4 font-semibold text-slate-500 whitespace-nowrap w-32">${f.label}</td>
+                            <td class="py-3">${displayValue}</td>
+                        </tr>`;
+                    }).join('');
                 } catch (error) {
                     console.error('Error fetching full lead data:', error);
-                    fbDataContainer.innerHTML = '<p class="text-rose-500 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</p>';
-                    parsedContainer.innerHTML = '<p class="text-rose-500 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</p>';
+                    tableBody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</td></tr>';
                 }
             }
 
@@ -2211,7 +2306,7 @@
                 
                 // Determine event type based on status
                 const STATUS_TO_EVENT = {
-                    'Qualified': 'Lead',
+                    'Qualified': 'Qualified',
                     'Sold': 'Purchase'
                 };
                 
@@ -2318,9 +2413,15 @@
                     if (eventsReceived === 0) {
                         btn.className = "action-sync w-full h-7 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded text-[9px] font-bold flex items-center justify-center gap-1";
                         btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle pointer-events-none"></i> Sent (0 received)';
-                        this.showToast(`⚠️ Sent to Meta but validation failed (events_received=0). Check console for details.`, 'warning');
+                        // Show Meta's actual validation messages
+                        const metaMsgs = result.meta_response?.messages || [];
+                        const msgText = metaMsgs.length > 0
+                            ? metaMsgs.join(' | ')
+                            : 'No validation details returned by Meta';
+                        console.error('❌ Meta validation messages:', metaMsgs);
+                        this.showToast(`⚠️ Meta rejected event: ${msgText}`, 'error');
                         btn.disabled = false;
-                        return; // Don't show success toast
+                        return;
                     }
                     
                     // Show comprehensive confirmation toast
@@ -2392,8 +2493,10 @@
                 btn.classList.add('bg-blue-50', 'border-blue-200');
 
                 if (!this.googleTokenClient) {
-                    console.error('❌ Google Token Client not initialized');
-                    this.handleGoogleError(btn, 'Google Contacts not configured. Check console for details.');
+                    console.error('❌ Google Token Client not initialized - check Google Cloud Console OAuth setup');
+                    this.showToast('⚙️ Google not ready yet — try again in a moment, or check console for setup errors', 'error');
+                    btn.innerHTML = '<i class="fa-solid fa-user-plus text-[10px] pointer-events-none"></i>';
+                    btn.classList.remove('bg-blue-50', 'border-blue-200');
                     return;
                 }
 
@@ -2588,5 +2691,7 @@
             });
         });
     </script>
+
+
 </body>
 </html>
