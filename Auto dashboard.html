@@ -1111,7 +1111,7 @@
             loadSavedData: async function(email, name, phone, leadId) {
                 try {
                     console.log('📡 Fetching saved auto data from backend for email:', email);
-                    const response = await fetch(`${window.location.origin}/api/get-auto-data/${encodeURIComponent(email)}`);
+                    const response = await fetch(`${window.location.origin}/api/get-auto-data/${encodeURIComponent(email)}`, { credentials: 'include' });
                     
                     if (response.ok) {
                         const result = await response.json();
@@ -2054,6 +2054,7 @@
                     const endpoint = type === 'mvr' ? 'parse-mvr' : 'parse-dash';
                     const response = await fetch(`${window.location.origin}/api/${endpoint}`, {
                         method: 'POST',
+                        credentials: 'include',
                         body: formData
                     });
                     
@@ -3818,6 +3819,7 @@
                     // Send to backend using new endpoint
                     const response = await fetch(`${window.location.origin}/api/save-auto-data`, {
                         method: 'POST',
+                        credentials: 'include',
                         headers: {
                             'Content-Type': 'application/json',
                         },
@@ -3867,7 +3869,7 @@
                 try {
                     console.log('📡 Fetching leads from backend...');
                     // Fetch leads from backend
-                    const response = await fetch(`${window.location.origin}/api/leads`);
+                    const response = await fetch(`${window.location.origin}/api/leads`, { credentials: 'include' });
                     console.log('📥 Response status:', response.status);
                     
                     if (!response.ok) {
@@ -4008,7 +4010,7 @@
                 const tryFetchSaved = async (query) => {
                     if (!query) return null;
                     console.log('📂 Fetching saved data for:', query);
-                    const response = await fetch(`${window.location.origin}/api/get-auto-data/${encodeURIComponent(query)}`);
+                    const response = await fetch(`${window.location.origin}/api/get-auto-data/${encodeURIComponent(query)}`, { credentials: 'include' });
                     if (!response.ok) return null;
                     const result = await response.json();
                     if (result.success && result.data && result.data.auto_data?.drivers) {
