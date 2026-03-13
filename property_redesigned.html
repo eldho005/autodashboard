@@ -1557,6 +1557,9 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                         // Populate insured person DOB and Gender from Auto Dashboard
                         setAndSave(document.querySelector('[data-key="insDob"]:not([data-scope])'),    driver.personalDob);
                         setAndSave(document.querySelector('[data-key="insGender"]:not([data-scope])'), driver.personalGender);
+
+                        // Insured with Brokerage Since ← Renewal Date (licRenewal) from Driver & Licensing
+                        setAndSave(document.querySelector('[data-key="insuredWithBrokerageSince"]'), driver.licRenewal);
                         
                         console.log('? Auto-populated address and customer info from Auto Dashboard');
                     }
