@@ -2413,11 +2413,19 @@
                     if (eventsReceived === 0) {
                         btn.className = "action-sync w-full h-7 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded text-[9px] font-bold flex items-center justify-center gap-1";
                         btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle pointer-events-none"></i> Sent (0 received)';
-                        // Show Meta's actual validation messages
+                        // Dig out the real reason: Meta can embed errors in a 200 response
+                        const metaError = result.meta_response?.error;
                         const metaMsgs = result.meta_response?.messages || [];
-                        const msgText = metaMsgs.length > 0
-                            ? metaMsgs.join(' | ')
-                            : 'No validation details returned by Meta';
+                        let msgText;
+                        if (metaError) {
+                            // OAuth / API-level error returned inside a 200 response
+                            msgText = metaError.message || metaError.error_user_msg || JSON.stringify(metaError);
+                        } else if (metaMsgs.length > 0) {
+                            msgText = metaMsgs.join(' | ');
+                        } else {
+                            msgText = 'events_received=0 — check Railway logs for details';
+                        }
+                        console.error('❌ Meta full response:', result.meta_response);
                         console.error('❌ Meta validation messages:', metaMsgs);
                         this.showToast(`⚠️ Meta rejected event: ${msgText}`, 'error');
                         btn.disabled = false;
