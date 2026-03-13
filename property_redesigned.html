@@ -58,15 +58,15 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.6);
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.15s ease;
+            will-change: opacity;
         }
         .selection-modal.active {
             opacity: 1;
@@ -79,10 +79,11 @@
             box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
             max-width: 600px;
             width: 90%;
-            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: slideUp 0.2s ease-out;
+            will-change: transform;
         }
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -99,7 +100,6 @@
         .type-card:hover {
             border-color: #3b82f6;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-            transform: translateY(-2px);
         }
         .type-card.selected {
             border-color: #3b82f6;
@@ -145,7 +145,7 @@
         });
     </script>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans text-slate-600 antialiased">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-600 antialiased" style="overscroll-behavior: contain;">
 
     <!-- Authentication Guard (server-side JWT verification) -->
     <script>(async function(){try{const r=await fetch('/api/verify-token',{credentials:'include'});if(!r.ok)throw 0}catch(e){sessionStorage.removeItem('metaDashboardAuth');sessionStorage.removeItem('metaDashboardUser');window.location.href='meta-login.html'}})()</script>
