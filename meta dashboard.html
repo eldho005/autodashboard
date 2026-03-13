@@ -2350,6 +2350,16 @@
                     return res.json();
                 })
                 .then(result => {
+                    // ── RAW DUMP: always show this so we can diagnose any issue ──
+                    console.group('📬 Meta Sync Raw Response');
+                    console.log('Full result:', result);
+                    console.log('meta_response:', result.meta_response);
+                    console.log('events_received:', result.meta_response?.events_received);
+                    console.log('messages:', result.meta_response?.messages);
+                    console.log('error:', result.meta_response?.error);
+                    console.groupEnd();
+                    // ─────────────────────────────────────────────────────────────
+
                     // Check if backend returned success: false
                     if (!result.success) {
                         throw new Error(result.error || 'Unknown error from backend');
