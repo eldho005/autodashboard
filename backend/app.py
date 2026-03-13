@@ -822,7 +822,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
         print(f"   Test Event Code: {test_event_code if test_event_code else 'N/A (production event)'}")
         print(f"   Event Time: {int(time.time())} (Unix timestamp)")
         print(f"   Action Source: system_generated (CRM/Offline)")
-        print(f"   Event Source URL: {event_source_url if event_source_url else 'N/A (offline event)'}")
+        print(f"   Event Source URL: N/A (offline event)")
         print(f"   Facebook Lead ID: {meta_lead_id if meta_lead_id else 'N/A'}")
         print(f"   External ID: {external_id}")
         print(f"   User Data Fields: {len([k for k, v in user_data.items() if v])} fields provided")
