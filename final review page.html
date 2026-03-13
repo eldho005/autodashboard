@@ -261,6 +261,8 @@
             
             if (drv0?.personalGender) RAW_DATA.customers[0]["Gender"] = sanitize(drv0.personalGender);
             if (drv0?.personalMaritalStatus) RAW_DATA.customers[0]["Marital Status"] = sanitize(drv0.personalMaritalStatus);
+            // Licence Number (driver 1) — strip all dashes
+            if (drv0?.licNumber) RAW_DATA.customers[0]["Licence Number"] = sanitize(drv0.licNumber).replace(/-/g, '');
 
             
             // SECTION 3-6: ALL DRIVERS DATA (loop through all drivers)
@@ -1122,6 +1124,7 @@
                         <div class="pb-3 border-b border-slate-100 space-y-1">
                             ${renderField("Gender", customer["Gender"])}
                             ${renderField("Marital Status", customer["Marital Status"])}
+                            ${renderField("Licence No", customer["Licence Number"])}
                         </div>
                         <div class="pb-3 border-b border-slate-100 space-y-1">
                             ${renderField("Home", customer["Home Phone"])}
@@ -1841,6 +1844,7 @@
                             "Effective Date": formatDateForExport(customer["Effective Date"] || ""),
                             "Gender": cleanExportValue(customer["Gender"] || ""),
                             "Marital Status": cleanExportValue(customer["Marital Status"] || ""),
+                            "Licence Number": cleanExportValue(customer["Licence Number"] || ""),
                             "Property Type": cleanExportValue(customer["Property Type"] || ""),
                             "Insured DOB": formatDateForExport(customer["Insured DOB"] || ""),
                             "drivers": simplifiedDrivers,
