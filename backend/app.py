@@ -835,7 +835,6 @@ def send_event_to_meta(lead_id, event_type, event_data):
         print(f"   - State/Region (SHA-256): {st_hash[:8]}***" if st_hash else "")
         print(f"   - Country (SHA-256): {country_hash[:8]}***" if country_hash else "")
         print(f"   - DOB (SHA-256): {db_hash[:8]}***" if db_hash else "")
-        print(f"   - Client User Agent: {client_user_agent[:50]}..." if client_user_agent else "")
         print(f"   Custom Data:")
         print(f"   - Value: ${custom_data.get('value', 0)} {custom_data.get('currency', 'CAD')}")
         print(f"   - Lead Status: {custom_data.get('lead_status', 'N/A')}")
