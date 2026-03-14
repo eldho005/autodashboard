@@ -39,6 +39,7 @@ parse_mvr_pdf = pdf_parser.parse_mvr_pdf
 parse_dash_pdf = pdf_parser.parse_dash_pdf
 parse_quote_pdf = pdf_parser.parse_quote_pdf
 parse_property_quote_pdf = pdf_parser.parse_property_quote_pdf
+import doc_verifier
 
 # Load environment variables from backend/.env and parent .env.local
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -886,6 +887,11 @@ def document_upload_dashboard():
 def callbacks_page():
     """Serve Callbacks / Not Picked Up page"""
     return send_from_directory(app.static_folder, 'callbacks.html')
+
+@app.route('/verification')
+def verification_page():
+    """Serve Document Verification page"""
+    return send_from_directory(app.static_folder, 'verification.html')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -2154,6 +2160,116 @@ def parse_property_quote():
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
+
+
+# ========== DOCUMENT VERIFICATION ENDPOINTS ==========
+
+@app.route('/api/verify-auto-docs', methods=['POST'])
+@require_auth
+def verify_auto_docs_endpoint():
+    """Extract fields from up to 4 PDFs (quote, dash, mvr, application) and cross-compare."""
+    try:
+        def _read(field):
+            f = request.files.get(field)
+            return f.read() if f and f.filename else None
+
+        quote_bytes = _read('quote')
+        dash_bytes  = _read('dash')
+        mvr_bytes   = _read('mvr')
+        app_bytes   = _read('application')
+
+        if not any([quote_bytes, dash_bytes, mvr_bytes, app_bytes]):
+            return jsonify({'success': False, 'error': 'No PDF files uploaded'}), 400
+
+        result = doc_verifier.verify_documents(
+            quote_bytes=quote_bytes,
+            dash_bytes=dash_bytes,
+            mvr_bytes=mvr_bytes,
+            app_bytes=app_bytes,
+        )
+
+        # Metadata from form fields
+        client_name  = request.form.get('client_name', '')
+        verified_by  = request.form.get('verified_by', '')
+        lead_id      = request.form.get('lead_id', None)
+        quote_number = request.form.get('quote_number', '')
+
+        # Save to Supabase
+        try:
+            record = {
+                'client_name':        client_name,
+                'verified_by':        verified_by,
+                'lead_id':            lead_id,
+                'quote_number':       quote_number,
+                'quote_data':         result['extracted'].get('quote'),
+                'dash_data':          result['extracted'].get('dash'),
+                'mvr_data':           result['extracted'].get('mvr'),
+                'application_data':   result['extracted'].get('application'),
+                'comparison_result':  result['comparison'],
+                'extraction_errors':  result.get('extraction_errors', {}),
+                'status':             'pending',
+                'created_at':         datetime.now(timezone.utc).isoformat(),
+            }
+            db_result = supabase.table('doc_verifications').insert(record).execute()
+            verification_id = db_result.data[0]['id'] if db_result.data else None
+        except Exception as db_err:
+            print(f'[VERIFY] DB save error: {db_err}')
+            verification_id = None
+
+        return jsonify({
+            'success':         True,
+            'verification_id': verification_id,
+            'comparison':      result['comparison'],
+            'extracted':       result['extracted'],
+            'extraction_errors': result.get('extraction_errors', {}),
+        }), 200
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/verifications', methods=['GET'])
+@require_auth
+def list_verifications():
+    """List all document verifications, optionally filtered by lead_id."""
+    try:
+        lead_id = request.args.get('lead_id')
+        query = supabase.table('doc_verifications').select(
+            'id, client_name, verified_by, quote_number, status, created_at, lead_id'
+        ).order('created_at', desc=True)
+        if lead_id:
+            query = query.eq('lead_id', lead_id)
+        result = query.limit(100).execute()
+        return jsonify({'success': True, 'data': result.data}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/verifications/<int:verification_id>', methods=['GET'])
+@require_auth
+def get_verification(verification_id):
+    """Fetch a single stored verification by ID."""
+    try:
+        result = supabase.table('doc_verifications').select('*').eq('id', verification_id).single().execute()
+        if not result.data:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        return jsonify({'success': True, 'data': result.data}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/verifications/<int:verification_id>/status', methods=['POST'])
+@require_auth
+def update_verification_status(verification_id):
+    """Update the status of a verification (pending / approved / cannot_bind)."""
+    try:
+        body = request.get_json() or {}
+        new_status = body.get('status', 'pending')
+        supabase.table('doc_verifications').update({'status': new_status}).eq('id', verification_id).execute()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/export-pdf', methods=['POST'])
