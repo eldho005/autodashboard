@@ -2165,7 +2165,6 @@ def parse_property_quote():
 # ========== DOCUMENT VERIFICATION ENDPOINTS ==========
 
 @app.route('/api/verify-auto-docs', methods=['POST'])
-@require_auth
 def verify_auto_docs_endpoint():
     """Extract fields from up to 4 PDFs (quote, dash, mvr, application) and cross-compare."""
     try:
@@ -2230,7 +2229,6 @@ def verify_auto_docs_endpoint():
 
 
 @app.route('/api/verifications', methods=['GET'])
-@require_auth
 def list_verifications():
     """List all document verifications, optionally filtered by lead_id."""
     try:
@@ -2247,7 +2245,6 @@ def list_verifications():
 
 
 @app.route('/api/verifications/<int:verification_id>', methods=['GET'])
-@require_auth
 def get_verification(verification_id):
     """Fetch a single stored verification by ID."""
     try:
@@ -2260,7 +2257,6 @@ def get_verification(verification_id):
 
 
 @app.route('/api/verifications/<int:verification_id>/status', methods=['POST'])
-@require_auth
 def update_verification_status(verification_id):
     """Update the status of a verification (pending / approved / cannot_bind)."""
     try:
