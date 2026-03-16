@@ -97,6 +97,7 @@ META_PAGE_ACCESS_TOKEN = os.getenv('META_PAGE_ACCESS_TOKEN')
 META_LEAD_FORM_ID = os.getenv('META_LEAD_FORM_ID')
 META_WEBHOOK_VERIFY_TOKEN = os.getenv('META_WEBHOOK_VERIFY_TOKEN')
 FB_PIXEL_ID = os.getenv('FB_PIXEL_ID')
+FB_PIXEL_TOKEN = os.getenv('FB_PIXEL_TOKEN')  # System-user token for Conversions API
 SIGNWELL_WEBHOOK_SECRET = os.getenv('SIGNWELL_WEBHOOK_SECRET')
 
 # Streamlit sidecar URLs — override in Railway env vars when deployed.
@@ -153,6 +154,7 @@ PUBLIC_ENDPOINTS = {
     '/api/signwell/webhook',
     '/api/signwell/webhook-legacy',
     '/api/meta-diagnostics',
+    '/verification',
 }
 
 # Prefixes for static file serving (HTML pages handle their own auth guard)
@@ -177,15 +179,13 @@ def authenticate_request():
     Runs before every request. Public endpoints and static files are skipped.
     All API endpoints require a valid JWT token in the 'auth_token' cookie.
     """
+    path = request.path
+
     if request.method == 'OPTIONS':
         return  # Allow CORS preflight through
 
-    if _is_public_route(request.path):
+    if _is_public_route(path):
         return  # Public route, no auth needed
-
-    # Also allow the root page and named page routes through (they serve HTML)
-    if request.path in ('/', '/auto', '/signwell-ui', '/document-upload-dashboard', '/login'):
-        return
 
     token = request.cookies.get('auth_token')
     if not token:
@@ -806,9 +806,12 @@ def send_event_to_meta(lead_id, event_type, event_data):
             'custom_data': custom_data
         }
         
+        # Prefer FB_PIXEL_TOKEN (system-user token) for Conversions API;
+        # fall back to META_PAGE_ACCESS_TOKEN so nothing breaks if FB_PIXEL_TOKEN is unset.
+        capi_token = FB_PIXEL_TOKEN or META_PAGE_ACCESS_TOKEN
         payload = {
             'data': [event_obj],
-            'access_token': META_PAGE_ACCESS_TOKEN
+            'access_token': capi_token
         }
         
         # Add test_event_code if provided (for testing in Meta Events Manager Test Events tab)
@@ -850,10 +853,17 @@ def send_event_to_meta(lead_id, event_type, event_data):
     
     except requests.exceptions.RequestException as e:
         print(f"❌ HTTP Error sending to Meta: {str(e)}")
-        print(f"   Status: {e.response.status_code if hasattr(e, 'response') else 'N/A'}")
-        if hasattr(e, 'response'):
+        print(f"   Status: {e.response.status_code if hasattr(e, 'response') and e.response is not None else 'N/A'}")
+        # Capture Meta's actual error body so the frontend can show a useful message
+        meta_error_detail = str(e)
+        if hasattr(e, 'response') and e.response is not None:
             print(f"   Response: {e.response.text}")
-        return {'success': False, 'error': str(e)}
+            try:
+                meta_body = e.response.json()
+                meta_error_detail = meta_body.get('error', {}).get('message', e.response.text)
+            except Exception:
+                meta_error_detail = e.response.text
+        return {'success': False, 'error': meta_error_detail}
     except Exception as e:
         print(f"❌ Error sending event to Meta: {str(e)}")
         import traceback
@@ -1518,18 +1528,25 @@ def sync_lead_event(lead_id):
         # Update lead sync timestamp and status
         # Meta returns 'events_received' field when successful
         sync_status = 'sent' if result and result.get('events_received', 0) > 0 else 'failed'
-        supabase.table('leads').update({
-            'last_sync': datetime.now(timezone.utc).isoformat(),
-            'sync_status': sync_status
-        }).eq('id', lead['id']).execute()
         
-        # Log sync event to database
-        supabase.table('sync_events').insert({
-            'lead_id': lead['id'],
-            'event_type': event_type,
-            'meta_response': result,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }).execute()
+        # Wrap DB writes in try/except so a Supabase failure doesn't mask the Meta result
+        try:
+            supabase.table('leads').update({
+                'last_sync': datetime.now(timezone.utc).isoformat(),
+                'sync_status': sync_status
+            }).eq('id', lead['id']).execute()
+        except Exception as db_err:
+            print(f"⚠️ Could not update leads sync status: {db_err}")
+        
+        try:
+            supabase.table('sync_events').insert({
+                'lead_id': lead['id'],
+                'event_type': event_type,
+                'meta_response': result,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }).execute()
+        except Exception as db_err:
+            print(f"⚠️ Could not insert into sync_events: {db_err}")
         
         # Log confirmation
         print(f"{'─'*60}")
@@ -2190,27 +2207,320 @@ def verify_auto_docs_endpoint():
         # Metadata from form fields
         client_name  = request.form.get('client_name', '')
         verified_by  = request.form.get('verified_by', '')
-        lead_id      = request.form.get('lead_id', None)
+        lead_id      = request.form.get('lead_id') or None
         quote_number = request.form.get('quote_number', '')
 
-        # Save to Supabase
+        # Save to Supabase — parent row first, then one child row per doc
+        verification_id = None
         try:
-            record = {
-                'client_name':        client_name,
-                'verified_by':        verified_by,
-                'lead_id':            lead_id,
-                'quote_number':       quote_number,
-                'quote_data':         result['extracted'].get('quote'),
-                'dash_data':          result['extracted'].get('dash'),
-                'mvr_data':           result['extracted'].get('mvr'),
-                'application_data':   result['extracted'].get('application'),
-                'comparison_result':  result['comparison'],
-                'extraction_errors':  result.get('extraction_errors', {}),
-                'status':             'pending',
-                'created_at':         datetime.now(timezone.utc).isoformat(),
+            parent = {
+                'client_name':       client_name,
+                'verified_by':       verified_by,
+                'lead_id':           lead_id,
+                'quote_number':      quote_number,
+                'extraction_errors': result.get('extraction_errors', {}),
+                'status':            'pending',
+                'created_at':        datetime.now(timezone.utc).isoformat(),
             }
-            db_result = supabase.table('doc_verifications').insert(record).execute()
-            verification_id = db_result.data[0]['id'] if db_result.data else None
+            parent_row = supabase.table('doc_verifications').insert(parent).execute()
+            verification_id = parent_row.data[0]['id'] if parent_row.data else None
+
+            def _veh(src):
+                """Pull first vehicle fields from an extracted doc dict."""
+                veh = (src.get('vehicles') or [{}])[0] if src and src.get('vehicles') else {}
+                return veh
+
+            if verification_id:
+                # --- Quote ---
+                q = result['extracted'].get('quote') or {}
+
+                # 2. Quote header (policy info, applicant, co-applicant, coverages)
+                pi = q.get('policy_info') or {}
+                ap = q.get('applicant') or {}
+                co = q.get('co_applicant') or {}
+                supabase.table('doc_ver_quotes').insert({
+                    'verification_id':          verification_id,
+                    'policy_type':              pi.get('policy_type'),
+                    'property_carrier':         pi.get('property_carrier'),
+                    'property_policy_number':   pi.get('property_policy_number'),
+                    'property_policy_date':     pi.get('property_policy_date'),
+                    'occupied_since':           pi.get('occupied_since'),
+                    'combined_policy_discount': pi.get('combined_policy_discount'),
+                    'combined_policy_company':  pi.get('combined_policy_company'),
+                    'term_length':              pi.get('term_length'),
+                    'applicant_salutation':     ap.get('salutation'),
+                    'applicant_first_name':     ap.get('first_name'),
+                    'applicant_middle':         ap.get('middle'),
+                    'applicant_last_name':      ap.get('last_name'),
+                    'applicant_suffix':         ap.get('suffix'),
+                    'co_applicant_salutation':  co.get('salutation'),
+                    'co_applicant_first_name':  co.get('first_name'),
+                    'co_applicant_middle':      co.get('middle'),
+                    'co_applicant_last_name':   co.get('last_name'),
+                    'co_applicant_suffix':      co.get('suffix'),
+                    'coverages':               q.get('coverages'),
+                }).execute()
+
+                # 2a. Quote vehicles (one row per vehicle)
+                for v in (q.get('vehicles') or []):
+                    supabase.table('doc_ver_quote_vehicles').insert({
+                        'verification_id':        verification_id,
+                        'vehicle_number':         v.get('vehicle_number'),
+                        'vehicle_type':           v.get('vehicle_type'),
+                        'vin':                    v.get('vin'),
+                        'body_style':             v.get('body_style'),
+                        'fuel_type':              v.get('fuel_type'),
+                        'hybrid':                 v.get('hybrid'),
+                        'primary_use':            v.get('primary_use'),
+                        'annual_km':              v.get('annual_km'),
+                        'business_km':            v.get('business_km'),
+                        'daily_km':               v.get('daily_km'),
+                        'garaging_location':      v.get('garaging_location'),
+                        'single_vehicle_mvd':     v.get('single_vehicle_mvd'),
+                        'leased':                 v.get('leased'),
+                        'cylinders':              v.get('cylinders'),
+                        'anti_theft_device_type': v.get('anti_theft_device_type'),
+                        'anti_theft_manufacturer': v.get('anti_theft_manufacturer'),
+                        'anti_theft_engraving':   v.get('anti_theft_engraving'),
+                        'condition':              v.get('condition'),
+                        'purchase_date':          v.get('purchase_date'),
+                        'km_at_purchase':         v.get('km_at_purchase'),
+                        'list_price_new':         v.get('list_price_new'),
+                        'purchase_price':         v.get('purchase_price'),
+                        'winter_tires':           v.get('winter_tires'),
+                        'private_garage':         v.get('private_garage'),
+                        'parking_at_night':       v.get('parking_at_night'),
+                    }).execute()
+
+                # 2b-2g. Per-driver tables
+                for drv in (q.get('drivers') or []):
+                    dname = drv.get('driver_name') or ''
+
+                    # 2b. Driver flat info
+                    supabase.table('doc_ver_quote_drivers').insert({
+                        'verification_id':          verification_id,
+                        'driver_number':            drv.get('driver_number'),
+                        'driver_name':              dname,
+                        'dob':                      drv.get('dob'),
+                        'marital_status':           drv.get('marital_status'),
+                        'gender':                   drv.get('gender'),
+                        'relationship_to_applicant': drv.get('relationship_to_applicant'),
+                        'driver_training':          drv.get('driver_training'),
+                        'driver_training_date':     drv.get('driver_training_date'),
+                        'out_of_province':          drv.get('out_of_province'),
+                        'licence_class':            drv.get('licence_class'),
+                        'g_date':                   drv.get('g_date'),
+                        'g2_date':                  drv.get('g2_date'),
+                        'g1_date':                  drv.get('g1_date'),
+                        'licence_number':           drv.get('licence_number'),
+                        'licence_province':         drv.get('licence_province'),
+                        'occupation':               drv.get('occupation'),
+                        'date_insured':             drv.get('date_insured'),
+                        'current_carrier':          drv.get('current_carrier'),
+                        'date_with_company':        drv.get('date_with_company'),
+                        'brokerage_insured':        drv.get('brokerage_insured'),
+                        'owner_principal':          drv.get('owner_principal'),
+                        'lives_with_parents':       drv.get('lives_with_parents'),
+                        'student_away_km':          drv.get('student_away_km'),
+                        'retired':                  drv.get('retired'),
+                        'other_licence_class':      drv.get('other_licence_class'),
+                        'other_licence_date':       drv.get('other_licence_date'),
+                    }).execute()
+
+                    # 2c. Claims
+                    for c in (drv.get('claims') or []):
+                        supabase.table('doc_ver_quote_claims').insert({
+                            'verification_id': verification_id,
+                            'driver_name':     dname,
+                            'claim_date':      c.get('claim_date'),
+                            'description':     c.get('description'),
+                            'chargeable':      c.get('chargeable'),
+                            'tp_bi':           c.get('tp_bi'),
+                            'tp_pd':           c.get('tp_pd'),
+                            'ab':              c.get('ab'),
+                            'coll':            c.get('coll'),
+                            'other_pd':        c.get('other_pd'),
+                            'vehicle_involved': c.get('vehicle_involved'),
+                        }).execute()
+
+                    # 2d. Convictions
+                    for c in (drv.get('convictions') or []):
+                        supabase.table('doc_ver_quote_convictions').insert({
+                            'verification_id': verification_id,
+                            'driver_name':     dname,
+                            'conviction_date': c.get('conviction_date'),
+                            'description':     c.get('description'),
+                            'km_over_limit':   c.get('km_over_limit'),
+                            'severity':        c.get('severity'),
+                        }).execute()
+
+                    # 2e. Suspensions
+                    for s in (drv.get('suspensions') or []):
+                        supabase.table('doc_ver_quote_suspensions').insert({
+                            'verification_id': verification_id,
+                            'driver_name':     dname,
+                            'suspension_date': s.get('suspension_date'),
+                            'description':     s.get('description'),
+                            'duration':        s.get('duration'),
+                            'reinstated_date': s.get('reinstated_date'),
+                        }).execute()
+
+                    # 2f. Lapses
+                    for l in (drv.get('lapses') or []):
+                        supabase.table('doc_ver_quote_lapses').insert({
+                            'verification_id': verification_id,
+                            'driver_name':     dname,
+                            'lapse_date':      l.get('lapse_date'),
+                            'description':     l.get('description'),
+                            'duration':        l.get('duration'),
+                            'reinstated_date': l.get('reinstated_date'),
+                        }).execute()
+
+                    # 2g. Misrepresentations
+                    for m in (drv.get('misrepresentations') or []):
+                        supabase.table('doc_ver_quote_misrepresentations').insert({
+                            'verification_id': verification_id,
+                            'driver_name':     dname,
+                            'misrep_date':     m.get('misrep_date'),
+                            'description':     m.get('description'),
+                        }).execute()
+
+                # --- DASH ---
+                d = result['extracted'].get('dash') or {}
+                dh = d.get('header', {})
+
+                # 1. Insert flat header
+                supabase.table('doc_ver_dash').insert({
+                    'verification_id':              verification_id,
+                    'driver_name':                  dh.get('driver_name'),
+                    'dln':                          dh.get('dln'),
+                    'claims_last_6_years':          dh.get('claims_last_6_years'),
+                    'at_fault_claims_last_6_years': dh.get('at_fault_claims_last_6_years'),
+                    'report_date':                  dh.get('report_date'),
+                    'last_data_update':             dh.get('last_data_update'),
+                }).execute()
+
+                # 2. Insert policies + compute gap_days between consecutive operator windows
+                from datetime import datetime as _dt
+                policies = d.get('policies') or []
+                # Sort ascending by sequence so we can compare index i with i-1 (newer)
+                policies_sorted = sorted(policies, key=lambda x: x.get('policy_sequence') or 0)
+                for i, pol in enumerate(policies_sorted):
+                    gap_days = None
+                    if i > 0:
+                        prev = policies_sorted[i - 1]  # prev = newer policy (lower sequence)
+                        try:
+                            end = _dt.strptime(pol.get('operator_end_date', ''), '%Y-%m-%d')
+                            start = _dt.strptime(prev.get('operator_start_date', ''), '%Y-%m-%d')
+                            diff = (start - end).days
+                            gap_days = diff if diff > 0 else None
+                        except Exception:
+                            gap_days = None
+                    supabase.table('doc_ver_dash_policies').insert({
+                        'verification_id':    verification_id,
+                        'policy_sequence':    pol.get('policy_sequence'),
+                        'insurer':            pol.get('insurer'),
+                        'status':             pol.get('status'),
+                        'cancellation_date':  pol.get('cancellation_date'),
+                        'cancellation_reason': pol.get('cancellation_reason'),
+                        'operator_start_date': pol.get('operator_start_date'),
+                        'operator_end_date':  pol.get('operator_end_date'),
+                        'gap_days':           gap_days,
+                        'is_possible_gap':    bool(pol.get('is_possible_gap', False)),
+                    }).execute()
+
+                # 3. Insert claim rows
+                for c in (d.get('claims') or []):
+                    supabase.table('doc_ver_dash_claims').insert({
+                        'verification_id':              verification_id,
+                        'claim_sequence':               c.get('claim_sequence'),
+                        'date_of_loss':                 c.get('date_of_loss'),
+                        'at_fault_pct':                 c.get('at_fault_pct'),
+                        'first_party_driver_name':      c.get('first_party_driver_name'),
+                        'first_party_driver_dln':       c.get('first_party_driver_dln'),
+                        'first_party_listed_on_policy': c.get('first_party_listed_on_policy'),
+                        'insurer':                      c.get('insurer'),
+                        'coverage':                     c.get('coverage'),
+                    }).execute()
+
+                # --- MVR ---
+                mv = result['extracted'].get('mvr') or {}
+                mvp = mv.get('personal', {})
+                mvl = mv.get('licence', {})
+                mvs = mv.get('summary', {})
+                supabase.table('doc_ver_mvr').insert({
+                    'verification_id':          verification_id,
+                    'first_name':               mvp.get('first_name'),
+                    'middle_name':              mvp.get('middle_name'),
+                    'last_name':                mvp.get('last_name'),
+                    'dob':                      mvp.get('dob'),
+                    'gender':                   mvp.get('gender'),
+                    'height':                   mvp.get('height'),
+                    'address':                  mvp.get('address'),
+                    'licence_number':           mvl.get('licence_number'),
+                    'licence_class':            mvl.get('licence_class'),
+                    'licence_status':           mvl.get('licence_status'),
+                    'expiry_date':              mvl.get('expiry_date'),
+                    'issue_date':               mvl.get('issue_date'),
+                    'demerit_points':           mvl.get('demerit_points'),
+                    'conditions':               mvl.get('conditions'),
+                    'conditions_endorsements':  mvl.get('conditions_endorsements'),
+                    'number_of_convictions':    mvs.get('number_of_convictions'),
+                    'receipt_number':           mvs.get('receipt_number'),
+                    'print_date':               mvs.get('print_date'),
+                    'requested_by':             mvs.get('requested_by'),
+                    'requested_on':             mvs.get('requested_on'),
+                    'reply_date':               mvs.get('reply_date'),
+                }).execute()
+
+                # --- MVR Convictions (one row per conviction) ---
+                for c in (mv.get('convictions') or []):
+                    supabase.table('doc_ver_mvr_convictions').insert({
+                        'verification_id': verification_id,
+                        'conviction_date': c.get('conviction_date'),
+                        'description':     c.get('description'),
+                        'offence_date':    c.get('offence_date'),
+                    }).execute()
+
+                # --- Application ---
+                ap = result['extracted'].get('application') or {}
+                apv = _veh(ap)
+                supabase.table('doc_ver_applications').insert({
+                    'verification_id':           verification_id,
+                    'first_name':                ap.get('personal', {}).get('first_name'),
+                    'middle_name':               ap.get('personal', {}).get('middle_name'),
+                    'last_name':                 ap.get('personal', {}).get('last_name'),
+                    'dob':                       ap.get('personal', {}).get('dob'),
+                    'gender':                    ap.get('personal', {}).get('gender'),
+                    'marital_status':            ap.get('personal', {}).get('marital_status'),
+                    'address':                   ap.get('personal', {}).get('address'),
+                    'city':                      ap.get('personal', {}).get('city'),
+                    'province':                  ap.get('personal', {}).get('province'),
+                    'postal_code':               ap.get('personal', {}).get('postal_code'),
+                    'phone':                     ap.get('personal', {}).get('phone'),
+                    'email':                     ap.get('personal', {}).get('email'),
+                    'licence_number':            ap.get('licence', {}).get('licence_number'),
+                    'licence_class':             ap.get('licence', {}).get('licence_class'),
+                    'g_date':                    ap.get('licence', {}).get('g_date'),
+                    'g2_date':                   ap.get('licence', {}).get('g2_date'),
+                    'g1_date':                   ap.get('licence', {}).get('g1_date'),
+                    'years_licensed':            ap.get('licence', {}).get('years_licensed'),
+                    'current_carrier':           ap.get('insurance_history', {}).get('current_carrier'),
+                    'date_first_insured':        ap.get('insurance_history', {}).get('date_first_insured'),
+                    'date_with_current_carrier': ap.get('insurance_history', {}).get('date_with_current_carrier'),
+                    'veh_year':                  apv.get('year'),
+                    'veh_make':                  apv.get('make'),
+                    'veh_model':                 apv.get('model'),
+                    'veh_vin':                   apv.get('vin'),
+                    'veh_annual_km':             apv.get('annual_km'),
+                    'veh_use':                   apv.get('use'),
+                    'veh_purchase_date':         apv.get('purchase_date'),
+                    'winter_tires':              apv.get('winter_tires'),
+                    'leased':                    apv.get('leased'),
+                    'claims':                    ap.get('claims'),
+                    'convictions':               ap.get('convictions'),
+                }).execute()
+
         except Exception as db_err:
             print(f'[VERIFY] DB save error: {db_err}')
             verification_id = None
@@ -2246,12 +2556,49 @@ def list_verifications():
 
 @app.route('/api/verifications/<int:verification_id>', methods=['GET'])
 def get_verification(verification_id):
-    """Fetch a single stored verification by ID."""
+    """Fetch a single stored verification by ID, including all document sub-tables."""
     try:
-        result = supabase.table('doc_verifications').select('*').eq('id', verification_id).single().execute()
-        if not result.data:
+        parent = supabase.table('doc_verifications').select('*').eq('id', verification_id).single().execute()
+        if not parent.data:
             return jsonify({'success': False, 'error': 'Not found'}), 404
-        return jsonify({'success': True, 'data': result.data}), 200
+
+        def _first(table):
+            r = supabase.table(table).select('*').eq('verification_id', verification_id).limit(1).execute()
+            return r.data[0] if r.data else None
+
+        def _all(table):
+            r = supabase.table(table).select('*').eq('verification_id', verification_id).execute()
+            return r.data or []
+
+        quote = _first('doc_ver_quotes')
+        if quote:
+            quote['vehicles']           = _all('doc_ver_quote_vehicles')
+            quote['drivers']            = _all('doc_ver_quote_drivers')
+            quote['claims']             = _all('doc_ver_quote_claims')
+            quote['convictions']        = _all('doc_ver_quote_convictions')
+            quote['suspensions']        = _all('doc_ver_quote_suspensions')
+            quote['lapses']             = _all('doc_ver_quote_lapses')
+            quote['misrepresentations'] = _all('doc_ver_quote_misrepresentations')
+
+        mvr = _first('doc_ver_mvr')
+        if mvr:
+            mvr['convictions'] = _all('doc_ver_mvr_convictions')
+
+        dash = _first('doc_ver_dash')
+        if dash:
+            dash['policies'] = _all('doc_ver_dash_policies')
+            dash['claims']   = _all('doc_ver_dash_claims')
+
+        return jsonify({
+            'success': True,
+            'data': {
+                **parent.data,
+                'quote':       quote,
+                'dash':        dash,
+                'mvr':         mvr,
+                'application': _first('doc_ver_applications'),
+            }
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -2264,6 +2611,287 @@ def update_verification_status(verification_id):
         new_status = body.get('status', 'pending')
         supabase.table('doc_verifications').update({'status': new_status}).eq('id', verification_id).execute()
         return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/verifications/<int:verification_id>/run-checks', methods=['GET'])
+def run_verification_checks(verification_id):
+    """
+    Compare Quote vs MVR and Quote vs DASH.
+    Returns per-check pass/fail/flag results and an overall status.
+    """
+    from datetime import datetime as _dt, timedelta
+
+    vid = verification_id
+
+    def _rows(table, extra_filter=None):
+        q = supabase.table(table).select('*').eq('verification_id', vid)
+        if extra_filter:
+            for k, v in extra_filter.items():
+                q = q.eq(k, v)
+        return q.execute().data or []
+
+    def _first_row(table):
+        rows = _rows(table)
+        return rows[0] if rows else {}
+
+    def _norm_name(s):
+        """Lowercase, remove punctuation, normalise spaces for fuzzy name matching."""
+        import re
+        if not s:
+            return ''
+        return re.sub(r'[^a-z ]', '', s.lower()).strip()
+
+    def _parse_date(s):
+        """Try common date formats, return date object or None."""
+        if not s:
+            return None
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d'):
+            try:
+                return _dt.strptime(s.strip(), fmt).date()
+            except ValueError:
+                pass
+        return None
+
+    def _dates_close(a, b, days=30):
+        """Return True if two date strings are within `days` of each other."""
+        da, db = _parse_date(a), _parse_date(b)
+        if not da or not db:
+            return False
+        return abs((da - db).days) <= days
+
+    checks = []          # list of check result dicts
+    overall = 'pass'     # escalates: pass → flag → fail
+
+    def _add(check_id, status, label, quote_val=None, doc_val=None, detail=None):
+        nonlocal overall
+        if status == 'fail' and overall != 'fail':
+            overall = 'fail'
+        elif status == 'flag' and overall == 'pass':
+            overall = 'flag'
+        checks.append({
+            'check':       check_id,
+            'label':       label,
+            'status':      status,   # pass | fail | flag | skip
+            'quote_value': quote_val,
+            'doc_value':   doc_val,
+            'detail':      detail,
+        })
+
+    # ─────────────────────────────────────────────
+    # Pull all data
+    # ─────────────────────────────────────────────
+    quote_drivers      = _rows('doc_ver_quote_drivers')
+    quote_claims       = _rows('doc_ver_quote_claims')
+    quote_convictions  = _rows('doc_ver_quote_convictions')
+    quote_lapses       = _rows('doc_ver_quote_lapses')
+    mvr                = _first_row('doc_ver_mvr')
+    mvr_convictions    = _rows('doc_ver_mvr_convictions')
+    dash               = _first_row('doc_ver_dash')
+    dash_policies      = _rows('doc_ver_dash_policies')
+    dash_claims        = _rows('doc_ver_dash_claims')
+
+    # ─────────────────────────────────────────────
+    # SECTION 1: Quote ↔ MVR
+    # ─────────────────────────────────────────────
+    if not mvr:
+        _add('mvr_present', 'skip', 'MVR uploaded', detail='No MVR data found')
+    else:
+        mvr_full_name = _norm_name((mvr.get('first_name') or '') + ' ' + (mvr.get('last_name') or ''))
+
+        # Find which quote driver matches this MVR by licence number
+        mvr_lic = (mvr.get('licence_number') or '').replace('-', '').replace(' ', '').upper()
+        matched_driver = None
+        for drv in quote_drivers:
+            ql = (drv.get('licence_number') or '').replace('-', '').replace(' ', '').upper()
+            if ql and ql == mvr_lic:
+                matched_driver = drv
+                break
+        # fallback: match by name
+        if not matched_driver:
+            for drv in quote_drivers:
+                qn = _norm_name(drv.get('driver_name') or '')
+                if mvr_full_name and mvr_full_name in qn or qn in mvr_full_name:
+                    matched_driver = drv
+                    break
+
+        if not matched_driver:
+            _add('mvr_driver_match', 'fail', 'MVR driver found in Quote',
+                 doc_val=(mvr.get('first_name') or '') + ' ' + (mvr.get('last_name') or ''),
+                 detail='Could not match MVR driver to any driver on the Quote')
+        else:
+            qd = matched_driver
+
+            # 1a. Licence number
+            q_lic = (qd.get('licence_number') or '').replace('-', '').replace(' ', '').upper()
+            _add('mvr_licence', 'pass' if q_lic == mvr_lic else 'fail',
+                 'Licence number matches',
+                 quote_val=qd.get('licence_number'), doc_val=mvr.get('licence_number'))
+
+            # 1b. DOB
+            q_dob = _parse_date(qd.get('dob'))
+            m_dob = _parse_date(mvr.get('dob'))
+            _add('mvr_dob', 'pass' if q_dob and m_dob and q_dob == m_dob else 'fail',
+                 'Date of birth matches',
+                 quote_val=qd.get('dob'), doc_val=mvr.get('dob'))
+
+            # 1c. Name
+            q_name = _norm_name(qd.get('driver_name') or '')
+            name_parts = mvr_full_name.split()
+            name_ok = all(p in q_name for p in name_parts) or all(p in mvr_full_name for p in q_name.split())
+            _add('mvr_name', 'pass' if name_ok else 'flag',
+                 'Name matches',
+                 quote_val=qd.get('driver_name'),
+                 doc_val=(mvr.get('first_name') or '') + ' ' + (mvr.get('last_name') or ''),
+                 detail=None if name_ok else 'Names differ — may be formatting')
+
+            # 1d. Gender
+            q_gen = (qd.get('gender') or '').strip().lower()
+            m_gen = (mvr.get('gender') or '').strip().lower()
+            if q_gen and m_gen:
+                _add('mvr_gender', 'pass' if q_gen == m_gen else 'fail',
+                     'Gender matches', quote_val=q_gen, doc_val=m_gen)
+
+            # 1e. Licence class
+            q_cls = (qd.get('licence_class') or '').strip().upper()
+            m_cls = (mvr.get('licence_class') or '').strip().upper()
+            # MVR class may have extra chars e.g. "G***" — check if quote class is contained
+            _add('mvr_licence_class', 'pass' if q_cls and m_cls and m_cls.startswith(q_cls) else 'fail',
+                 'Licence class matches', quote_val=q_cls, doc_val=m_cls)
+
+            # 1f. Conviction count
+            q_conv_count = len([c for c in quote_convictions
+                                 if _norm_name(c.get('driver_name') or '') in _norm_name(qd.get('driver_name') or '')
+                                 or _norm_name(qd.get('driver_name') or '') in _norm_name(c.get('driver_name') or '')])
+            try:
+                m_conv_count = int(mvr.get('number_of_convictions') or 0)
+            except (ValueError, TypeError):
+                m_conv_count = len(mvr_convictions)
+            _add('mvr_conviction_count', 'pass' if q_conv_count == m_conv_count else 'fail',
+                 'Conviction count matches',
+                 quote_val=q_conv_count, doc_val=m_conv_count,
+                 detail=None if q_conv_count == m_conv_count else
+                        f'Quote has {q_conv_count}, MVR has {m_conv_count}')
+
+            # 1g. Each MVR conviction date vs Quote convictions
+            for mc in mvr_convictions:
+                mc_date = mc.get('conviction_date') or mc.get('offence_date')
+                mc_desc = mc.get('description') or ''
+                matched_conv = any(_dates_close(mc_date, qc.get('conviction_date'))
+                                   for qc in quote_convictions)
+                _add('mvr_conviction_' + (mc_date or 'unknown'),
+                     'pass' if matched_conv else 'fail',
+                     'MVR conviction declared in Quote',
+                     doc_val=mc_date + ' ' + mc_desc,
+                     detail=None if matched_conv else
+                            f'MVR conviction {mc_date} ({mc_desc}) not found in Quote convictions')
+
+    # ─────────────────────────────────────────────
+    # SECTION 2: Quote ↔ DASH
+    # ─────────────────────────────────────────────
+    if not dash:
+        _add('dash_present', 'skip', 'DASH uploaded', detail='No DASH data found')
+    else:
+        # 2a. Total claim count
+        dash_total = dash.get('claims_last_6_years')
+        quote_total = len(quote_claims)
+        if dash_total is not None:
+            _add('dash_claim_count', 'pass' if dash_total == quote_total else 'fail',
+                 'Total claim count matches',
+                 quote_val=quote_total, doc_val=dash_total,
+                 detail=None if dash_total == quote_total else
+                        f'DASH shows {dash_total} claims, Quote has {quote_total}')
+
+        # 2b. At-fault claim count
+        dash_af = dash.get('at_fault_claims_last_6_years')
+        quote_af = len([c for c in quote_claims if (c.get('chargeable') or '').lower() == 'at-fault'])
+        if dash_af is not None:
+            _add('dash_atfault_count', 'pass' if dash_af == quote_af else 'fail',
+                 'At-fault claim count matches',
+                 quote_val=quote_af, doc_val=dash_af,
+                 detail=None if dash_af == quote_af else
+                        f'DASH shows {dash_af} at-fault, Quote has {quote_af}')
+
+        # 2c. Each DASH claim: date declared in Quote
+        for dc in dash_claims:
+            dc_date = dc.get('date_of_loss')
+            dc_af   = dc.get('at_fault_pct') or ''
+            dc_seq  = dc.get('claim_sequence')
+
+            matched_qc = None
+            for qc in quote_claims:
+                if _dates_close(dc_date, qc.get('claim_date')):
+                    matched_qc = qc
+                    break
+
+            if not matched_qc:
+                _add('dash_claim_date_' + str(dc_seq),
+                     'fail', f'DASH claim #{dc_seq} declared in Quote',
+                     doc_val=dc_date,
+                     detail=f'Claim {dc_date} in DASH not found in Quote')
+            else:
+                # 2d. At-fault alignment
+                dash_is_fault = dc_af not in ('0%', '0', 'null', '', None)
+                quote_is_fault = (matched_qc.get('chargeable') or '').lower() == 'at-fault'
+                fault_match = dash_is_fault == quote_is_fault
+                _add('dash_claim_atfault_' + str(dc_seq),
+                     'pass' if fault_match else 'fail',
+                     f'Claim #{dc_seq} at-fault status matches',
+                     quote_val=matched_qc.get('chargeable'),
+                     doc_val=dc_af,
+                     detail=None if fault_match else
+                            f'DASH at-fault={dc_af}, Quote chargeable={matched_qc.get("chargeable")}')
+
+            # 2e. Undeclared driver caused claim
+            if (dc.get('first_party_listed_on_policy') or '').lower() == 'no':
+                _add('dash_unlisted_driver_' + str(dc_seq),
+                     'flag', f'Claim #{dc_seq} driver listed on policy',
+                     doc_val=dc.get('first_party_driver_name') or dc.get('first_party_driver_dln'),
+                     detail=f'Driver who caused claim {dc_date} is NOT listed on the policy')
+
+        # 2f. Coverage gaps in last 3 years → must have matching Quote lapse
+        from datetime import date as _date
+        cutoff = _date.today().replace(year=_date.today().year - 3)
+        for pol in dash_policies:
+            gap = pol.get('gap_days')
+            if not gap or gap <= 0:
+                continue
+            ed = _parse_date(pol.get('operator_end_date'))
+            if not ed or ed < cutoff:
+                continue   # gap is older than 3 years — skip
+            # Check Quote lapses for a matching date
+            matched_lapse = any(_dates_close(pol.get('operator_end_date'), ql.get('lapse_date'), days=45)
+                                for ql in quote_lapses)
+            pol_insurer = (pol.get('insurer') or '')[:40]
+            _add('dash_gap_' + (pol.get('operator_end_date') or str(pol.get('policy_sequence'))),
+                 'pass' if matched_lapse else 'fail',
+                 f'Gap after {pol_insurer} declared as lapse in Quote',
+                 quote_val='Lapse declared' if matched_lapse else 'Not declared',
+                 doc_val=f'{gap} day gap ending {pol.get("operator_end_date")}',
+                 detail=None if matched_lapse else
+                        f'DASH shows {gap}-day gap ending {pol.get("operator_end_date")} — no matching lapse in Quote')
+
+    # ─────────────────────────────────────────────
+    # Build summary
+    # ─────────────────────────────────────────────
+    pass_count = sum(1 for c in checks if c['status'] == 'pass')
+    fail_count = sum(1 for c in checks if c['status'] == 'fail')
+    flag_count = sum(1 for c in checks if c['status'] == 'flag')
+
+    try:
+        return jsonify({
+            'success': True,
+            'verification_id': vid,
+            'overall': overall,
+            'summary': {
+                'total': len(checks),
+                'pass':  pass_count,
+                'fail':  fail_count,
+                'flag':  flag_count,
+            },
+            'checks': checks,
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
