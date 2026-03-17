@@ -97,7 +97,6 @@ META_PAGE_ACCESS_TOKEN = os.getenv('META_PAGE_ACCESS_TOKEN')
 META_LEAD_FORM_ID = os.getenv('META_LEAD_FORM_ID')
 META_WEBHOOK_VERIFY_TOKEN = os.getenv('META_WEBHOOK_VERIFY_TOKEN')
 FB_PIXEL_ID = os.getenv('FB_PIXEL_ID')
-FB_PIXEL_TOKEN = os.getenv('FB_PIXEL_TOKEN')  # System-user token for Conversions API
 SIGNWELL_WEBHOOK_SECRET = os.getenv('SIGNWELL_WEBHOOK_SECRET')
 
 # Streamlit sidecar URLs — override in Railway env vars when deployed.
@@ -145,6 +144,7 @@ ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH')
 
 # Endpoints that do NOT require authentication
 PUBLIC_ENDPOINTS = {
+    '/login',
     '/api/login',
     '/api/logout',
     '/api/verify-token',
@@ -806,12 +806,9 @@ def send_event_to_meta(lead_id, event_type, event_data):
             'custom_data': custom_data
         }
         
-        # Prefer FB_PIXEL_TOKEN (system-user token) for Conversions API;
-        # fall back to META_PAGE_ACCESS_TOKEN so nothing breaks if FB_PIXEL_TOKEN is unset.
-        capi_token = FB_PIXEL_TOKEN or META_PAGE_ACCESS_TOKEN
         payload = {
             'data': [event_obj],
-            'access_token': capi_token
+            'access_token': META_PAGE_ACCESS_TOKEN
         }
         
         # Add test_event_code if provided (for testing in Meta Events Manager Test Events tab)
@@ -853,17 +850,10 @@ def send_event_to_meta(lead_id, event_type, event_data):
     
     except requests.exceptions.RequestException as e:
         print(f"❌ HTTP Error sending to Meta: {str(e)}")
-        print(f"   Status: {e.response.status_code if hasattr(e, 'response') and e.response is not None else 'N/A'}")
-        # Capture Meta's actual error body so the frontend can show a useful message
-        meta_error_detail = str(e)
-        if hasattr(e, 'response') and e.response is not None:
+        print(f"   Status: {e.response.status_code if hasattr(e, 'response') else 'N/A'}")
+        if hasattr(e, 'response'):
             print(f"   Response: {e.response.text}")
-            try:
-                meta_body = e.response.json()
-                meta_error_detail = meta_body.get('error', {}).get('message', e.response.text)
-            except Exception:
-                meta_error_detail = e.response.text
-        return {'success': False, 'error': meta_error_detail}
+        return {'success': False, 'error': str(e)}
     except Exception as e:
         print(f"❌ Error sending event to Meta: {str(e)}")
         import traceback
@@ -1528,25 +1518,18 @@ def sync_lead_event(lead_id):
         # Update lead sync timestamp and status
         # Meta returns 'events_received' field when successful
         sync_status = 'sent' if result and result.get('events_received', 0) > 0 else 'failed'
+        supabase.table('leads').update({
+            'last_sync': datetime.now(timezone.utc).isoformat(),
+            'sync_status': sync_status
+        }).eq('id', lead['id']).execute()
         
-        # Wrap DB writes in try/except so a Supabase failure doesn't mask the Meta result
-        try:
-            supabase.table('leads').update({
-                'last_sync': datetime.now(timezone.utc).isoformat(),
-                'sync_status': sync_status
-            }).eq('id', lead['id']).execute()
-        except Exception as db_err:
-            print(f"⚠️ Could not update leads sync status: {db_err}")
-        
-        try:
-            supabase.table('sync_events').insert({
-                'lead_id': lead['id'],
-                'event_type': event_type,
-                'meta_response': result,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }).execute()
-        except Exception as db_err:
-            print(f"⚠️ Could not insert into sync_events: {db_err}")
+        # Log sync event to database
+        supabase.table('sync_events').insert({
+            'lead_id': lead['id'],
+            'event_type': event_type,
+            'meta_response': result,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }).execute()
         
         # Log confirmation
         print(f"{'─'*60}")
