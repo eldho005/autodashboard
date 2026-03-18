@@ -29,6 +29,8 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import hmac
 import hashlib
+import time
+import traceback
 import jwt
 import bcrypt
 from flask_limiter import Limiter
@@ -239,6 +241,66 @@ def _verify_signwell_webhook(req):
 
 
 
+# ========== RENEWALS TABLE AUTO-MIGRATION ==========
+_renewals_table_checked = False
+
+def _ensure_renewals_table():
+    """Create the renewals table if it doesn't exist (runs once per server start)"""
+    global _renewals_table_checked
+    if _renewals_table_checked:
+        return
+    try:
+        # Quick probe — if select works, table exists
+        supabase.table('renewals').select('id').limit(1).execute()
+        _renewals_table_checked = True
+    except Exception:
+        # Table doesn't exist — create it via Supabase RPC or direct REST
+        print("📋 Renewals table not found — creating it now...")
+        try:
+            create_sql = """
+            CREATE TABLE IF NOT EXISTS renewals (
+                id              BIGSERIAL PRIMARY KEY,
+                lead_id         UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                renewal_date    TEXT NOT NULL,
+                quoted_premium  NUMERIC(12,2) NOT NULL DEFAULT 0,
+                notes           TEXT NOT NULL DEFAULT '',
+                status          TEXT NOT NULL DEFAULT 'active',
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_renewals_lead_id ON renewals(lead_id);
+            CREATE INDEX IF NOT EXISTS idx_renewals_status  ON renewals(status);
+            CREATE INDEX IF NOT EXISTS idx_renewals_date    ON renewals(renewal_date);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_renewals_active_lead
+                ON renewals(lead_id) WHERE status = 'active';
+            """
+            # Use PostgREST rpc if available, otherwise REST API with service role
+            import requests as _req
+            headers = {
+                'apikey': SUPABASE_KEY,
+                'Authorization': f'Bearer {SUPABASE_KEY}',
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            }
+            resp = _req.post(
+                f'{SUPABASE_URL}/rest/v1/rpc/exec_sql',
+                json={'query': create_sql},
+                headers=headers,
+                timeout=15
+            )
+            if resp.status_code < 300:
+                print("✅ Renewals table created via RPC")
+                _renewals_table_checked = True
+            else:
+                # RPC not available — user needs to run SQL manually
+                print(f"⚠️ Could not auto-create renewals table (status {resp.status_code}).")
+                print("   Please run create_renewals_table.sql in Supabase SQL Editor.")
+                _renewals_table_checked = True  # Don't retry every request
+        except Exception as create_err:
+            print(f"⚠️ Auto-migration failed: {create_err}")
+            print("   Please run create_renewals_table.sql in Supabase SQL Editor.")
+            _renewals_table_checked = True  # Don't retry every request
+
 
 # ========== FACEBOOK API CACHE ==========
 # Cache Facebook lead results for 5 minutes to avoid hammering Meta API
@@ -381,8 +443,6 @@ def check_auto_qualified(driver_license_answer):
         return False
     
     # Extract year from various formats
-    import re
-    
     # Try to find a 4-digit year
     year_match = re.search(r'\b(19|20)\d{2}\b', str(driver_license_answer))
     if year_match:
@@ -542,8 +602,13 @@ def save_lead_to_supabase(lead_data):
         # Insert new lead
         print(f"🔄 Attempting to save lead: {lead_data.get('name')}")
         response = supabase.table('leads').insert(lead_data).execute()
-        print(f"💾 Saved lead: {lead_data.get('name')} (ID: {response.data[0].get('id') if response.data else 'N/A'})")
-        return response.data[0] if response.data else None
+        saved = response.data[0] if response.data else None
+        print(f"💾 Saved lead: {lead_data.get('name')} (ID: {saved.get('id') if saved else 'N/A'})")
+
+        # Meta events are sent MANUALLY via the View Data modal button.
+        # No auto-send here to prevent misfires.
+
+        return saved
     except Exception as e:
         print(f"❌ Error saving lead to Supabase: {str(e)}")
         import traceback
@@ -633,8 +698,8 @@ def send_event_to_meta(lead_id, event_type, event_data):
     - StartTrial: Start of free trial
     - AddPaymentInfo: Addition of payment info during checkout
     
-    Custom Events:
-    - Qualified: Lead with 5+ years driving experience (maps to QUALIFIED positive stage)
+    Standard Events used for qualified leads:
+    - CompleteRegistration: Lead with 5+ years driving experience (replaces custom 'Qualified' event)
     
     Required Parameters (per Meta's documentation):
     - event_time: Unix timestamp (required)
@@ -646,7 +711,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
     
     Args:
         lead_id: Internal lead ID
-        event_type: Event name ('Qualified' or 'Purchase')
+        event_type: Internal event type ('Qualified' mapped to 'CompleteRegistration', or 'Purchase')
         event_data: Dict containing:
             - email: Customer email (hashed)
             - phone: Customer phone (hashed)
@@ -664,6 +729,10 @@ def send_event_to_meta(lead_id, event_type, event_data):
         Meta API response dict with events_received, messages, fbtrace_id
     """
     try:
+        if not FB_PIXEL_ID or not META_PAGE_ACCESS_TOKEN:
+            print("❌ FB_PIXEL_ID or META_PAGE_ACCESS_TOKEN not configured")
+            return {'success': False, 'error': 'Meta CAPI not configured — missing FB_PIXEL_ID or META_PAGE_ACCESS_TOKEN'}
+
         url = f'{META_BASE_URL}/{FB_PIXEL_ID}/events'
         
         # SHA-256 hash email, phone, and first name for Meta Conversions API
@@ -729,12 +798,17 @@ def send_event_to_meta(lead_id, event_type, event_data):
             # Handle YYYY/MM/DD or YYYY-MM-DD (year first)
             if len(date_of_birth) >= 8 and (date_of_birth[4] in ('/', '-')):
                 dob_normalized = re.sub(r'\D', '', date_of_birth)  # strip separators → YYYYMMDD
-            # Handle MM/DD/YYYY format (month first with slashes)
+            # Handle DD/MM/YYYY (Canadian/international) or MM/DD/YYYY — check if day > 12 to disambiguate
             elif '/' in date_of_birth:
                 parts = date_of_birth.split('/')
                 if len(parts) == 3:
-                    month, day, year = parts[0], parts[1], parts[2]
-                    dob_normalized = f"{year}{month.zfill(2)}{day.zfill(2)}"
+                    p0, p1, p2 = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                    if len(p2) == 4:  # year is last
+                        # Assume DD/MM/YYYY (Canadian format) — day first, month second
+                        day, month, year = p0.zfill(2), p1.zfill(2), p2
+                        dob_normalized = f"{year}{month}{day}"
+                    else:
+                        dob_normalized = re.sub(r'\D', '', date_of_birth)
             else:
                 # Already YYYYMMDD or unknown — use as-is after stripping non-digits
                 dob_normalized = re.sub(r'\D', '', date_of_birth)
@@ -772,10 +846,18 @@ def send_event_to_meta(lead_id, event_type, event_data):
             user_data['lead_id'] = meta_lead_id
         
         # Generate unique event_id for deduplication (Meta uses event_id + event_name for deduplication)
-        import time
         # Event ID prefixes
+        # Map internal event types to Meta standard event names
+        meta_event_name_map = {
+            'Lead': 'Lead',
+            'Qualified': 'CompleteRegistration',
+            'Purchase': 'Purchase'
+        }
+        meta_event_name = meta_event_name_map.get(event_type, event_type)
+
         event_prefix_map = {
-            'Qualified': 'ql',
+            'Lead': 'lead',
+            'Qualified': 'cr',
             'Purchase': 'sale'
         }
         event_prefix = event_prefix_map.get(event_type, 'event')
@@ -791,14 +873,17 @@ def send_event_to_meta(lead_id, event_type, event_data):
         }
         
         # Add event-specific context
-        if event_type == 'Qualified':
+        if event_type == 'Lead':
+            custom_data['lead_status'] = 'initial_lead'
+        elif event_type == 'Qualified':
             custom_data['lead_status'] = 'qualified'
+            custom_data['qualification_criteria'] = '5_plus_years_driving'
         elif event_type == 'Purchase':
             custom_data['policy_type'] = 'auto_insurance'
             custom_data['lead_status'] = 'sold'
         
         event_obj = {
-            'event_name': event_type,
+            'event_name': meta_event_name,
             'event_time': int(time.time()),
             'event_id': event_id,
             'action_source': 'system_generated',
@@ -818,7 +903,7 @@ def send_event_to_meta(lead_id, event_type, event_data):
         
         print(f"📡 Sending to Meta Conversions API...")
         print(f"   URL: {url}")
-        print(f"   Event Name: {event_type}")
+        print(f"   Event Name: {meta_event_name} (internal: {event_type})")
         print(f"   Event ID: {event_id}")
         print(f"   Test Event Code: {test_event_code if test_event_code else 'N/A (production event)'}")
         print(f"   Event Time: {int(time.time())} (Unix timestamp)")
@@ -856,7 +941,6 @@ def send_event_to_meta(lead_id, event_type, event_data):
         return {'success': False, 'error': str(e)}
     except Exception as e:
         print(f"❌ Error sending event to Meta: {str(e)}")
-        import traceback
         traceback.print_exc()
         return {'success': False, 'error': str(e)}
 
@@ -1175,6 +1259,35 @@ def get_leads():
             email_key = (lead.get('email') or '').strip().lower()
             lead['has_auto_data'] = auto_data_by_email.get(email_key, False)
 
+        # Batch-enrich with sync_events (Meta CAPI confirmation) per lead
+        lead_ids = [lead['id'] for lead in leads if lead.get('id')]
+        sync_by_lead = {}  # { lead_id: { 'Lead': {...}, 'Qualified': {...} } }
+        if lead_ids:
+            try:
+                sync_result = supabase.table('sync_events').select('lead_id,event_type,meta_response,created_at').in_('lead_id', lead_ids).order('created_at', desc=True).execute()
+                for row in (sync_result.data or []):
+                    lid = row.get('lead_id')
+                    etype = row.get('event_type')
+                    # Normalize legacy event type names
+                    if etype == 'QualifiedLead' or etype == 'CompleteRegistration':
+                        etype = 'Qualified'
+                    if lid and etype:
+                        if lid not in sync_by_lead:
+                            sync_by_lead[lid] = {}
+                        # Keep only the latest per event type (already sorted desc)
+                        if etype not in sync_by_lead[lid]:
+                            meta_resp = row.get('meta_response') or {}
+                            sync_by_lead[lid][etype] = {
+                                'sent_at': row.get('created_at'),
+                                'events_received': meta_resp.get('events_received', 0),
+                                'fbtrace_id': meta_resp.get('fbtrace_id', ''),
+                            }
+            except Exception as e:
+                print(f"⚠️ Error fetching sync_events: {e}")
+
+        for lead in leads:
+            lead['meta_events'] = sync_by_lead.get(lead.get('id'), {})
+
         print(f"📋 Fetched {len(leads)} leads from database")
         return jsonify(leads), 200
     except Exception as e:
@@ -1426,10 +1539,31 @@ def sync_lead_event(lead_id):
         if not lead:
             return jsonify({'success': False, 'error': 'Lead not found'}), 404
         
+        # ── Dedup check: skip if a successful event already exists ──
+        if not data.get('force'):
+            # Check both current and legacy event type names
+            type_variants = [event_type]
+            if event_type == 'Qualified':
+                type_variants.extend(['QualifiedLead', 'CompleteRegistration'])
+            existing = supabase.table('sync_events').select('id, event_type, meta_response, created_at').eq(
+                'lead_id', lead['id']
+            ).in_('event_type', type_variants).order('created_at', desc=True).limit(1).execute()
+            if existing.data:
+                prev = existing.data[0]
+                prev_resp = prev.get('meta_response') or {}
+                if prev_resp.get('events_received', 0) > 0:
+                    return jsonify({
+                        'success': True,
+                        'skipped': True,
+                        'reason': f'{event_type} event already sent on {prev["created_at"][:19]}',
+                        'previous_fbtrace_id': prev_resp.get('fbtrace_id', ''),
+                        'previous_sent_at': prev['created_at']
+                    }), 200
+        
         # Auto-detect event type based on lead status if not provided
         if not event_type:
             if lead.get('is_auto_qualified'):
-                event_type = 'Qualified'  # Matches Meta sales funnel positive stage
+                event_type = 'Qualified'  # Internally 'Qualified', sent to Meta as 'CompleteRegistration'
             else:
                 # Don't send events for unqualified leads
                 return jsonify({
@@ -1508,7 +1642,7 @@ def sync_lead_event(lead_id):
             'state': state,
             'date_of_birth': date_of_birth,
             'country': 'ca',
-            'external_id': str(lead_id),
+            'external_id': str(lead['id']),  # Always use canonical DB UUID
             'test_event_code': data.get('test_event_code', '')
         }
         
@@ -1581,7 +1715,6 @@ def sync_lead_event(lead_id):
         print(f"❌ SYNC FAILED")
         print(f"{'='*60}")
         print(f"Error syncing lead event {lead_id}: {str(e)}")
-        import traceback
         traceback.print_exc()
         print(f"{'='*60}\n")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1760,7 +1893,7 @@ def update_lead(lead_id):
             'notes', 'coverage', 'insuranceType', 'visaType',
             'trip_start', 'trip_end', 'is_auto_qualified',
             'driver_license_received', 'reminder_date', 'reminder_note',
-            'callback_count'
+            'callback_count', 'renewal_date'
         }
         filtered_data = {k: v for k, v in data.items() if k in ALLOWED_FIELDS}
         
@@ -1768,8 +1901,12 @@ def update_lead(lead_id):
             return jsonify({'success': False, 'error': 'No valid fields to update'}), 400
         
         response = supabase.table('leads').update(filtered_data).eq('id', lead_id).execute()
-        
-        return jsonify({'success': True, 'data': response.data[0] if response.data else None}), 200
+        updated_lead = response.data[0] if response.data else None
+
+        # Meta events are sent MANUALLY via the View Data modal button.
+        # No auto-send here to prevent misfires.
+
+        return jsonify({'success': True, 'data': updated_lead}), 200
     
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1782,10 +1919,110 @@ def delete_lead(lead_id):
         # Delete from clients_data and properties_data first
         supabase.table('clients_data').delete().eq('lead_id', lead_id).execute()
         supabase.table('properties_data').delete().eq('lead_id', lead_id).execute()
+        # Delete any renewals
+        try:
+            supabase.table('renewals').delete().eq('lead_id', lead_id).execute()
+        except Exception:
+            pass  # Table may not exist yet
         # Then delete from leads
         supabase.table('leads').delete().eq('id', lead_id).execute()
         return jsonify({'success': True, 'message': 'Lead and all related data deleted'}), 200
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ========== RENEWALS PIPELINE ==========
+
+@app.route('/api/renewals', methods=['GET'])
+def get_renewals():
+    """Get all active renewals with lead info"""
+    _ensure_renewals_table()
+    try:
+        result = supabase.table('renewals').select('*').eq('status', 'active').order('renewal_date').execute()
+        return jsonify({'success': True, 'data': result.data or []}), 200
+    except Exception as e:
+        print(f"❌ Error fetching renewals: {e}")
+        return jsonify({'success': True, 'data': []}), 200  # Graceful fallback
+
+
+@app.route('/api/renewals', methods=['POST'])
+def upsert_renewal():
+    """Create or update a renewal for a lead (one active renewal per lead)"""
+    _ensure_renewals_table()
+    try:
+        data = request.get_json()
+        lead_id = data.get('lead_id')
+        renewal_date = data.get('renewal_date', '').strip()  # Expected YYYY-MM-DD
+        quoted_premium = float(data.get('quoted_premium', 0))
+        notes = data.get('notes', '').strip()
+
+        if not lead_id:
+            return jsonify({'success': False, 'error': 'lead_id is required'}), 400
+        if not renewal_date:
+            return jsonify({'success': False, 'error': 'renewal_date is required'}), 400
+
+        # Validate date format YYYY-MM-DD
+        if not re.match(r'^\d{4}-\d{2}-\d{2}$', renewal_date):
+            return jsonify({'success': False, 'error': 'renewal_date must be YYYY-MM-DD'}), 400
+
+        # Check if an active renewal already exists for this lead
+        existing = supabase.table('renewals').select('id').eq('lead_id', lead_id).eq('status', 'active').execute()
+
+        now = datetime.now(timezone.utc).isoformat()
+        if existing.data:
+            # Update existing active renewal
+            renewal_id = existing.data[0]['id']
+            updated = supabase.table('renewals').update({
+                'renewal_date': renewal_date,
+                'quoted_premium': quoted_premium,
+                'notes': notes,
+                'updated_at': now
+            }).eq('id', renewal_id).execute()
+            row = updated.data[0] if updated.data else None
+            return jsonify({'success': True, 'data': row, 'action': 'updated'}), 200
+        else:
+            # Create new renewal
+            inserted = supabase.table('renewals').insert({
+                'lead_id': lead_id,
+                'renewal_date': renewal_date,
+                'quoted_premium': quoted_premium,
+                'notes': notes,
+                'status': 'active',
+                'created_at': now,
+                'updated_at': now
+            }).execute()
+            row = inserted.data[0] if inserted.data else None
+            return jsonify({'success': True, 'data': row, 'action': 'created'}), 201
+
+    except Exception as e:
+        print(f"❌ Error upserting renewal: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/renewals/<lead_id>/reopen', methods=['POST'])
+def reopen_renewal(lead_id):
+    """Mark the active renewal for a lead as 'reopened' and reset lead status"""
+    _ensure_renewals_table()
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Mark active renewal as reopened
+        supabase.table('renewals').update({
+            'status': 'reopened',
+            'updated_at': now
+        }).eq('lead_id', lead_id).eq('status', 'active').execute()
+
+        # Reset lead status to New Lead
+        supabase.table('leads').update({
+            'status': 'New Lead'
+        }).eq('id', lead_id).execute()
+
+        return jsonify({'success': True, 'message': 'Renewal reopened, lead reset to New Lead'}), 200
+
+    except Exception as e:
+        print(f"❌ Error reopening renewal: {e}")
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

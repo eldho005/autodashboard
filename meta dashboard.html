@@ -64,15 +64,25 @@
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes metaPopupIn { from { transform: translateX(120%) scale(0.95); opacity: 0; } to { transform: translateX(0) scale(1); opacity: 1; } }
+        @keyframes metaPopupOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+        @keyframes metaPopupBar { from { width: 100%; } to { width: 0%; } }
         
         .toast-enter { animation: slideDown 0.3s ease-out forwards; }
         .bulk-bar-enter { animation: slideUp 0.3s ease-out forwards; }
         
         /* Modal Animation */
-        .modal { transition: opacity 0.25s ease; }
-        .modal-content { transition: transform 0.25s ease; }
+        .modal { transition: opacity 0.2s ease; }
+        .modal-content { transition: transform 0.2s ease; }
         .modal.hidden { opacity: 0; pointer-events: none; }
-        .modal.hidden .modal-content { transform: scale(0.95); }
+        .modal.hidden .modal-content { transform: scale(0.97); }
+
+        /* Row hover transition */
+        #leads-table tbody tr { transition: background-color 0.15s ease; }
+
+        /* Stat card subtle hover */
+        .shadow-card { transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+        .shadow-card:hover { box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06); border-color: #cbd5e1; }
 
         /* Flatpickr Z-Index fix for Modal */
         .flatpickr-calendar { z-index: 9999 !important; }
@@ -252,8 +262,8 @@
         <div class="modal-content bg-white w-full max-w-lg rounded-xl shadow-lg overflow-hidden transform scale-100 max-h-[90vh] overflow-y-auto">
             <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center sticky top-0 z-10">
                 <div>
-                    <h3 class="text-base font-bold text-indigo-900"><i class="fa-solid fa-paper-plane text-indigo-500 mr-2"></i> Data Sent to Meta</h3>
-                    <p class="text-[11px] text-indigo-400 mt-0.5">Fields used for Meta Conversions API matching</p>
+                    <h3 class="text-sm font-bold text-indigo-900"><i class="fa-solid fa-paper-plane text-indigo-400 mr-2"></i>Data Sent to Meta</h3>
+                    <p class="text-[10px] text-indigo-400 mt-0.5">Fields used for Conversions API matching</p>
                 </div>
                 <button type="button" class="js-close-view-data text-indigo-400 hover:text-indigo-600 transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -282,8 +292,8 @@
                     <i class="fa-brands fa-meta"></i>
                 </span>
                 <div>
-                    <h1 class="text-sm font-bold text-slate-800 leading-tight">META LEADS MANAGER</h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Multi-Line Dashboard</p>
+                    <h1 class="text-sm font-bold text-slate-800 leading-tight">Meta Leads Manager</h1>
+                    <p class="text-[10px] font-medium text-slate-400 tracking-wide">Multi-Line Insurance Dashboard</p>
                 </div>
             </div>
             <div class="flex items-center gap-4">
@@ -321,10 +331,10 @@
     <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
 
         <!-- Performance Section -->
-        <section class="mb-8">
-            <div class="flex justify-between items-center mb-5">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-pie text-slate-400"></i> Performance Snapshot
+        <section class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-slate-400 text-sm"></i> Performance
                 </h2>
                 <!-- Refactored Date Range Picker with Shortcuts -->
                 <div class="hidden md:flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm relative">
@@ -350,70 +360,86 @@
             </div>
             
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
-                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card group">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm"><i class="fa-solid fa-users-viewfinder"></i></div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">Total</span>
+                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-sm"><i class="fa-solid fa-users-viewfinder"></i></div>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-100">Total</span>
                     </div>
                     <div class="text-2xl font-bold text-slate-800" id="stat-new">0</div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">New Leads</div>
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-1">New Leads</div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card group">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm"><i class="fa-solid fa-headset"></i></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-sm"><i class="fa-solid fa-headset"></i></div>
                     </div>
                     <div class="text-2xl font-bold text-slate-800" id="stat-contacted">0</div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">Contacted</div>
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-1">Contacted</div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card group">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center text-sm"><i class="fa-solid fa-paper-plane"></i></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-500 flex items-center justify-center text-sm"><i class="fa-solid fa-paper-plane"></i></div>
                     </div>
                     <div class="text-2xl font-bold text-slate-800" id="stat-quotes">0</div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">Quotes Sent</div>
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-1">Quotes Sent</div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card group">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm"><i class="fa-solid fa-trophy"></i></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-sm"><i class="fa-solid fa-trophy"></i></div>
                     </div>
                     <div class="text-2xl font-bold text-slate-800" id="stat-closed">0</div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">Closed Won</div>
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-1">Closed Won</div>
                 </div>
-                <div class="col-span-2 md:col-span-1 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm group relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-3 opacity-10 text-white text-5xl transform translate-x-2 -translate-y-2"><i class="fa-solid fa-dollar-sign"></i></div>
-                    <div class="flex justify-between items-start mb-2 relative z-10">
+                <div class="col-span-2 md:col-span-1 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-3 opacity-[0.06] text-white text-5xl transform translate-x-2 -translate-y-2"><i class="fa-solid fa-dollar-sign"></i></div>
+                    <div class="flex justify-between items-start mb-3 relative z-10">
                         <div class="w-8 h-8 rounded-lg bg-slate-700 text-emerald-400 flex items-center justify-center text-sm border border-slate-600"><i class="fa-solid fa-sack-dollar"></i></div>
                     </div>
                     <div class="text-2xl font-bold text-white relative z-10" id="stat-premium">$0</div>
-                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1 relative z-10">Prem. Sold</div>
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-1 relative z-10">Premium Sold</div>
                 </div>
             </div>
         </section>
 
+        <!-- Renewal Alert Banner -->
+        <div id="renewal-banner" class="hidden mb-4 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+            <div class="flex-1 text-xs font-medium">
+                <span id="renewal-banner-text">You have renewals due soon.</span>
+                <button class="underline ml-2 text-amber-700 hover:text-amber-900" onclick="window.dashboardApp && window.dashboardApp.switchTab('renewals')">View Renewals</button>
+            </div>
+            <button id="renewal-banner-close" class="text-amber-400 hover:text-amber-600 flex-shrink-0" onclick="document.getElementById('renewal-banner').classList.add('hidden')">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+
         <!-- Leads Table Section -->
         <section>
             <!-- Tabs -->
-            <div class="flex items-center gap-1 mb-6 border-b border-slate-200 w-full overflow-x-auto no-scrollbar">
-                <button class="tab-btn px-4 py-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors whitespace-nowrap" data-tab="all">
+            <div class="flex items-center gap-0.5 mb-5 border-b border-slate-200 w-full overflow-x-auto no-scrollbar">
+                <button class="tab-btn px-3.5 py-2 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors whitespace-nowrap" data-tab="all">
                     All Leads
                 </button>
-                <button class="tab-btn px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="general">
-                    <i class="fa-solid fa-car text-xs mr-1.5 opacity-70"></i> General
+                <button class="tab-btn px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="general">
+                    <i class="fa-solid fa-car text-[10px] mr-1 opacity-70"></i> General
                 </button>
-                <button class="tab-btn px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="life">
-                    <i class="fa-solid fa-heart-pulse text-xs mr-1.5 opacity-70"></i> Life & CI
+                <button class="tab-btn px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="life">
+                    <i class="fa-solid fa-heart-pulse text-[10px] mr-1 opacity-70"></i> Life & CI
                 </button>
-                <button class="tab-btn px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="travel">
-                    <i class="fa-solid fa-plane text-xs mr-1.5 opacity-70"></i> Travel
+                <button class="tab-btn px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="travel">
+                    <i class="fa-solid fa-plane text-[10px] mr-1 opacity-70"></i> Travel
+                </button>
+                <button class="tab-btn px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap" data-tab="renewals">
+                    <i class="fa-solid fa-calendar-check text-[10px] mr-1 opacity-70"></i> Renewals
+                    <span id="renewal-badge" class="hidden ml-1 px-1.5 py-0.5 text-[9px] font-bold bg-amber-500 text-white rounded-full leading-none">0</span>
                 </button>
             </div>
 
             <div class="flex flex-col md:flex-row justify-between items-end mb-4 gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-brands fa-meta text-blue-600"></i> Lead Feed
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-brands fa-meta text-blue-500"></i> Lead Feed
                     </h2>
-                    <p class="text-xs text-slate-400 mt-1">Real-time incoming leads via Meta Ads API</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Incoming leads via Meta Ads API</p>
                 </div>
                 
                 <!-- Search & Filters -->
@@ -451,17 +477,16 @@
 
             <div class="md:bg-white md:border md:border-slate-200 md:rounded-xl md:shadow-card md:overflow-hidden">
                 <table class="w-full text-left border-collapse responsive-table" id="leads-table">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                    <thead id="leads-thead" class="bg-slate-50/80 border-b border-slate-200">
                         <tr>
-                            <th class="p-3 w-10 text-center checkbox-col">
+                            <th class="px-3 py-2.5 w-10 text-center checkbox-col">
                                 <input type="checkbox" id="select-all" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                             </th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-48">Lead Identity</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-44">Contact Info</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-36">Status</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider min-w-[180px]" id="header-calculator">Policy Details</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-36">Meta Signal</th>
-                            <th class="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right w-32">Action</th>
+                            <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lead</th>
+                            <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact</th>
+                            <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Status</th>
+                            <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center whitespace-nowrap">Meta Signal</th>
+                            <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right whitespace-nowrap">Action</th>
                         </tr>
                     </thead>
                     <tbody class="md:divide-y md:divide-slate-50" id="table-body">
@@ -523,8 +548,8 @@
             <td class="p-2 md:p-3 align-top">
                 <div class="space-y-1.5">
                     <div class="flex items-center justify-between group/phone-row pr-2">
-                        <a href="#" class="lead-phone-link flex items-center gap-2 text-xs text-slate-600 hover:text-indigo-600 hover:underline transition-colors group/phone truncate">
-                            <i class="fa-solid fa-phone text-slate-300 w-3 group-hover/phone:text-indigo-500"></i> 
+                        <a href="#" target="_blank" rel="noopener noreferrer" class="lead-phone-link flex items-center gap-2 text-xs text-slate-600 hover:text-green-600 hover:underline transition-colors group/phone truncate">
+                            <i class="fa-brands fa-whatsapp text-slate-300 w-3 group-hover/phone:text-green-500"></i> 
                             <span class="lead-phone font-medium"></span>
                         </a>
                         <button class="action-save-google w-6 h-6 rounded flex items-center justify-center bg-white border border-slate-200 text-slate-300 hover:text-blue-500 hover:border-blue-200 transition-colors flex-shrink-0" title="Save to Google Contacts">
@@ -541,6 +566,7 @@
                     <select class="status-select w-full h-8 pl-2 pr-7 bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 appearance-none cursor-pointer">
                         <option value="New Lead">New Lead</option>
                         <option value="Qualified">Qualified</option>
+                        <option value="Quote Sent">Quote Sent</option>
                         <option value="Sold">Sold</option>
                         <option value="Unqualified">Unqualified</option>
                         <option value="Lost">Lost</option>
@@ -548,41 +574,41 @@
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
                 </div>
-            </td>
-
-            <td class="p-2 md:p-3 align-top dynamic-cell">
-                <!-- Content Injected via JS -->
-            </td>
-
-            <td class="p-2 md:p-3 align-top border-l border-r border-slate-100">
-                <span class="mobile-label">Meta Signal Control</span>
-                
-                <button class="action-sync w-full h-7 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-[9px] font-bold transition-colors flex items-center justify-center gap-1 mt-1">
-                    <i class="fa-brands fa-meta pointer-events-none"></i> Sync
-                </button>
-
-                <div class="sync-timestamp text-[9px] text-slate-400 text-center mt-1.5 font-mono opacity-0 whitespace-nowrap leading-tight">
-                    Pending
+                <div class="renewal-date-wrap mt-1 hidden">
+                    <input type="text" class="renewal-date-input w-full h-7 px-2 border border-amber-300 bg-amber-50 text-slate-700 text-[11px] rounded-lg focus:ring-1 focus:ring-amber-400 focus:border-amber-400" placeholder="DD/MM/YYYY" maxlength="10" title="Policy renewal date (DD/MM/YYYY)">
                 </div>
-                
-                <button class="action-view-data text-[9px] text-indigo-600 hover:text-indigo-700 font-medium text-center mt-1.5 transition-colors w-full" title="View All Lead Data">
-                    View Data
-                </button>
             </td>
 
-            <td class="p-2 md:p-3 align-top md:text-right">
-                <div class="flex flex-col gap-2 items-end">
-                    <button class="action-process h-7 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap w-full md:w-auto justify-center">
-                        Process <i class="fa-solid fa-arrow-right"></i>
+            <td class="p-2 md:p-3 align-top whitespace-nowrap">
+                <div class="flex flex-col items-center gap-1">
+                    <button class="action-view-data text-[9px] text-indigo-600 hover:text-indigo-700 font-semibold text-center transition-colors" title="View All Lead Data">
+                        View Data
                     </button>
-                    <div class="flex gap-1 justify-end w-full">
-                        <button class="action-reminder w-7 h-7 bg-white border border-slate-200 hover:border-amber-300 hover:text-amber-500 text-slate-400 rounded-lg text-xs transition-colors flex items-center justify-center" title="Set Reminder">
+                    <div class="flex items-center gap-1.5 justify-center">
+                        <button class="action-send-lead text-[9px] text-blue-500 hover:text-blue-700 font-medium transition-colors" title="Send Lead signal to Meta">
+                            Send Lead
+                        </button>
+                        <span class="text-slate-200 text-[8px]">|</span>
+                        <button class="action-send-qualified text-[9px] text-violet-500 hover:text-violet-700 font-medium transition-colors" title="Send CompleteRegistration signal to Meta (qualified lead)">
+                            Send Qualified
+                        </button>
+                    </div>
+                </div>
+            </td>
+
+            <td class="p-2 md:p-3 align-top md:text-right whitespace-nowrap">
+                <div class="inline-flex flex-col gap-1 items-end">
+                    <button class="action-process h-7 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-colors shadow-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+                        Process <i class="fa-solid fa-arrow-right text-[8px]"></i>
+                    </button>
+                    <div class="flex gap-1">
+                        <button class="action-reminder w-6 h-6 bg-white border border-slate-200 hover:border-amber-300 hover:text-amber-500 text-slate-400 rounded-md text-[10px] transition-colors flex items-center justify-center" title="Set Reminder">
                             <i class="fa-regular fa-bell pointer-events-none"></i>
                         </button>
-                        <button class="action-edit w-7 h-7 bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-400 rounded-lg text-xs transition-colors flex items-center justify-center" title="Edit Lead">
+                        <button class="action-edit w-6 h-6 bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-400 rounded-md text-[10px] transition-colors flex items-center justify-center" title="Edit Lead">
                             <i class="fa-solid fa-pen pointer-events-none"></i>
                         </button>
-                        <button class="action-delete w-7 h-7 bg-white border border-slate-200 hover:border-rose-300 hover:text-rose-600 text-slate-400 rounded-lg text-xs transition-colors flex items-center justify-center" title="Delete Lead">
+                        <button class="action-delete w-6 h-6 bg-white border border-slate-200 hover:border-rose-300 hover:text-rose-600 text-slate-400 rounded-md text-[10px] transition-colors flex items-center justify-center" title="Delete Lead">
                             <i class="fa-solid fa-trash pointer-events-none"></i>
                         </button>
                     </div>
@@ -650,6 +676,8 @@
                 this.state = {
                     activeTab: 'all',
                     leads: [], // Will be populated from backend
+                    renewals: [],      // Active renewals from renewals table
+                    renewalsMap: {},    // lead_id → renewal object for quick lookup
                     filterStatus: 'all',
                     searchTerm: '',
                     selectedIds: new Set(),
@@ -697,7 +725,6 @@
                     selectedCount: document.getElementById('selected-count'),
                     closeBulkBar: document.getElementById('close-bulk-bar'),
                     tabBtns: document.querySelectorAll('.tab-btn'),
-                    headerCalculator: document.getElementById('header-calculator'),
                     
                     // Stats Elements
                     statNew: document.getElementById('stat-new'),
@@ -725,6 +752,7 @@
                     this.state.loading = false;
                     this.renderAll();
                     this.updateStats();
+                    this.updateRenewalBadge();
                     this.checkAllReminders();
                     setInterval(() => this.checkAllReminders(), 60000);
                     this.startAutoRefresh();
@@ -732,12 +760,14 @@
                     this.loadExistingLeadsFromDatabase().then(() => {
                         this.renderAll();
                         this.updateStats();
+                        this.updateRenewalBadge();
                     });
                 } else {
                     // Cache miss — full blocking fetch (first visit or cache expired)
                     await this.loadExistingLeadsFromDatabase();
                     this.renderAll();
                     this.updateStats();
+                    this.updateRenewalBadge();
                     this.checkAllReminders();
                     setInterval(() => this.checkAllReminders(), 60000);
                     this.startAutoRefresh();
@@ -886,6 +916,7 @@
                         await this.loadExistingLeadsFromDatabase();
                         this.renderAll();
                         this.updateStats();
+                        this.updateRenewalBadge();
                         
                         const newCount = this.state.leads.length;
                         if (newCount > prevCount) {
@@ -978,6 +1009,31 @@
                     const manualLeads = this.getStoredManualLeads();
                     this.state.leads = manualLeads;
                     console.log('⚠️ Using fallback manual leads from localStorage:', manualLeads.length);
+                }
+
+                // Load active renewals from dedicated renewals table
+                await this._loadRenewals();
+            }
+
+            async _loadRenewals() {
+                try {
+                    const res = await fetch(`${BACKEND_URL}/api/renewals`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const json = await res.json();
+                    this.state.renewals = (json.data || []);
+                    // Build lead_id → renewal lookup map
+                    this.state.renewalsMap = {};
+                    for (const r of this.state.renewals) {
+                        this.state.renewalsMap[r.lead_id] = r;
+                    }
+                    console.log(`📅 Loaded ${this.state.renewals.length} active renewals`);
+                } catch (e) {
+                    console.warn('⚠️ Could not load renewals:', e.message);
+                    this.state.renewals = [];
+                    this.state.renewalsMap = {};
                 }
             }
 
@@ -1136,8 +1192,20 @@
 
                 // Table Events (Delegation)
                 this.dom.tbody.addEventListener('click', (e) => this.handleTableClick(e));
-                this.dom.tbody.addEventListener('input', (e) => this.handleTableInput(e));
-                this.dom.tbody.addEventListener('change', (e) => this.handleCheckboxChange(e));
+                this.dom.tbody.addEventListener('change', (e) => {
+                    this.handleCheckboxChange(e);
+                    if (e.target.tagName === 'SELECT' || e.target.classList.contains('renewal-date-input')) {
+                        this.handleTableInput(e);
+                    }
+                });
+                // Auto-insert slashes while typing DD/MM/YYYY into renewal date field
+                this.dom.tbody.addEventListener('input', (e) => {
+                    if (!e.target.classList.contains('renewal-date-input')) return;
+                    let v = e.target.value.replace(/[^\d]/g, '').slice(0, 8);
+                    if (v.length > 4) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+                    else if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+                    e.target.value = v;
+                });
 
                 // Modal Events
                 this.dom.openModalBtn.addEventListener('click', () => this.openModal());
@@ -1208,30 +1276,16 @@
                 this.dom.tabBtns.forEach(btn => {
                     const isActive = btn.dataset.tab === this.state.activeTab;
                     btn.className = isActive 
-                        ? "tab-btn px-4 py-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors whitespace-nowrap"
-                        : "tab-btn px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors whitespace-nowrap";
+                        ? "tab-btn px-3.5 py-2 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors whitespace-nowrap"
+                        : "tab-btn px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap";
                 });
 
-                // Update Header Text based on Tab
-                const headerCalc = this.dom.headerCalculator;
-                
-                switch(this.state.activeTab) {
-                    case CONFIG.TYPES.GENERAL: 
-                        headerCalc.textContent = 'Auto/Home Calc'; 
-                        break;
-                    case CONFIG.TYPES.LIFE: 
-                        headerCalc.textContent = 'Coverage Details'; 
-                        break;
-                    case CONFIG.TYPES.TRAVEL: 
-                        headerCalc.textContent = 'Travel Details'; 
-                        break;
-                    default: 
-                        headerCalc.textContent = 'Policy Details'; 
-                        break;
-                }
             }
 
             getFilteredLeads() {
+                // Renewals tab uses its own render path — return empty here
+                if (this.state.activeTab === 'renewals') return [];
+
                 const filtered = this.state.leads.filter(lead => {
                     // Filter by Tab Type
                     if (this.state.activeTab !== 'all' && lead.type !== this.state.activeTab) {
@@ -1286,11 +1340,33 @@
 
             renderAll() {
                 this.dom.tbody.innerHTML = '';
+
+                // ── Renewals Tab ─────────────────────────────────────────────
+                if (this.state.activeTab === 'renewals') {
+                    this._setRenewalsThead();
+                    const renewalLeads = this._getRenewalLeads();
+                    if (renewalLeads.length === 0) {
+                        this.dom.noResults.classList.remove('hidden');
+                        this.dom.noResults.innerHTML = '<i class="fa-solid fa-calendar-check text-2xl mb-2 opacity-50"></i><p>No renewals yet. Set status to <strong>Quote Sent</strong> and pick a renewal date.</p>';
+                        this.dom.paginationBar.classList.add('hidden');
+                    } else {
+                        this.dom.noResults.classList.add('hidden');
+                        this.dom.noResults.innerHTML = '<i class="fa-solid fa-filter-circle-xmark text-2xl mb-2 opacity-50"></i><p>No leads found matching your criteria.</p>';
+                        renewalLeads.forEach(lead => this.renderRenewalRow(lead));
+                        this.dom.paginationBar.classList.add('hidden');
+                    }
+                    this.updateBulkUI();
+                    return;
+                }
+
+                // ── Normal Tabs ───────────────────────────────────────────────
+                this._setDefaultThead();
                 const filtered = this.getFilteredLeads();
                 const total = filtered.length;
 
                 if (total === 0) {
                     this.dom.noResults.classList.remove('hidden');
+                    this.dom.noResults.innerHTML = '<i class="fa-solid fa-filter-circle-xmark text-2xl mb-2 opacity-50"></i><p>No leads found matching your criteria.</p>';
                     this.dom.paginationBar.classList.add('hidden');
                 } else {
                     this.dom.noResults.classList.add('hidden');
@@ -1374,7 +1450,8 @@
                 row.querySelector('.lead-phone').textContent = lead.phone;
                 row.querySelector('.lead-email').textContent = lead.email;
                 const cleanPhone = lead.phone ? lead.phone.replace(/\D/g, '') : '';
-                row.querySelector('.lead-phone-link').href = `tel:${cleanPhone}`;
+                const waPhone = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
+                row.querySelector('.lead-phone-link').href = cleanPhone ? `https://wa.me/${waPhone}` : '#';
                 
                 // Restore Google save status
                 const googleBtn = row.querySelector('.action-save-google');
@@ -1384,26 +1461,236 @@
                 }
 
                 // Status Column
-                row.querySelector('.status-select').value = lead.status;
+                const statusSelect = row.querySelector('.status-select');
+                statusSelect.value = lead.status;
 
-                // Dynamic Columns (The heavy lifting refactored out)
-                this._renderDynamicCell(row, lead);
+                // Show renewal date input if lead status is Quote Sent
+                if (lead.status === 'Quote Sent') {
+                    const dateWrap = row.querySelector('.renewal-date-wrap');
+                    if (dateWrap) dateWrap.classList.remove('hidden');
+                    // Pre-fill from renewals table
+                    const renewal = this.state.renewalsMap[lead.id];
+                    if (renewal) {
+                        const dateInput = row.querySelector('.renewal-date-input');
+                        const parts = renewal.renewal_date.slice(0, 10).split('-');
+                        if (dateInput) dateInput.value = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : renewal.renewal_date.slice(0, 10);
+                    }
+                }
 
                 // Checkbox & Reminder
                 row.querySelector('.lead-checkbox').checked = this.state.selectedIds.has(lead.id);
                 this._renderReminderButton(row, lead);
 
-                // Change Process button to green when license number is on file (data was parsed)
-                if (lead.has_auto_data) {
-                    const btn = row.querySelector('.action-process');
-                    if (btn) {
-                        btn.classList.remove('bg-slate-900', 'hover:bg-slate-800');
-                        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
-                        btn.title = 'Data parsed — ready to process';
+                // Color View Data button based on Meta signal status
+                const viewDataBtn = row.querySelector('.action-view-data');
+                if (viewDataBtn) {
+                    const me = lead.meta_events || {};
+                    const qualEvt = me['Qualified'];
+                    const leadEvt = me['Lead'];
+                    const hasError = (leadEvt && leadEvt.events_received === 0) || (qualEvt && qualEvt.events_received === 0);
+                    viewDataBtn.classList.remove('text-indigo-600', 'hover:text-indigo-700', 'text-emerald-600', 'hover:text-emerald-700', 'text-red-400', 'hover:text-red-500');
+                    if (qualEvt && qualEvt.events_received > 0) {
+                        viewDataBtn.classList.add('text-emerald-600', 'hover:text-emerald-700');
+                        viewDataBtn.title = `Qualified signal sent — fbtrace: ${qualEvt.fbtrace_id || 'N/A'}`;
+                    } else if (hasError) {
+                        viewDataBtn.classList.add('text-red-400', 'hover:text-red-500');
+                        viewDataBtn.title = 'Meta signal error — click for details';
+                    } else {
+                        viewDataBtn.classList.add('text-indigo-600', 'hover:text-indigo-700');
+                        viewDataBtn.title = 'View All Lead Data';
                     }
                 }
 
+                // Update Send Lead / Send Qualified buttons if already sent
+                const me = lead.meta_events || {};
+                const sendLeadBtn = row.querySelector('.action-send-lead');
+                const sendQualBtn = row.querySelector('.action-send-qualified');
+
+                if (!lead.meta_lead_id) {
+                    // Manual lead — no Meta lead ID, cannot send signals
+                    if (sendLeadBtn) {
+                        sendLeadBtn.disabled = true;
+                        sendLeadBtn.title = 'Not a Meta lead';
+                        sendLeadBtn.classList.remove('text-blue-500', 'hover:text-blue-700');
+                        sendLeadBtn.classList.add('text-slate-300', 'cursor-not-allowed');
+                    }
+                    if (sendQualBtn) {
+                        sendQualBtn.disabled = true;
+                        sendQualBtn.title = 'Not a Meta lead';
+                        sendQualBtn.classList.remove('text-violet-500', 'hover:text-violet-700');
+                        sendQualBtn.classList.add('text-slate-300', 'cursor-not-allowed');
+                    }
+                } else {
+                    if (sendLeadBtn && me['Lead'] && me['Lead'].events_received > 0) {
+                        sendLeadBtn.textContent = '✓ Lead Sent';
+                        sendLeadBtn.disabled = true;
+                        sendLeadBtn.classList.remove('text-blue-500', 'hover:text-blue-700');
+                        sendLeadBtn.classList.add('text-emerald-600');
+                    }
+                    if (sendQualBtn && me['Qualified'] && me['Qualified'].events_received > 0) {
+                        sendQualBtn.textContent = '✓ Qualified Sent';
+                        sendQualBtn.disabled = true;
+                        sendQualBtn.classList.remove('text-violet-500', 'hover:text-violet-700');
+                        sendQualBtn.classList.add('text-emerald-600');
+                    }
+                }
+
+                // Process button: warn if Lead event not yet sent to Meta (Meta leads only)
+                const processBtn = row.querySelector('.action-process');
+                if (processBtn && lead.has_auto_data && (!lead.meta_lead_id || (me['Lead'] && me['Lead'].events_received > 0))) {
+                    processBtn.classList.remove('bg-slate-900', 'hover:bg-slate-800');
+                    processBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                    processBtn.title = 'Data parsed — ready to process';
+                }
+
                 this.dom.tbody.appendChild(clone);
+            }
+
+            // --- RENEWALS HELPERS ---
+
+            _getRenewalLeads() {
+                // Join renewals with leads for display
+                return this.state.renewals
+                    .map(r => {
+                        const lead = this.state.leads.find(l => l.id === r.lead_id) || {};
+                        return { ...lead, renewal_date: r.renewal_date, quoted_premium: r.quoted_premium, _renewalId: r.id };
+                    })
+                    .sort((a, b) => (a.renewal_date || '').localeCompare(b.renewal_date || ''));
+            }
+
+            _getDaysUntil(dateStr) {
+                if (!dateStr) return null;
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                // Use T00:00:00 to avoid UTC/local timezone off-by-one
+                const target = new Date(dateStr.slice(0, 10) + 'T00:00:00'); target.setHours(0, 0, 0, 0);
+                return Math.round((target - today) / 86400000);
+            }
+
+            _setRenewalsThead() {
+                const thead = document.getElementById('leads-thead');
+                if (!thead) return;
+                thead.innerHTML = `<tr>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lead</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Renewal Date</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Days Left</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Quoted Premium</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right whitespace-nowrap">Action</th>
+                </tr>`;
+            }
+
+            _setDefaultThead() {
+                const thead = document.getElementById('leads-thead');
+                if (!thead) return;
+                thead.innerHTML = `<tr>
+                    <th class="px-3 py-2.5 w-10 text-center checkbox-col">
+                        <input type="checkbox" id="select-all" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    </th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lead</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Status</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center whitespace-nowrap">Meta Signal</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right whitespace-nowrap">Action</th>
+                </tr>`;
+                // Re-wire select-all checkbox after thead rebuild
+                const newSelectAll = document.getElementById('select-all');
+                if (newSelectAll) {
+                    newSelectAll.addEventListener('change', (e) => this.toggleSelectAll(e.target.checked));
+                }
+            }
+
+            renderRenewalRow(lead) {
+                const days = this._getDaysUntil(lead.renewal_date);
+                // Format stored YYYY-MM-DD as DD/MM/YYYY for display
+                let dateFormatted = '—';
+                if (lead.renewal_date) {
+                    const rp = lead.renewal_date.slice(0, 10).split('-');
+                    dateFormatted = rp.length === 3 ? `${rp[2]}/${rp[1]}/${rp[0]}` : lead.renewal_date.slice(0, 10);
+                }
+
+                let daysClass = 'text-slate-500';
+                let daysLabel = days === null ? '—' : `${days}d`;
+                if (days !== null) {
+                    if (days < 0) { daysClass = 'text-red-500 font-bold'; daysLabel = `${Math.abs(days)}d overdue`; }
+                    else if (days <= 7) { daysClass = 'text-red-500 font-bold'; }
+                    else if (days <= 14) { daysClass = 'text-amber-600 font-semibold'; }
+                    else if (days <= 30) { daysClass = 'text-amber-500'; }
+                    else { daysClass = 'text-emerald-600'; }
+                }
+
+                const rawPremium = lead.quoted_premium || lead.premium;
+                const premium = rawPremium ? '$' + parseFloat(rawPremium).toLocaleString() : '—';
+                const cleanPhone = lead.phone ? lead.phone.replace(/\D/g, '') : '';
+                const waPhone = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
+                const id = lead.id || lead.meta_lead_id;
+
+                const tr = document.createElement('tr');
+                tr.className = 'group hover:bg-slate-50';
+                tr.dataset.id = id;
+                tr.innerHTML = `
+                    <td class="px-3 py-2.5 align-middle">
+                        <div class="text-sm font-bold text-slate-800">${this._escHtml(lead.name || '—')}</div>
+                        <div class="text-[10px] text-slate-400">${this._escHtml(lead.email || '')}</div>
+                    </td>
+                    <td class="px-3 py-2.5 align-middle text-xs text-slate-600 whitespace-nowrap">${dateFormatted}</td>
+                    <td class="px-3 py-2.5 align-middle whitespace-nowrap">
+                        <span class="text-xs ${daysClass}">${daysLabel}</span>
+                    </td>
+                    <td class="px-3 py-2.5 align-middle text-xs font-semibold text-slate-700">${premium}</td>
+                    <td class="px-3 py-2.5 align-middle">
+                        ${cleanPhone ? `<a href="https://wa.me/${waPhone}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 text-xs text-slate-600 hover:text-green-600 transition-colors">
+                            <i class="fa-brands fa-whatsapp text-slate-300"></i> ${this._escHtml(lead.phone)}
+                        </a>` : '<span class="text-xs text-slate-400">—</span>'}
+                    </td>
+                    <td class="px-3 py-2.5 align-middle text-right">
+                        <button class="action-reopen-lead h-7 px-3 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 rounded-lg border border-slate-200 hover:border-indigo-300 transition-colors" data-id="${id}">
+                            Reopen
+                        </button>
+                    </td>`;
+                this.dom.tbody.appendChild(tr);
+            }
+
+            updateRenewalBadge() {
+                const badge = document.getElementById('renewal-badge');
+                const banner = document.getElementById('renewal-banner');
+                const bannerText = document.getElementById('renewal-banner-text');
+                const renewals = this.state.renewals || [];
+                const dueSoon = renewals.filter(r => {
+                    const d = this._getDaysUntil(r.renewal_date);
+                    return d !== null && d <= 30;
+                });
+                const urgentCount = renewals.filter(r => {
+                    const d = this._getDaysUntil(r.renewal_date);
+                    return d !== null && d <= 14;
+                }).length;
+
+                if (badge) {
+                    if (dueSoon.length > 0) {
+                        badge.textContent = dueSoon.length;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                if (banner && bannerText) {
+                    if (urgentCount > 0 && !banner.classList.contains('dismissed')) {
+                        bannerText.textContent = `${urgentCount} renewal${urgentCount > 1 ? 's' : ''} due within 14 days.`;
+                        banner.classList.remove('hidden');
+                    }
+                }
+            }
+
+            switchTab(tab) {
+                this.state.activeTab = tab;
+                this.state.currentPage = 1;
+                this.updateTabsUI();
+                this.renderAll();
+                this.updateStats();
+            }
+
+            _escHtml(str) {
+                return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
             }
 
             // --- RENDER HELPERS ---
@@ -1483,55 +1770,6 @@
                 }
             }
 
-            _renderDynamicCell(row, lead) {
-                const calcCell = row.querySelector('.dynamic-cell');
-                if (lead.type === CONFIG.TYPES.LIFE) {
-                     calcCell.innerHTML = `
-                        <div class="space-y-1.5">
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-shield-heart text-[9px]"></i></div>
-                                <input type="number" placeholder="Coverage" value="${escapeHtml(lead.coverage || '')}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
-                            </div>
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-500"><i class="fa-solid fa-dollar-sign text-[9px]"></i></div>
-                                <input type="text" placeholder="Est. Prem" value="${escapeHtml(lead.premium || '')}" class="h-7 w-full bg-slate-100 border border-slate-200 text-slate-900 text-[10px] font-bold rounded block pl-4 px-1">
-                            </div>
-                        </div>`;
-                } else if (lead.type === CONFIG.TYPES.TRAVEL) {
-                    calcCell.innerHTML = `
-                          <div class="space-y-1.5">
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-brands fa-canadian-maple-leaf text-[9px]"></i></div>
-                                <select class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
-                                    <option>Visitor Visa</option>
-                                    <option ${lead.visaType === 'Super Visa' ? 'selected' : ''}>Super Visa</option>
-                                </select>
-                            </div>
-                             <div class="flex gap-1">
-                                <div class="relative w-full"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-shield-halved text-[9px]"></i></div>
-                                    <input type="number" placeholder="Coverage Amount" value="${escapeHtml(lead.coverage || '')}" class="h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1">
-                                </div>
-                            </div>
-                        </div>`;
-                    row.querySelector('.mobile-label').textContent = "Travel Details"; 
-                } else {
-                    // Default General
-                    calcCell.innerHTML = `
-                        <span class="mobile-label">Premium Calculator</span>
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-car text-[9px]"></i></div>
-                                <input type="number" placeholder="Auto" class="calc-input calc-auto h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
-                            </div>
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-house text-[9px]"></i></div>
-                                <input type="number" placeholder="Home" class="calc-input calc-home h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
-                            </div>
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400"><i class="fa-solid fa-building text-[9px]"></i></div>
-                                <input type="number" placeholder="Tent" class="calc-input calc-tenant h-7 w-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-medium rounded block pl-5 px-1 focus:ring-1 focus:ring-indigo-500">
-                            </div>
-                            <div class="relative"><div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-500"><i class="fa-solid fa-calculator text-[9px]"></i></div>
-                                <input type="text" placeholder="Total" readonly value="${lead.premium || ''}" class="calc-total h-7 w-full bg-slate-100 border border-slate-200 text-slate-900 text-[10px] font-bold rounded block pl-5 px-1">
-                            </div>
-                        </div>`;
-                }
-            }
-
             // --- EVENT LOGIC ---
 
             handleCheckboxChange(e) {
@@ -1578,6 +1816,14 @@
                     // Get lead data and navigate to appropriate page based on insurance type
                     const leadId = row.dataset.id;
                     const lead = this.state.leads.find(l => String(l.id) === String(leadId) || String(l.lead_id) === String(leadId));
+                    // Block processing if Lead event hasn't been sent to Meta yet
+                    if (lead && lead.meta_lead_id) {
+                        const me = lead.meta_events || {};
+                        if (!me['Lead'] || me['Lead'].events_received < 1) {
+                            this.showToast('Send the Lead signal to Meta first before processing', 'error');
+                            return;
+                        }
+                    }
                     const rowName = row.dataset.name || '';
                     const rowPhone = row.dataset.phone || '';
                     const rowEmail = row.dataset.email || '';
@@ -1645,39 +1891,103 @@
                     this.deleteLead(row.dataset.id);
                 } else if (target.closest('.action-save-google')) {
                     this.saveToGoogle(target.closest('.action-save-google'), row);
-                } else if (target.closest('.action-sync')) {
-                    this.syncMetaSignal(target.closest('.action-sync'), row);
                 } else if (target.closest('.action-reminder')) {
                     this.openReminderModal(row.dataset.id);
                 } else if (target.closest('.action-view-data')) {
                     this.openViewDataModal(row.dataset.id);
+                } else if (target.closest('.action-send-lead')) {
+                    this.sendMetaEventFromRow(row.dataset.id, 'Lead', target.closest('.action-send-lead'));
+                } else if (target.closest('.action-send-qualified')) {
+                    this.sendMetaEventFromRow(row.dataset.id, 'Qualified', target.closest('.action-send-qualified'));
+                } else if (target.closest('.action-reopen-lead')) {
+                    this.reopenLead(row.dataset.id);
                 }
             }
 
             handleTableInput(e) {
-                if (e.target.classList.contains('calc-input')) {
-                    this.calculatePremium(e.target.closest('tr'));
-                } else if (e.target.classList.contains('status-select')) {
+                if (e.target.classList.contains('status-select')) {
                     // Update status in database
-                    const id = e.target.closest('tr').dataset.id;
-                    const lead = this.state.leads.find(l => l.id === id);
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    const newStatus = e.target.value;
+                    const lead = this.state.leads.find(l => l.id === id || l.meta_lead_id === id);
+                    console.log(`🔄 Status change: id=${id}, newStatus=${newStatus}, leadFound=${!!lead}`);
+
+                    // Show/hide renewal date input
+                    const dateWrap = row.querySelector('.renewal-date-wrap');
+                    if (dateWrap) {
+                        if (newStatus === 'Quote Sent') {
+                            dateWrap.classList.remove('hidden');
+                        } else {
+                            dateWrap.classList.add('hidden');
+                        }
+                    }
+
                     if (lead) {
-                        lead.status = e.target.value;
+                        lead.status = newStatus;
                         this.updateStats(); // Recalculate stats on status change
                         
                         // Save to database
                         fetch(`${BACKEND_URL}/api/leads/${id}`, {
                             method: 'PUT',
+                            credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: e.target.value })
+                            body: JSON.stringify({ status: newStatus })
                         })
-                        .then(res => res.json())
-                        .then(() => {
-                            console.log('✅ Status saved to database');
+                        .then(res => {
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            return res.json();
+                        })
+                        .then(result => {
+                            console.log('✅ Status saved:', result.success);
                         })
                         .catch(error => {
                             console.error('❌ Failed to save status:', error);
                             this.showToast('Failed to save status', 'error');
+                        });
+                    }
+                } else if (e.target.classList.contains('renewal-date-input')) {
+                    // Save renewal date to dedicated renewals table
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    const rawVal = e.target.value.trim(); // DD/MM/YYYY from user
+                    // Parse and validate DD/MM/YYYY — year must be exactly 4 digits
+                    const parts = rawVal.split('/');
+                    if (parts.length !== 3 || parts[2].length !== 4 || !/^\d{2}$/.test(parts[0]) || !/^\d{2}$/.test(parts[1]) || !/^\d{4}$/.test(parts[2])) {
+                        if (rawVal.length > 0) this.showToast('Use DD/MM/YYYY format (e.g. 15/06/2026)', 'error');
+                        return;
+                    }
+                    const day = parseInt(parts[0], 10), month = parseInt(parts[1], 10), year = parseInt(parts[2], 10);
+                    if (month < 1 || month > 12 || day < 1 || day > 31) {
+                        this.showToast('Invalid date — check day/month', 'error');
+                        return;
+                    }
+                    const renewalDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // → YYYY-MM-DD for DB
+                    const lead = this.state.leads.find(l => l.id === id || l.meta_lead_id === id);
+                    if (lead) {
+                        fetch(`${BACKEND_URL}/api/renewals`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                lead_id: lead.id,
+                                renewal_date: renewalDate,
+                                quoted_premium: parseFloat(lead.premium) || 0
+                            })
+                        })
+                        .then(res => {
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            return res.json();
+                        })
+                        .then(result => {
+                            if (!result.success) throw new Error(result.error || 'Unknown error');
+                            // Update local renewals state
+                            this._loadRenewals().then(() => this.updateRenewalBadge());
+                            this.showToast('Renewal date saved', 'success');
+                        })
+                        .catch(error => {
+                            console.error('❌ Failed to save renewal:', error);
+                            this.showToast('Failed to save renewal: ' + error.message, 'error');
                         });
                     }
                 } else if (e.target.classList.contains('insurance-type-select')) {
@@ -1722,6 +2032,31 @@
                         this.showToast('Failed to delete lead', 'error');
                     });
                 }
+            }
+
+            reopenLead(id) {
+                const lead = this.state.leads.find(l => l.id === id || l.meta_lead_id === id);
+                if (!lead) return;
+                fetch(`${BACKEND_URL}/api/renewals/${lead.id}/reopen`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+                .then(() => {
+                    lead.status = 'New Lead';
+                    return this._loadRenewals();
+                })
+                .then(() => {
+                    this.updateRenewalBadge();
+                    this.renderAll();
+                    this.updateStats();
+                    this.showToast('Lead moved back to New Lead', 'success');
+                })
+                .catch(error => {
+                    console.error('❌ Failed to reopen lead:', error);
+                    this.showToast('Failed to reopen lead', 'error');
+                });
             }
 
             openEditModal(id) {
@@ -2133,6 +2468,38 @@
                             <td class="py-3">${displayValue}</td>
                         </tr>`;
                     }).join('');
+
+                    // --- Meta Signal Confirmation section ---
+                    const me = lead.meta_events || {};
+                    const leadEvt = me['Lead'];
+                    const qualEvt = me['Qualified'];
+                    const leadSent = leadEvt && leadEvt.events_received > 0;
+                    const qualSent = qualEvt && qualEvt.events_received > 0;
+
+                    const fmtSent = (evt) => {
+                        const d = new Date(evt.sent_at);
+                        const t = isNaN(d) ? (evt.sent_at || '') : d.toLocaleString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        return `<span class="text-emerald-600 text-xs font-semibold">✓ Sent — ${t}</span><br><span class="font-mono text-[10px] text-slate-400">${evt.fbtrace_id || ''}</span>`;
+                    };
+
+                    tableBody.innerHTML += `
+                    <tr><td colspan="3" class="pt-5 pb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-px bg-slate-100"></div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-brands fa-meta"></i> Meta Signal Confirmation</span>
+                            <div class="flex-1 h-px bg-slate-100"></div>
+                        </div>
+                    </td></tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="py-3 pr-3 w-5 text-slate-400"><i class="fa-solid fa-signal"></i></td>
+                        <td class="py-3 pr-4 font-semibold text-slate-500 whitespace-nowrap w-32">Lead Event</td>
+                        <td class="py-3">${leadSent ? fmtSent(leadEvt) : `<button onclick="app.sendMetaEvent('${leadId}', 'Lead', this)" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Send Lead Event →</button>`}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 pr-3 w-5 text-slate-400"><i class="fa-solid fa-star"></i></td>
+                        <td class="py-3 pr-4 font-semibold text-slate-500 whitespace-nowrap w-32">Qualified Event <span class="text-[8px] text-slate-400">(CompleteRegistration)</span></td>
+                        <td class="py-3">${qualSent ? fmtSent(qualEvt) : `<button onclick="app.sendMetaEvent('${leadId}', 'Qualified', this)" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Send Qualified Event →</button>`}</td>
+                    </tr>`;
                 } catch (error) {
                     console.error('Error fetching full lead data:', error);
                     tableBody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error loading data</td></tr>';
@@ -2142,6 +2509,113 @@
             closeViewDataModal() {
                 this.dom.viewDataModal.classList.add('hidden');
                 document.body.style.overflow = '';
+            }
+
+            async sendMetaEventFromRow(leadId, eventType, btn) {
+                if (btn.disabled) return;
+                btn.disabled = true;
+                const orig = btn.textContent.trim();
+                btn.textContent = 'Sending...';
+                try {
+                    const res = await fetch(`${BACKEND_URL}/api/leads/${leadId}/sync-event`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ event_type: eventType })
+                    });
+                    const result = await res.json();
+                    if (result.skipped) {
+                        btn.textContent = '✓ Already Sent';
+                        btn.classList.add('text-slate-400');
+                        btn.classList.remove('text-blue-500', 'text-violet-500');
+                        return;
+                    }
+                    if (result.success && result.meta_response && result.meta_response.events_received > 0) {
+                        btn.textContent = `✓ ${eventType} Sent`;
+                        btn.classList.add('text-emerald-600');
+                        btn.classList.remove('text-blue-500', 'text-violet-500', 'hover:text-blue-700', 'hover:text-violet-700');
+                        const lead = this.state.leads.find(l => l.id === leadId || l.meta_lead_id === leadId);
+                        if (lead) {
+                            if (!lead.meta_events) lead.meta_events = {};
+                            lead.meta_events[eventType] = {
+                                events_received: result.meta_response.events_received,
+                                fbtrace_id: result.meta_response.fbtrace_id || '',
+                                sent_at: result.sync_timestamp || new Date().toISOString()
+                            };
+                        }
+                        this.showMetaSignalNotification({
+                            success: true,
+                            event_type: eventType,
+                            events_received: result.meta_response.events_received,
+                            fbtrace_id: result.meta_response.fbtrace_id || '',
+                            sent_at: result.sync_timestamp
+                        }, result.lead_name || 'Lead');
+                    } else {
+                        btn.textContent = orig;
+                        btn.disabled = false;
+                        this.showToast(`Failed to send ${eventType} event`, 'error');
+                    }
+                } catch (err) {
+                    console.error('Meta send error:', err);
+                    btn.textContent = orig;
+                    btn.disabled = false;
+                    this.showToast('Network error', 'error');
+                }
+            }
+
+            async sendMetaEvent(leadId, eventType, btn) {
+                if (btn.disabled) return;
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                btn.classList.replace('text-blue-600', 'text-slate-400');
+                try {
+                    const res = await fetch(`${BACKEND_URL}/api/leads/${leadId}/sync-event`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ event_type: eventType })
+                    });
+                    const result = await res.json();
+                    if (result.skipped) {
+                        btn.textContent = `Already sent`;
+                        btn.classList.replace('text-slate-400', 'text-amber-500');
+                        this.showToast(`${eventType} event was already sent for this lead`, 'info');
+                        return;
+                    }
+                    if (result.success && result.meta_response && result.meta_response.events_received > 0) {
+                        const fbtrace = result.meta_response.fbtrace_id || '';
+                        btn.outerHTML = `<span class="text-emerald-600 text-xs font-semibold">✓ Sent</span><br><span class="font-mono text-[10px] text-slate-400">${fbtrace}</span>`;
+                        // Update local state
+                        const lead = this.state.leads.find(l => l.id === leadId || l.meta_lead_id === leadId);
+                        if (lead) {
+                            if (!lead.meta_events) lead.meta_events = {};
+                            lead.meta_events[eventType] = {
+                                events_received: result.meta_response.events_received,
+                                fbtrace_id: fbtrace,
+                                sent_at: result.sync_timestamp || new Date().toISOString()
+                            };
+                        }
+                        this.showMetaSignalNotification({
+                            success: true,
+                            event_type: eventType,
+                            events_received: result.meta_response.events_received,
+                            fbtrace_id: fbtrace,
+                            sent_at: result.sync_timestamp
+                        }, result.lead_name || 'Lead');
+                    } else {
+                        btn.textContent = 'Failed — retry?';
+                        btn.classList.replace('text-slate-400', 'text-red-500');
+                        btn.disabled = false;
+                        this.showToast(`Failed to send ${eventType} event`, 'error');
+                    }
+                } catch (err) {
+                    console.error('Meta send error:', err);
+                    btn.textContent = originalText;
+                    btn.classList.replace('text-slate-400', 'text-blue-600');
+                    btn.disabled = false;
+                    this.showToast('Network error sending to Meta', 'error');
+                }
             }
 
             handleReminderSubmit(e) {
@@ -2224,54 +2698,8 @@
                 }, 30000);
             }
 
-            calculatePremium(row) {
-                // Simplified for demo - mainly handles the General Auto/Home calc
-                const auto = parseFloat(row.querySelector('.calc-auto')?.value) || 0;
-                const home = parseFloat(row.querySelector('.calc-home')?.value) || 0;
-                const tenant = parseFloat(row.querySelector('.calc-tenant')?.value) || 0;
-                const total = auto + home + tenant;
-                
-                const totalEl = row.querySelector('.calc-total');
-                // Ensure we don't display NaN or 0 unnecessarily
-                if(totalEl) totalEl.value = total > 0 ? total : '';
-                
-                // Update State for Stats Calculation
-                const id = row.dataset.id;
-                const lead = this.state.leads.find(l => l.id === id);
-                if (lead) {
-                    lead.premium = total;
-                    this.updateStats(); // Recalculate stats immediately
-                    
-                    // Save to database
-                    fetch(`${BACKEND_URL}/api/leads/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ premium: total })
-                    })
-                    .then(res => res.json())
-                    .then(() => {
-                        console.log('✅ Premium saved to database');
-                    })
-                    .catch(error => {
-                        console.error('❌ Failed to save premium:', error);
-                    });
-                }
-            }
-
             updateSignalUI(row, type) {
                 const leadId = row.dataset.id;
-                const syncBtn = row.querySelector('.action-sync');
-                
-                // Update UI locally
-                if (type === 'green') {
-                    syncBtn.disabled = false;
-                    syncBtn.className = "action-sync w-full h-7 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-[9px] font-bold shadow-sm transition-all flex items-center justify-center gap-1";
-                    syncBtn.innerHTML = '<i class="fa-brands fa-meta pointer-events-none"></i> Sync';
-                } else {
-                    syncBtn.disabled = true;
-                    syncBtn.className = "action-sync w-full h-7 bg-slate-100 text-slate-400 border border-slate-200 rounded text-[9px] font-bold flex items-center justify-center gap-1 cursor-not-allowed";
-                    syncBtn.innerHTML = 'No Sync';
-                }
                 
                 // Skip API call if leadId is undefined/null/empty or is meta_lead_id (Facebook lead)
                 if (!leadId || leadId === 'undefined' || leadId === 'null') {
@@ -2297,208 +2725,6 @@
                 })
                 .catch(error => {
                     // Silently ignore errors for Facebook leads
-                });
-            }
-
-            syncMetaSignal(btn, row) {
-                if (btn.disabled) return;
-                const leadId = row.dataset.id;
-                const name = row.querySelector('.lead-name').textContent;
-                const phone = row.querySelector('.lead-phone').textContent;
-                const email = row.querySelector('.lead-email').textContent;
-                const timestampEl = row.querySelector('.sync-timestamp');
-                const status = row.querySelector('.status-select').value;
-                
-                // Determine event type based on status
-                const STATUS_TO_EVENT = {
-                    'Qualified': 'Qualified',
-                    'Sold': 'Purchase'
-                };
-                
-                const eventType = STATUS_TO_EVENT[status];
-                
-                // Block if status is not Qualified or Sold
-                if (!eventType) {
-                    this.showToast(`Change status to "Qualified" or "Sold" to sync to Meta`, 'error');
-                    return;
-                }
-                
-                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin pointer-events-none"></i>';
-                btn.disabled = true;
-                
-                // Log confirmation details
-                console.log('🔔 SYNCING TO FACEBOOK EVENT MANAGER');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log(`📋 Lead ID: ${leadId}`);
-                console.log(`👤 Name: ${name}`);
-                console.log(`📞 Phone: ${phone}`);
-                console.log(`📧 Email: ${email}`);
-                console.log(`📊 Status: ${status}`);
-                console.log(`🎯 Event Type: ${eventType}`);
-                console.log(`⏰ Sync Time: ${new Date().toLocaleString()}`);
-                console.log(`📍 Destination: Facebook Event Manager (Conversions API)`);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                
-                // Send event to Meta via backend
-                fetch(`${BACKEND_URL}/api/leads/${leadId}/sync-event`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event_type: eventType })
-                })
-                .then(res => {
-                    if (!res.ok) {
-                        // HTTP error - parse error message
-                        return res.json().then(err => {
-                            throw new Error(err.error || `HTTP ${res.status}: ${res.statusText}`);
-                        });
-                    }
-                    return res.json();
-                })
-                .then(result => {
-                    // ── RAW DUMP: always show this so we can diagnose any issue ──
-                    console.group('📬 Meta Sync Raw Response');
-                    console.log('Full result:', result);
-                    console.log('meta_response:', result.meta_response);
-                    console.log('events_received:', result.meta_response?.events_received);
-                    console.log('messages:', result.meta_response?.messages);
-                    console.log('error:', result.meta_response?.error);
-                    console.groupEnd();
-                    // ─────────────────────────────────────────────────────────────
-
-                    // Check if backend returned success: false
-                    if (!result.success) {
-                        throw new Error(result.error || 'Unknown error from backend');
-                    }
-                    
-                    console.log('✅ FACEBOOK SYNC CONFIRMED');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log(`✨ Lead successfully sent to Meta Event Manager`);
-                    console.log(`🔗 API Response:`, result);
-                    console.log(`📊 Meta Response Details:`, result.meta_response);
-                    
-                    // Check if Meta actually received the events
-                    const eventsReceived = result.meta_response?.events_received || 0;
-                    const fbTraceId = result.meta_response?.fbtrace_id || 'N/A';
-                    
-                    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-                    console.log(`📈 META API STATUS:`);
-                    console.log(`   Events Received: ${eventsReceived}`);
-                    console.log(`   FB Trace ID: ${fbTraceId}`);
-                    console.log(`   Messages:`, result.meta_response?.messages || []);
-                    
-                    if (eventsReceived === 0) {
-                        console.warn(`⚠️ WARNING: Meta returned events_received = 0`);
-                        console.warn(`   This means Meta did NOT accept the event`);
-                        console.warn(`   Check the messages above for validation errors`);
-                    } else {
-                        console.log(`   ✅ Meta confirmed receiving ${eventsReceived} event(s)`);
-                    }
-                    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-                    
-                    // Show all the data that was sent to Meta
-                    if (result.data_sent_to_meta) {
-                        console.log('📦 DATA SENT TO META (Enriched from Backend):');
-                        console.log(`   📧 Email: ${result.data_sent_to_meta.email || 'N/A'}`);
-                        console.log(`   📞 Phone: ${result.data_sent_to_meta.phone || 'N/A'}`);
-                        console.log(`   👤 Name: ${result.data_sent_to_meta.name || 'N/A'}`);
-                        console.log(`   🏙️ City: ${result.data_sent_to_meta.city || 'N/A'}`);
-                        console.log(`   📮 Postal Code: ${result.data_sent_to_meta.postal_code || 'N/A'}`);
-                        console.log(`   🗺️ State/Province: ${result.data_sent_to_meta.state || 'N/A'}`);
-                        console.log(`   🎂 Date of Birth: ${result.data_sent_to_meta.date_of_birth || 'N/A'}`);
-                        console.log(`   🌍 Country: ${result.data_sent_to_meta.country || 'N/A'}`);
-                        console.log(`   🔗 Meta Lead ID: ${result.data_sent_to_meta.meta_lead_id || 'N/A'}`);
-                        console.log('   ✅ Fields Sent:', result.data_sent_to_meta.fields_sent);
-                    }
-                    
-                    console.log(`⏱️  Confirmation Time: ${new Date().toLocaleString()}`);
-                    console.log(`🎯 TO VERIFY IN FACEBOOK:`);
-                    console.log(`   1. Go to: https://business.facebook.com/events_manager2`);
-                    console.log(`   2. Click "Test Events" in left sidebar`);
-                    console.log(`   3. Look for "Lead" event with timestamp: ${new Date().toLocaleString()}`);
-                    console.log(`   4. Event should show: Email (${email}), Phone (${phone})`);
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    
-                    btn.className = "action-sync w-full h-7 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-[9px] font-bold flex items-center justify-center gap-1 cursor-default";
-                    btn.innerHTML = '<i class="fa-solid fa-check pointer-events-none"></i> Sent';
-                    const now = new Date();
-                    timestampEl.textContent = `Sent: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-                    timestampEl.style.opacity = '1';
-                    
-                    // Show warning if Meta didn't receive the event
-                    if (eventsReceived === 0) {
-                        btn.className = "action-sync w-full h-7 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded text-[9px] font-bold flex items-center justify-center gap-1";
-                        btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle pointer-events-none"></i> Sent (0 received)';
-                        // Dig out the real reason: Meta can embed errors in a 200 response
-                        const metaError = result.meta_response?.error;
-                        const metaMsgs = result.meta_response?.messages || [];
-                        let msgText;
-                        if (metaError) {
-                            // OAuth / API-level error returned inside a 200 response
-                            msgText = metaError.message || metaError.error_user_msg || JSON.stringify(metaError);
-                        } else if (metaMsgs.length > 0) {
-                            msgText = metaMsgs.join(' | ');
-                        } else {
-                            msgText = 'events_received=0 — check Railway logs for details';
-                        }
-                        console.error('❌ Meta full response:', result.meta_response);
-                        console.error('❌ Meta validation messages:', metaMsgs);
-                        this.showToast(`⚠️ Meta rejected event: ${msgText}`, 'error');
-                        btn.disabled = false;
-                        return;
-                    }
-                    
-                    // Show comprehensive confirmation toast
-                    this.showToast(`✅ "${name}" synced to Meta Event Manager`, 'success');
-                    
-                    // Optional: Show detailed toast with lead info
-                    const detailToast = document.createElement('div');
-                    detailToast.className = "fixed bottom-24 right-4 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-2xl text-[10px] font-mono space-y-1 border border-slate-700 max-w-xs z-50";
-                    detailToast.innerHTML = `
-                        <div class="text-emerald-400 font-bold">✨ Sync Confirmation</div>
-                        <div>Lead ID: <span class="text-blue-300">${leadId}</span></div>
-                        <div>Email: <span class="text-blue-300">${email}</span></div>
-                        <div>Phone: <span class="text-blue-300">${phone}</span></div>
-                        <div>Status: <span class="text-emerald-400">Sent to Event Manager</span></div>
-                        <div class="text-slate-400 mt-2">${new Date().toLocaleString()}</div>
-                        <div class="bg-yellow-900 border border-yellow-600 rounded px-2 py-1.5 mt-2">
-                            <div class="text-yellow-300 font-bold text-[9px] mb-1">📍 Where to check:</div>
-                            <div class="text-yellow-100 text-[8px]">
-                                1. Events Manager → Events<br>
-                                2. NOT in "Test Events"<br>
-                                3. Filter by "Lead" event type<br>
-                                4. May take 5-10 min to appear
-                            </div>
-                        </div>
-                        <a href="https://business.facebook.com/events_manager2/list/pixel/${result.meta_response?.pixel_id || ''}/overview" target="_blank" class="block mt-2 bg-blue-600 hover:bg-blue-700 text-white text-center py-1.5 rounded text-[9px] font-bold transition-colors">
-                            🔍 Open Events Manager →
-                        </a>
-                    `;
-                    document.body.appendChild(detailToast);
-                    setTimeout(() => {
-                        detailToast.style.opacity = '0';
-                        detailToast.style.transition = 'opacity 0.3s';
-                        setTimeout(() => detailToast.remove(), 300);
-                    }, 8000);
-                })
-                .catch(error => {
-                    console.error('❌ FACEBOOK SYNC FAILED');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.error(`Error syncing lead ${leadId}:`, error.message || error);
-                    console.log(`Lead: ${name}`);
-                    console.log(`Email: ${email}`);
-                    console.log(`Phone: ${phone}`);
-                    console.log(`Status: ${status}`);
-                    console.log(`Event Type: ${eventType}`);
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    
-                    btn.className = "action-sync w-full h-7 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[9px] font-bold flex items-center justify-center gap-1";
-                    btn.innerHTML = '<i class="fa-solid fa-exclamation"></i> Failed';
-                    
-                    // Show detailed error message
-                    const errorMsg = error.message || error.toString();
-                    this.showToast(`❌ Meta Sync Failed: ${errorMsg}`, 'error');
-                    
-                    btn.disabled = false;
                 });
             }
 
@@ -2627,6 +2853,51 @@
                 } catch (e) {
                     return false;
                 }
+            }
+
+            showMetaSignalNotification(capi, leadName) {
+                const isSuccess = capi.success && capi.events_received > 0;
+                const d = new Date(capi.sent_at);
+                const timeStr = isNaN(d) ? '' : d.toLocaleString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                const popup = document.createElement('div');
+                popup.className = 'fixed top-4 right-4 z-[100] max-w-sm';
+                popup.style.cssText = 'animation: metaPopupIn 0.4s ease-out';
+                popup.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-2xl border ${isSuccess ? 'border-emerald-200' : 'border-red-200'} overflow-hidden">
+                        <div class="bg-gradient-to-r ${isSuccess ? 'from-blue-600 to-indigo-600' : 'from-red-500 to-rose-600'} px-4 py-2 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-brands fa-meta text-white text-sm"></i>
+                                <span class="text-white text-[11px] font-bold tracking-wide uppercase">Conversions API</span>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="text-white/60 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex items-center gap-2.5 mb-3">
+                                <div class="w-7 h-7 rounded-full ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'} flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid ${isSuccess ? 'fa-check' : 'fa-xmark'} text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-red-700'}">${isSuccess ? 'Qualified Signal Sent' : 'Signal Failed'}</div>
+                                    <div class="text-[10px] text-slate-400">${capi.event_type || 'Qualified'} Event</div>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2.5 space-y-1.5 text-[11px]">
+                                <div class="flex justify-between"><span class="text-slate-400 font-medium">Lead</span><span class="text-slate-700 font-semibold">${leadName}</span></div>
+                                ${isSuccess ? `<div class="flex justify-between"><span class="text-slate-400 font-medium">fbtrace_id</span><span class="text-slate-600 font-mono text-[10px] select-all">${capi.fbtrace_id || '—'}</span></div>` : `<div class="text-red-500 text-[10px]">${capi.error || 'Meta did not confirm receipt'}</div>`}
+                                ${timeStr ? `<div class="flex justify-between"><span class="text-slate-400 font-medium">Time</span><span class="text-slate-600">${timeStr}</span></div>` : ''}
+                            </div>
+                        </div>
+                        <div class="h-1 bg-slate-100"><div class="h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-400'}" style="animation: metaPopupBar 6s linear forwards"></div></div>
+                    </div>
+                `;
+                document.body.appendChild(popup);
+
+                // Auto-remove after 6 seconds
+                setTimeout(() => {
+                    popup.style.animation = 'metaPopupOut 0.3s ease-in forwards';
+                    setTimeout(() => popup.remove(), 300);
+                }, 6000);
             }
 
             showToast(msg, type) {

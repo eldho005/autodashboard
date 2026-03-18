@@ -598,73 +598,74 @@
                             <div class="bg-blue-50 border-b border-slate-200 px-5 py-3">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-bold text-blue-700">5.</span>
-                                    <h3 class="text-sm font-bold text-blue-800">Premium Details</h3>
+                                    <h3 class="text-sm font-bold text-blue-800">Premium Comparison</h3>
                                 </div>
                             </div>
-                            <div class="p-5 space-y-4">
-                                <!-- Proposed -->
-                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <p class="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Proposed</p>
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Auto</label>
-                                            <input id="premium-proposed-auto" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
-                                            <input id="premium-proposed-home" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Total</label>
-                                            <input id="premium-proposed-total" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Current -->
-                                <div class="bg-blue-50/30 rounded-lg p-4 border border-blue-100">
-                                    <p class="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Current</p>
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Auto</label>
-                                            <input id="premium-current-auto" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
-                                            <input id="premium-current-home" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm bg-white transition-colors w-full">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Total</label>
-                                            <input id="premium-current-total" type="text" inputmode="decimal" placeholder="0.00"
-                                                class="hud__input hud__input--light rounded-md px-3 py-2 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Difference (Proposed - Current, read-only) -->
-                                <div class="bg-rose-50/40 rounded-lg p-4 border border-rose-200">
-                                    <p class="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wide">Difference <span class="normal-case font-normal text-slate-400">(Proposed − Current)</span></p>
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Auto</label>
-                                            <input id="premium-diff-auto" type="text" readonly placeholder="0.00"
-                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Home / Tenant</label>
-                                            <input id="premium-diff-home" type="text" readonly placeholder="0.00"
-                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-xs font-medium text-slate-500">Total</label>
-                                            <input id="premium-diff-total" type="text" readonly placeholder="0.00"
-                                                class="rounded-md px-3 py-2 text-sm font-semibold w-full bg-rose-50 border border-rose-200 text-slate-600 cursor-default focus:outline-none">
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="p-4">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-200">
+                                            <th class="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2 w-28"></th>
+                                            <th class="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2 px-2">Auto</th>
+                                            <th class="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2 px-2">Home / Tenant</th>
+                                            <th class="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2 px-2">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-100">
+                                            <td class="py-2.5 pr-2">
+                                                <span class="text-xs font-semibold text-slate-500">Current</span>
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-current-auto" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm bg-white transition-colors w-full">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-current-home" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm bg-white transition-colors w-full">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-current-total" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b border-slate-100">
+                                            <td class="py-2.5 pr-2">
+                                                <span class="text-xs font-semibold text-slate-500">Proposed</span>
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-proposed-auto" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm bg-white transition-colors w-full">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-proposed-home" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm bg-white transition-colors w-full">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-proposed-total" type="text" inputmode="decimal" placeholder="0.00"
+                                                    class="hud__input hud__input--light rounded-md px-2.5 py-1.5 focus:outline-none text-sm font-semibold bg-white transition-colors w-full">
+                                            </td>
+                                        </tr>
+                                        <tr class="bg-slate-50/60">
+                                            <td class="py-2.5 pr-2">
+                                                <span class="text-xs font-semibold text-slate-600">Savings</span>
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-diff-auto" type="text" readonly placeholder="—"
+                                                    class="rounded-md px-2.5 py-1.5 text-sm font-bold w-full bg-transparent border-none text-slate-600 cursor-default focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-diff-home" type="text" readonly placeholder="—"
+                                                    class="rounded-md px-2.5 py-1.5 text-sm font-bold w-full bg-transparent border-none text-slate-600 cursor-default focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5 px-2">
+                                                <input id="premium-diff-total" type="text" readonly placeholder="—"
+                                                    class="rounded-md px-2.5 py-1.5 text-sm font-bold w-full bg-transparent border-none text-slate-600 cursor-default focus:outline-none">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p class="text-[10px] text-slate-400 mt-2 text-right">Enter auto and/or home separately, or just the total</p>
                             </div>
                         </div>
                     </section>
@@ -4856,10 +4857,10 @@
                 const current  = parseFloat((document.getElementById('premium-current-'  + col)?.value || '').replace(/[^0-9.-]/g, '')) || 0;
                 const diffEl = document.getElementById('premium-diff-' + col);
                 if (diffEl) {
-                    const diff = proposed - current;
-                    diffEl.value = (proposed === 0 && current === 0) ? '' : diff.toFixed(2);
-                    // colour: negative = mild red, positive = mild green, zero = neutral
-                    diffEl.style.color = diff < 0 ? '#f43f5e' : diff > 0 ? '#16a34a' : '';
+                    const savings = current - proposed;
+                    diffEl.value = (proposed === 0 && current === 0) ? '' : savings.toFixed(2);
+                    // positive savings = green, negative = red, zero = neutral
+                    diffEl.style.color = savings > 0 ? '#16a34a' : savings < 0 ? '#f43f5e' : '';
                 }
             });
         }
