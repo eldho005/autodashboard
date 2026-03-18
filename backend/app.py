@@ -730,9 +730,13 @@ def send_event_to_meta(lead_id, event_type, event_data):
         Meta API response dict with events_received, messages, fbtrace_id
     """
     try:
-        if not FB_PIXEL_ID or not META_PAGE_ACCESS_TOKEN:
-            print("❌ FB_PIXEL_ID or META_PAGE_ACCESS_TOKEN not configured")
-            return {'success': False, 'error': 'Meta CAPI not configured — missing FB_PIXEL_ID or META_PAGE_ACCESS_TOKEN'}
+        _placeholders = {'your_pixel_id', 'your_page_access_token', 'your_pixel_token', 'none', ''}
+        if not FB_PIXEL_ID or str(FB_PIXEL_ID).lower() in _placeholders:
+            print("❌ FB_PIXEL_ID is not configured (missing or placeholder value)")
+            return {'success': False, 'error': 'FB_PIXEL_ID is not set — update it in Railway Variables with your real Pixel ID'}
+        if not META_PAGE_ACCESS_TOKEN or str(META_PAGE_ACCESS_TOKEN).lower() in {'your_page_access_token', 'none', ''}:
+            print("❌ META_PAGE_ACCESS_TOKEN is not configured (missing or placeholder value)")
+            return {'success': False, 'error': 'META_PAGE_ACCESS_TOKEN is not set — update it in Railway Variables with your real token'}
 
         url = f'{META_BASE_URL}/{FB_PIXEL_ID}/events'
         
