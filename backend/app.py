@@ -653,19 +653,20 @@ def get_leads_from_db(filters=None):
                 email_key = lead['email'].strip().lower()
                 auto_data = auto_data_by_email.get(email_key)
                 if isinstance(auto_data, dict) and auto_data:
-                    # Extract personal information fields
-                    lead['first_name'] = auto_data.get('personalFirstName', '')
-                    lead['middle_name'] = auto_data.get('personalMiddleName', '')
-                    lead['last_name'] = auto_data.get('personalLastName', '')
-                    lead['city'] = auto_data.get('personalCity', '')
-                    lead['postal_code'] = auto_data.get('personalPostalCode', '')
-                    lead['date_of_birth'] = auto_data.get('personalDob', '')
-                    lead['address'] = auto_data.get('personalAddress', '')
-                    lead['marital_status'] = auto_data.get('personalMaritalStatus', '')
-                    lead['gender'] = auto_data.get('personalGender', '')
-                    # Check if license number is present in first driver — means real data was parsed
+                    # Personal fields live inside drivers[0], with top-level as legacy fallback
                     drivers = auto_data.get('drivers', [])
-                    lic = drivers[0].get('licNumber', '').strip() if drivers else ''
+                    drv0 = drivers[0] if drivers else {}
+                    lead['first_name'] = drv0.get('personalFirstName', '') or auto_data.get('personalFirstName', '')
+                    lead['middle_name'] = drv0.get('personalMiddleName', '') or auto_data.get('personalMiddleName', '')
+                    lead['last_name'] = drv0.get('personalLastName', '') or auto_data.get('personalLastName', '')
+                    lead['city'] = drv0.get('personalCity', '') or auto_data.get('personalCity', '')
+                    lead['postal_code'] = drv0.get('personalPostalCode', '') or auto_data.get('personalPostalCode', '')
+                    lead['date_of_birth'] = drv0.get('personalDob', '') or auto_data.get('personalDob', '')
+                    lead['address'] = drv0.get('personalAddress', '') or auto_data.get('personalAddress', '')
+                    lead['marital_status'] = drv0.get('personalMaritalStatus', '') or auto_data.get('personalMaritalStatus', '')
+                    lead['gender'] = drv0.get('personalGender', '') or auto_data.get('personalGender', '')
+                    # Check if license number is present in first driver — means real data was parsed
+                    lic = drv0.get('licNumber', '').strip()
                     lead['has_auto_data'] = bool(lic)
                     print(f"✅ Enriched lead {lead.get('name')} with personal info (has_auto_data={lead['has_auto_data']})")
         
@@ -934,11 +935,14 @@ def send_event_to_meta(lead_id, event_type, event_data):
         return result
     
     except requests.exceptions.RequestException as e:
+        resp = getattr(e, 'response', None)
+        status = resp.status_code if resp is not None else 'N/A'
+        body = resp.text if resp is not None else ''
         print(f"❌ HTTP Error sending to Meta: {str(e)}")
-        print(f"   Status: {e.response.status_code if hasattr(e, 'response') else 'N/A'}")
-        if hasattr(e, 'response'):
-            print(f"   Response: {e.response.text}")
-        return {'success': False, 'error': str(e)}
+        print(f"   Status: {status}")
+        if body:
+            print(f"   Response: {body}")
+        return {'success': False, 'error': str(e), 'http_status': status, 'meta_error': body}
     except Exception as e:
         print(f"❌ Error sending event to Meta: {str(e)}")
         traceback.print_exc()
@@ -1628,7 +1632,28 @@ def sync_lead_event(lead_id):
                         print(f"📋 Enriched from auto_data: City={city}, Postal={postal_code}, DOB={date_of_birth}, State={state}")
             except Exception as e:
                 print(f"⚠️ Could not fetch auto_data for enrichment: {str(e)}")
-        
+
+        # Fallback: parse city/postal/DOB from the raw Facebook lead form field_data.
+        # Applies to leads that have never been through the DASH form (no auto_data record).
+        if not city or not postal_code or not date_of_birth:
+            meta_data = lead.get('meta_data') or {}
+            field_data = meta_data.get('field_data', []) if isinstance(meta_data, dict) else []
+            if field_data:
+                field_map = {}
+                for f in field_data:
+                    fname = (f.get('name') or '').lower().strip()
+                    fvals = f.get('values', [])
+                    field_map[fname] = fvals[0] if fvals else ''
+                if not city:
+                    city = field_map.get('city') or field_map.get('town') or field_map.get('town_city') or ''
+                if not postal_code:
+                    postal_code = (field_map.get('zip_code') or field_map.get('postal_code')
+                                   or field_map.get('zip') or field_map.get('postcode') or '')
+                if not date_of_birth:
+                    date_of_birth = field_map.get('date_of_birth') or field_map.get('dob') or ''
+                if city or postal_code or date_of_birth:
+                    print(f"📋 Enriched from meta_data field_data: City={city}, Postal={postal_code}, DOB={date_of_birth}")
+
         # Send to Meta with ad attribution context and enriched data
         event_data = {
             'email': lead.get('email', ''),
@@ -1648,6 +1673,31 @@ def sync_lead_event(lead_id):
         
         print(f"📤 Sending to Meta Conversions API...")
         result = send_event_to_meta(lead['id'], event_type, event_data)
+        
+        # If send_event_to_meta returned an error, propagate it immediately
+        if result and result.get('success') is False:
+            error_msg = result.get('error', 'Unknown Meta API error')
+            meta_error = result.get('meta_error', '')
+            print(f"❌ Meta send failed: {error_msg}")
+            if meta_error:
+                print(f"   Meta response body: {meta_error}")
+            # Still log the failed attempt
+            supabase.table('leads').update({
+                'last_sync': datetime.now(timezone.utc).isoformat(),
+                'sync_status': 'failed'
+            }).eq('id', lead['id']).execute()
+            supabase.table('sync_events').insert({
+                'lead_id': lead['id'],
+                'event_type': event_type,
+                'meta_response': result,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }).execute()
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'meta_error': meta_error,
+                'lead_name': lead.get('name')
+            }), 502
         
         # Update lead sync timestamp and status
         # Meta returns 'events_received' field when successful

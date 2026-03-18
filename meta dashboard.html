@@ -2553,7 +2553,9 @@
                     } else {
                         btn.textContent = orig;
                         btn.disabled = false;
-                        this.showToast(`Failed to send ${eventType} event`, 'error');
+                        const errMsg = result.error || result.meta_error || `Failed to send ${eventType} event`;
+                        console.error('Meta send failed:', result);
+                        this.showToast(errMsg, 'error');
                     }
                 } catch (err) {
                     console.error('Meta send error:', err);
@@ -2607,7 +2609,9 @@
                         btn.textContent = 'Failed — retry?';
                         btn.classList.replace('text-slate-400', 'text-red-500');
                         btn.disabled = false;
-                        this.showToast(`Failed to send ${eventType} event`, 'error');
+                        const errMsg = result.error || result.meta_error || `Failed to send ${eventType} event`;
+                        console.error('Meta send failed:', result);
+                        this.showToast(errMsg, 'error');
                     }
                 } catch (err) {
                     console.error('Meta send error:', err);
