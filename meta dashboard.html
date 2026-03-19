@@ -585,6 +585,10 @@
                         View Data
                     </button>
                     <div class="flex items-center gap-1.5 justify-center">
+                        <button class="action-send-lead text-[9px] text-blue-500 hover:text-blue-700 font-medium transition-colors" title="Send Lead signal to Meta">
+                            Send Lead
+                        </button>
+                        <span class="text-slate-200 text-[8px]">|</span>
                         <button class="action-send-qualified text-[9px] text-violet-500 hover:text-violet-700 font-medium transition-colors" title="Send CompleteRegistration signal to Meta (qualified lead)">
                             Send Qualified
                         </button>
@@ -1497,12 +1501,19 @@
                     }
                 }
 
-                // Update Send Qualified button if already sent
+                // Update Send Lead / Send Qualified buttons if already sent
                 const me = lead.meta_events || {};
+                const sendLeadBtn = row.querySelector('.action-send-lead');
                 const sendQualBtn = row.querySelector('.action-send-qualified');
 
                 if (!lead.meta_lead_id) {
                     // Manual lead — no Meta lead ID, cannot send signals
+                    if (sendLeadBtn) {
+                        sendLeadBtn.disabled = true;
+                        sendLeadBtn.title = 'Not a Meta lead';
+                        sendLeadBtn.classList.remove('text-blue-500', 'hover:text-blue-700');
+                        sendLeadBtn.classList.add('text-slate-300', 'cursor-not-allowed');
+                    }
                     if (sendQualBtn) {
                         sendQualBtn.disabled = true;
                         sendQualBtn.title = 'Not a Meta lead';
@@ -1510,6 +1521,12 @@
                         sendQualBtn.classList.add('text-slate-300', 'cursor-not-allowed');
                     }
                 } else {
+                    if (sendLeadBtn && me['Lead'] && me['Lead'].events_received > 0) {
+                        sendLeadBtn.textContent = '✓ Lead Sent';
+                        sendLeadBtn.disabled = true;
+                        sendLeadBtn.classList.remove('text-blue-500', 'hover:text-blue-700');
+                        sendLeadBtn.classList.add('text-emerald-600');
+                    }
                     if (sendQualBtn && me['Qualified'] && me['Qualified'].events_received > 0) {
                         sendQualBtn.textContent = '✓ Qualified Sent';
                         sendQualBtn.disabled = true;
@@ -1878,6 +1895,8 @@
                     this.openReminderModal(row.dataset.id);
                 } else if (target.closest('.action-view-data')) {
                     this.openViewDataModal(row.dataset.id);
+                } else if (target.closest('.action-send-lead')) {
+                    this.sendMetaEventFromRow(row.dataset.id, 'Lead', target.closest('.action-send-lead'));
                 } else if (target.closest('.action-send-qualified')) {
                     this.sendMetaEventFromRow(row.dataset.id, 'Qualified', target.closest('.action-send-qualified'));
                 } else if (target.closest('.action-reopen-lead')) {
@@ -1907,19 +1926,7 @@
                     if (lead) {
                         lead.status = newStatus;
                         this.updateStats(); // Recalculate stats on status change
-
-                        // Auto-send Lead event to Meta when status changes to Qualified
-                        if (newStatus === 'Qualified' && lead.meta_lead_id) {
-                            const me = lead.meta_events || {};
-                            const alreadySent = me['Lead'] && me['Lead'].events_received > 0;
-                            if (!alreadySent) {
-                                console.log('🔵 Status → Qualified: auto-sending Lead event to Meta');
-                                // Dummy btn proxy — sendMetaEventFromRow needs an element-like object
-                                const noop = { disabled: false, textContent: '', classList: { add() {}, remove() {} } };
-                                this.sendMetaEventFromRow(id, 'Lead', noop);
-                            }
-                        }
-
+                        
                         // Save to database
                         fetch(`${BACKEND_URL}/api/leads/${id}`, {
                             method: 'PUT',
