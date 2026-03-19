@@ -1399,18 +1399,20 @@
                     // ✅ Sync Mobile and Home Phone - when either is filled, populate both
                     if (target.dataset.key === 'personalMobile' || target.dataset.key === 'personalHomePhone') {
                         const phoneValue = target.value;
+                        // Home Phone is plain text - strip phone formatting before syncing to it
+                        const rawPhoneValue = phoneValue.replace(/[()\s\-]/g, '');
                         console.log(`📱 Phone entered in ${target.dataset.key}: "${phoneValue}"`);
                         
                         if (phoneValue) {
-                            // Sync to both fields
+                            // Sync to both fields (Home Phone gets raw/unformatted value)
                             currentDriver.personalMobile = phoneValue;
-                            currentDriver.personalHomePhone = phoneValue;
+                            currentDriver.personalHomePhone = rawPhoneValue;
                             
                             // Update both input fields
                             const mobileInput = document.querySelector('[data-key="personalMobile"]');
                             const homeInput = document.querySelector('[data-key="personalHomePhone"]');
                             if (mobileInput) mobileInput.value = phoneValue;
-                            if (homeInput) homeInput.value = phoneValue;
+                            if (homeInput) homeInput.value = rawPhoneValue;
                             
                             // Sync to originalLead for first driver
                             if (this.currDrvIdx === 0 && this.originalLead) {
@@ -1703,6 +1705,10 @@
                     }
                 }
                 
+                // Normalize Home Phone: strip any phone formatting so it displays as plain text
+                if (drv.personalHomePhone) {
+                    drv.personalHomePhone = drv.personalHomePhone.replace(/[()\s\-]/g, '');
+                }
                 Binder.loadToDom('driver', drv);
                 this.renderVehicleCards(drv.vehicles);
                 drv.vehicles.forEach((v) => Binder.loadToDom(`vehicle-${v.id}`, v));
