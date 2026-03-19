@@ -955,35 +955,42 @@ def send_event_to_meta(lead_id, event_type, event_data):
 
 # ========== API ENDPOINTS ==========
 
+def _no_cache(resp):
+    """Add no-cache headers so browsers always fetch fresh HTML on Railway."""
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
+
 @app.route('/')
 def index():
     """Serve Meta Dashboard as home page"""
-    return send_from_directory(app.static_folder, 'meta dashboard.html')
+    return _no_cache(send_from_directory(app.static_folder, 'meta dashboard.html'))
 
 @app.route('/auto')
 def auto_dashboard():
     """Serve Auto Dashboard"""
-    return send_from_directory(app.static_folder, 'Auto dashboard.html')
+    return _no_cache(send_from_directory(app.static_folder, 'Auto dashboard.html'))
 
 @app.route('/signwell-ui')
 def signwell_ui():
     """Serve the new purpose-built SignWell Signing UI"""
-    return send_from_directory(app.static_folder, 'signwell-ui.html')
+    return _no_cache(send_from_directory(app.static_folder, 'signwell-ui.html'))
 
 @app.route('/document-upload-dashboard')
 def document_upload_dashboard():
     """Serve Dashboard-Style Document Upload UI"""
-    return send_from_directory(app.static_folder, 'document-upload-dashboard.html')
+    return _no_cache(send_from_directory(app.static_folder, 'document-upload-dashboard.html'))
 
 @app.route('/callbacks')
 def callbacks_page():
     """Serve Callbacks / Not Picked Up page"""
-    return send_from_directory(app.static_folder, 'callbacks.html')
+    return _no_cache(send_from_directory(app.static_folder, 'callbacks.html'))
 
 @app.route('/verification')
 def verification_page():
     """Serve Document Verification page"""
-    return send_from_directory(app.static_folder, 'verification.html')
+    return _no_cache(send_from_directory(app.static_folder, 'verification.html'))
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -1008,7 +1015,7 @@ def streamlit_config():
 @app.route('/login')
 def serve_login_page():
     """Serve the login page"""
-    return send_from_directory(app.static_folder, 'meta-login.html')
+    return _no_cache(send_from_directory(app.static_folder, 'meta-login.html'))
 
 @app.route('/api/login', methods=['POST'])
 @limiter.limit('5 per minute')
