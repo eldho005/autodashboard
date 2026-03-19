@@ -395,6 +395,7 @@
                                 <label class="text-xs font-medium text-slate-500">Finished Percent</label>
                                 <select data-key="basementFinished" data-scope="primary" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer">
                                     <option value="">Select</option>
+                                    <option value="0">0</option>
                                     <option value="50">50</option>
                                     <option value="100">100</option>
                                 </select>
@@ -1011,6 +1012,7 @@ This action cannot be undone.\n\nAre you sure you want to continue?`;
                                     <label class="text-xs font-medium text-slate-500">Finished Percent</label>
                                     <select data-rental-id="${rental.id}" data-key="basementFinished" class="hud__input--light rounded-md px-3 py-2 text-sm bg-white transition-colors cursor-pointer" onchange="PropertyApp.updateRentalProperty(${rental.id})">
                                         <option value="">Select</option>
+                                        <option value="0">0</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
                                     </select>
